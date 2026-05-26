@@ -21,7 +21,7 @@ function Landing() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src={logo} alt="SHNOOR International LLC" className="h-10 w-auto" />
-            <h1 className="text-2xl font-extrabold text-blue-700">SHNOOR LMS</h1>
+            <h1 className="text-2xl font-extrabold text-blue-950">SHNOOR LMS</h1>
           </div>
 
           <div className="hidden md:flex gap-8 font-semibold text-sm">
@@ -36,14 +36,14 @@ function Landing() {
           <div className="flex gap-3">
             <Link
              to="/register"
-             className="bg-white border border-blue-700 text-blue-700 px-5 py-2 rounded-xl font-bold"
+             className="bg-white border border-blue-950 text-blue-950 px-5 py-2 rounded-xl font-bold"
             >
              Register
             </Link>
 
             <Link
              to="/login"
-             className="bg-blue-700 text-white px-5 py-2 rounded-xl font-bold"
+             className="bg-blue-950 text-white px-5 py-2 rounded-xl font-bold"
             >
              Login
             </Link>
@@ -53,7 +53,7 @@ function Landing() {
 
       <section id="home" className="max-w-7xl mx-auto px-6 py-24 grid lg:grid-cols-2 gap-14 items-center">
         <div>
-          <span className="inline-block bg-blue-100 text-blue-700 px-5 py-2 rounded-full font-bold text-sm">
+          <span className="inline-block bg-blue-100 text-blue-950 px-5 py-2 rounded-full font-bold text-sm">
             Subscription-Based LMS Platform
           </span>
 
@@ -69,7 +69,7 @@ function Landing() {
           <div className="flex gap-4 mt-10">
           <Link
            to="/register"
-           className="bg-blue-700 text-white px-8 py-4 rounded-xl font-bold inline-block"
+           className="bg-blue-950 text-white px-8 py-4 rounded-xl font-bold inline-block"
           >
            Get Started
            </Link>
@@ -91,7 +91,7 @@ function Landing() {
               "System tracks progress and generates certificate",
             ].map((item, index) => (
               <div key={index} className="flex gap-4 items-start">
-                <div className="min-w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-extrabold">
+                <div className="min-w-10 h-10 rounded-xl bg-blue-100 text-blue-950 flex items-center justify-center font-extrabold">
                   {index + 1}
                 </div>
                 <p className="font-semibold leading-7">{item}</p>
@@ -134,7 +134,7 @@ function Landing() {
               <h2 className="text-5xl font-extrabold mt-8">₹0</h2>
             </div>
 
-            <div className="bg-white p-10 rounded-3xl border-2 border-blue-700 shadow-xl">
+            <div className="bg-white p-10 rounded-3xl border-2 border-blue-950 shadow-xl">
               <h3 className="text-3xl font-extrabold">Premium Plan</h3>
               <p className="text-slate-600 mt-4">
                 Price, access rules and benefits should come from database.
@@ -149,7 +149,7 @@ function Landing() {
         <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-4 gap-6">
           {stats.map((stat, index) => (
             <div key={index} className="text-center p-7 rounded-3xl bg-slate-50 border border-slate-200">
-              <h2 className="text-4xl font-extrabold text-blue-700">{stat.value}</h2>
+              <h2 className="text-4xl font-extrabold text-blue-950">{stat.value}</h2>
               <p className="text-slate-600 mt-2 font-semibold">{stat.label}</p>
             </div>
           ))}
@@ -178,7 +178,7 @@ function Landing() {
             <input className="border border-slate-300 rounded-xl px-5 py-4" placeholder="Your Name" />
             <input className="border border-slate-300 rounded-xl px-5 py-4" placeholder="Email Address" />
             <textarea className="border border-slate-300 rounded-xl px-5 py-4 h-36" placeholder="Message"></textarea>
-            <button className="bg-blue-700 text-white py-4 rounded-xl font-bold">Send Message</button>
+            <button className="bg-blue-950 text-white py-4 rounded-xl font-bold">Send Message</button>
           </form>
         </div>
       </section>

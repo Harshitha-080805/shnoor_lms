@@ -40,7 +40,9 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
-    'authentication',
+    'accounts',
+    'organizations',
+    'learners',
 ]
 
 MIDDLEWARE = [
@@ -124,10 +126,10 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
-AUTH_USER_MODEL = 'authentication.User'
+AUTH_USER_MODEL='accounts.User'
 
 AUTHENTICATION_BACKENDS=[
-    'authentication.backends.EmailBackend',
+    'accounts.backends.EmailBackend',
 ]
 
 REST_FRAMEWORK = {
