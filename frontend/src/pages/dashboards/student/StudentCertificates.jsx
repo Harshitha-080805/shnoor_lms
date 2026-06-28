@@ -9,6 +9,7 @@ function StudentCertificates(){
   const[requests,setRequests]=useState([]);
   const[loading,setLoading]=useState(true);
   const[selectedCert,setSelectedCert]=useState(null);
+  const[sortOption, setSortOption]=useState("Newest");
 
   const loadCerts=async()=>{
     try{
@@ -33,6 +34,22 @@ function StudentCertificates(){
   const approvedCerts = requests.filter(r => r.status?.toUpperCase() === 'APPROVED');
   const pendingCerts = requests.filter(r => r.status?.toUpperCase() === 'PENDING');
   const rejectedCerts = requests.filter(r => r.status?.toUpperCase() === 'REJECTED');
+
+  const sortedRequests = React.useMemo(() => {
+    let dataCopy = [...requests];
+    
+    // search filter
+    if (searchTerm) {
+      dataCopy = dataCopy.filter(r => r.course_title.toLowerCase().includes(searchTerm.toLowerCase()));
+    }
+
+    if (sortOption === "Newest") return dataCopy.sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    if (sortOption === "Oldest") return dataCopy.sort((a,b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+    if (sortOption === "Course A-Z") return dataCopy.sort((a,b) => (a.course_title||'').localeCompare(b.course_title||''));
+    if (sortOption === "Course Z-A") return dataCopy.sort((a,b) => (b.course_title||'').localeCompare(a.course_title||''));
+
+    return dataCopy;
+  }, [requests, searchTerm, sortOption]);
 
   return(
     <div className="space-y-6">
@@ -69,38 +86,50 @@ function StudentCertificates(){
         }
       `}</style>
 
-      <div>
-        <h2 className="text-2xl font-bold text-slate-800">My Certificates</h2>
-        <p className="text-slate-500 text-sm mt-1">View and print your earned course credentials</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800">My Certificates</h2>
+          <p className="text-slate-500 text-sm mt-1">View and print your earned course credentials</p>
+        </div>
+        <select
+          value={sortOption}
+          onChange={(e) => setSortOption(e.target.value)}
+          className="bg-white border border-slate-200 text-slate-700 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block px-4 py-2 shadow-sm"
+        >
+          <option value="Newest">Sort by: Newest</option>
+          <option value="Oldest">Sort by: Oldest</option>
+          <option value="Course A-Z">Course A-Z</option>
+          <option value="Course Z-A">Course Z-A</option>
+        </select>
       </div>
 
       {/* Summary Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+        <div className="bg-blue-950 p-5 rounded-2xl border border-blue-900 shadow-sm flex items-center gap-4">
+          <div className="w-11 h-11 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
             <CheckCircle size={22} />
           </div>
           <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Earned</p>
-            <h3 className="text-xl font-black text-slate-800">{approvedCerts.length}</h3>
+            <p className="text-xs font-bold text-blue-200 uppercase tracking-wider">Earned</p>
+            <h3 className="text-xl font-black text-white">{approvedCerts.length}</h3>
           </div>
         </div>
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center">
+        <div className="bg-blue-950 p-5 rounded-2xl border border-blue-900 shadow-sm flex items-center gap-4">
+          <div className="w-11 h-11 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
             <Clock size={22} />
           </div>
           <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Pending</p>
-            <h3 className="text-xl font-black text-slate-800">{pendingCerts.length}</h3>
+            <p className="text-xs font-bold text-blue-200 uppercase tracking-wider">Pending</p>
+            <h3 className="text-xl font-black text-white">{pendingCerts.length}</h3>
           </div>
         </div>
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="w-11 h-11 rounded-xl bg-red-50 text-red-400 flex items-center justify-center">
+        <div className="bg-blue-950 p-5 rounded-2xl border border-blue-900 shadow-sm flex items-center gap-4">
+          <div className="w-11 h-11 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center">
             <XCircle size={22} />
           </div>
           <div>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Rejected</p>
-            <h3 className="text-xl font-black text-slate-800">{rejectedCerts.length}</h3>
+            <p className="text-xs font-bold text-blue-200 uppercase tracking-wider">Rejected</p>
+            <h3 className="text-xl font-black text-white">{rejectedCerts.length}</h3>
           </div>
         </div>
       </div>
@@ -111,9 +140,7 @@ function StudentCertificates(){
         </div>
       ):(
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {requests
-            .filter(r => !searchTerm || r.course_title.toLowerCase().includes(searchTerm.toLowerCase()))
-            .map(r=>{
+          {sortedRequests.map(r=>{
             const st = getStatusStyle(r.status);
             const isApproved = r.status?.toUpperCase() === 'APPROVED';
             return(
@@ -174,7 +201,7 @@ function StudentCertificates(){
               </div>
             );
           })}
-          {requests.filter(r => !searchTerm || r.course_title.toLowerCase().includes(searchTerm.toLowerCase())).length===0&&(
+          {sortedRequests.length===0&&(
             <div className="col-span-2 bg-white p-16 rounded-2xl border border-slate-200 shadow-sm text-center">
               <div className="w-16 h-16 mx-auto mb-4 bg-slate-50 rounded-full flex items-center justify-center text-slate-300 border border-slate-100">
                 <Award size={28} />

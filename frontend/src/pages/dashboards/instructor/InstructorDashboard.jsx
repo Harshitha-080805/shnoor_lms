@@ -15,6 +15,7 @@ import {
   Trophy,
   User,
   Target,
+  FileCheck,
 } from "lucide-react";
 
 const isTokenValid = (t) => {
@@ -39,6 +40,7 @@ function InstructorDashboard() {
     { name: "My Courses", path: "/instructor-dashboard/courses", icon: <BookOpen size={20} /> },
     { name: "Assignments", path: "/instructor-dashboard/assignments", icon: <FileText size={20} /> },
     { name: "Quizzes", path: "/instructor-dashboard/quizzes", icon: <ClipboardList size={20} /> },
+    { name: "Exam Evaluation", path: "/instructor-dashboard/exams", icon: <FileCheck size={20} /> },
     { name: "Practice Arena", path: "/instructor-dashboard/practice-arena", icon: <Target size={20} /> },
     { name: "Students List", path: "/instructor-dashboard/students", icon: <Users size={20} /> },
     { name: "Leaderboards", path: "/instructor-dashboard/leaderboards", icon: <Trophy size={20} /> },
@@ -164,7 +166,7 @@ function InstructorDashboard() {
         
       </aside>
       <main className="ml-60 flex-1 flex flex-col min-h-screen">
-        <header className="bg-white px-8 py-4 border-b border-slate-200 flex justify-between items-center sticky top-0 z-10">
+        <header className="bg-white px-8 py-4 border-b border-slate-200 flex justify-between items-center sticky top-0 z-50">
           <div className="flex flex-col">
             <h2 className="text-xl font-bold text-slate-800 tracking-tight">
               {getPageTitle()}

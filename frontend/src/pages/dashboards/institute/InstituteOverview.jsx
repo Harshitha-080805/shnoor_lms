@@ -32,26 +32,26 @@ function InstituteOverview() {
     {
       label: "TOTAL LEARNERS",
       value: stats.totalLearners.toLocaleString(),
-      icon: <GraduationCap className="text-blue-600" size={24} />,
-      bgColor: "bg-blue-100",
+      icon: <GraduationCap className="text-white" size={24} />,
+      bgColor: "bg-sky-500 shadow-lg shadow-sky-500/20",
     },
     {
       label: "TOTAL INSTRUCTORS",
       value: stats.totalInstructors.toLocaleString(),
-      icon: <Users className="text-emerald-500" size={24} />,
-      bgColor: "bg-emerald-100",
+      icon: <Users className="text-white" size={24} />,
+      bgColor: "bg-teal-500 shadow-lg shadow-teal-500/20",
     },
     {
       label: "ACTIVE COURSES",
       value: stats.activeCourses.toLocaleString(),
-      icon: <BookOpen className="text-purple-600" size={24} />,
-      bgColor: "bg-purple-100",
+      icon: <BookOpen className="text-white" size={24} />,
+      bgColor: "bg-purple-500 shadow-lg shadow-purple-500/20",
     },
     {
       label: "AVG COMPLETION",
       value: `${stats.avgCompletion}%`,
-      icon: <TrendingUp className="text-rose-500" size={24} />,
-      bgColor: "bg-rose-100",
+      icon: <TrendingUp className="text-white" size={24} />,
+      bgColor: "bg-rose-500 shadow-lg shadow-rose-500/20",
     },
   ];
 
@@ -71,13 +71,13 @@ function InstituteOverview() {
         {statCards.map((stat, idx) => (
           <div
             key={idx}
-            className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow"
+            className="bg-blue-950 p-6 rounded-xl border border-blue-900 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow"
           >
             <div className="flex flex-col">
-              <p className="text-[11px] font-bold text-slate-400 tracking-wider mb-2 uppercase">
+              <p className="text-[11px] font-bold text-blue-200 tracking-wider mb-2 uppercase">
                 {stat.label}
               </p>
-              <h3 className="text-3xl font-black text-slate-800 leading-none">
+              <h3 className="text-3xl font-black text-white leading-none">
                 {stat.value}
               </h3>
             </div>

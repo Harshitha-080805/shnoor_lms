@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { BookOpen, Search, CheckCircle, XCircle, ArrowLeft, User, Users } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import api from "../../../api";
@@ -11,6 +11,7 @@ function InstituteCourses() {
   const [filter, setFilter] = useState("all");
   const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'table'
   const [gridFilter, setGridFilter] = useState("all");
+  const [sortOption, setSortOption] = useState("Newest");
   const [selectedCourse, setSelectedCourse] = useState(null);
 
   const fetchCourses = async () => {
@@ -54,26 +55,39 @@ function InstituteCourses() {
   );
   const publishedCount = courses.filter((c) => c.is_published && c.is_approved).length;
 
-  const filteredGrid = courses.filter((c) => {
-    if (gridFilter === "published" && (!c.is_published || !c.is_approved)) return false;
-    if (gridFilter === "pending" && c.is_approved) return false;
-    if (location.state?.targetCourseId && c.id === location.state.targetCourseId) return true;
-    if (search) {
-      const q = search.toLowerCase();
-      if (!((c.title || "").toLowerCase().includes(q) || (c.instructor?.full_name || "").toLowerCase().includes(q))) {
-        return false;
+  const sortedGrid = useMemo(() => {
+    let dataCopy = [...courses].filter(Boolean);
+    
+    // Grid Filter
+    dataCopy = dataCopy.filter((c) => {
+      if (gridFilter === "published" && (!c.is_published || !c.is_approved)) return false;
+      if (gridFilter === "pending" && c.is_approved) return false;
+      if (location.state?.targetCourseId && c.id === location.state.targetCourseId) return true;
+      if (search) {
+        const q = search.toLowerCase();
+        if (!((c.title || "").toLowerCase().includes(q) || (c.instructor?.full_name || "").toLowerCase().includes(q))) {
+          return false;
+        }
       }
-    }
-    return true;
-  });
+      return true;
+    });
 
-  const filteredTable = courses
-    .filter((c) => {
+    if (sortOption === "Newest") return dataCopy.sort((a,b) => new Date(b?.created_at || 0) - new Date(a?.created_at || 0));
+    if (sortOption === "Oldest") return dataCopy.sort((a,b) => new Date(a?.created_at || 0) - new Date(b?.created_at || 0));
+    if (sortOption === "Title A-Z") return dataCopy.sort((a,b) => (a?.title||'').localeCompare(b?.title||''));
+    if (sortOption === "Title Z-A") return dataCopy.sort((a,b) => (b?.title||'').localeCompare(a?.title||''));
+    
+    return dataCopy;
+  }, [courses, gridFilter, search, location.state, sortOption]);
+
+  const sortedTable = useMemo(() => {
+    let dataCopy = [...courses].filter(Boolean);
+    
+    dataCopy = dataCopy.filter((c) => {
       if (filter === "published") return c.is_published && c.is_approved;
       if (filter === "pending") return !c.is_approved;
       return true;
-    })
-    .filter((c) => {
+    }).filter((c) => {
       if (location.state?.targetCourseId && c.id === location.state.targetCourseId) return true;
       if (!search) return true;
       const q = search.toLowerCase();
@@ -83,35 +97,43 @@ function InstituteCourses() {
       );
     });
 
+    if (sortOption === "Newest") return dataCopy.sort((a,b) => new Date(b?.created_at || 0) - new Date(a?.created_at || 0));
+    if (sortOption === "Oldest") return dataCopy.sort((a,b) => new Date(a?.created_at || 0) - new Date(b?.created_at || 0));
+    if (sortOption === "Title A-Z") return dataCopy.sort((a,b) => (a?.title||'').localeCompare(b?.title||''));
+    if (sortOption === "Title Z-A") return dataCopy.sort((a,b) => (b?.title||'').localeCompare(a?.title||''));
+    
+    return dataCopy;
+  }, [courses, filter, search, location.state, sortOption]);
+
   const renderGrid = () => (
     <div className="space-y-6">
       {/* Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+        <div className="bg-blue-950 p-5 rounded-2xl border border-blue-900 shadow-sm flex items-center gap-4">
+          <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-500/20">
             <BookOpen size={20} />
           </div>
           <div>
-            <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">Total Courses</p>
-            <h3 className="text-xl font-bold text-slate-800">{courses.length}</h3>
+            <p className="text-blue-200 text-xs font-medium uppercase tracking-wider">Total Courses</p>
+            <h3 className="text-xl font-bold text-white">{courses.length}</h3>
           </div>
         </div>
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
+        <div className="bg-blue-950 p-5 rounded-2xl border border-blue-900 shadow-sm flex items-center gap-4">
+          <div className="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20">
             <CheckCircle size={20} />
           </div>
           <div>
-            <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">Published</p>
-            <h3 className="text-xl font-bold text-slate-800">{publishedCount}</h3>
+            <p className="text-blue-200 text-xs font-medium uppercase tracking-wider">Published</p>
+            <h3 className="text-xl font-bold text-white">{publishedCount}</h3>
           </div>
         </div>
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center">
+        <div className="bg-blue-950 p-5 rounded-2xl border border-blue-900 shadow-sm flex items-center gap-4">
+          <div className="w-10 h-10 rounded-full bg-purple-500 text-white flex items-center justify-center shadow-lg shadow-purple-500/20">
             <Users size={20} />
           </div>
           <div>
-            <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">Total Enrollments</p>
-            <h3 className="text-xl font-bold text-slate-800">{totalEnrollments}</h3>
+            <p className="text-blue-200 text-xs font-medium uppercase tracking-wider">Total Enrollments</p>
+            <h3 className="text-xl font-bold text-white">{totalEnrollments}</h3>
           </div>
         </div>
       </div>
@@ -133,7 +155,7 @@ function InstituteCourses() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {filteredGrid.map((course) => (
+        {sortedGrid.map((course) => (
           <div key={course.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col hover:shadow-md transition-shadow">
             <div className="h-40 bg-slate-100 relative p-4 overflow-hidden">
               {(course.thumbnail_file || course.thumbnail_url) && (
@@ -169,7 +191,7 @@ function InstituteCourses() {
           </div>
         ))}
       </div>
-      {filteredGrid.length === 0 && (
+      {sortedGrid.length === 0 && (
         <div className="py-12 text-center text-slate-400">
           <BookOpen size={48} className="mx-auto mb-4 text-slate-300" />
           <p className="text-lg font-semibold text-slate-500">No courses match this filter.</p>
@@ -188,7 +210,17 @@ function InstituteCourses() {
       </button>
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-200 bg-slate-50 flex justify-end items-center">
+        <div className="p-4 border-b border-slate-200 bg-slate-50 flex justify-end items-center gap-3">
+          <select
+            value={sortOption}
+            onChange={(e) => setSortOption(e.target.value)}
+            className="px-3 py-2 bg-white border border-slate-200 text-slate-700 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+          >
+            <option value="Newest">Sort by: Newest</option>
+            <option value="Oldest">Sort by: Oldest</option>
+            <option value="Title A-Z">Title A-Z</option>
+            <option value="Title Z-A">Title Z-A</option>
+          </select>
           <div className="relative w-full md:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input
@@ -213,7 +245,7 @@ function InstituteCourses() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredTable.map((course) => (
+                {sortedTable.map((course) => (
                   <tr key={course.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4">
                       <div>
@@ -273,7 +305,7 @@ function InstituteCourses() {
                     </td>
                   </tr>
                 ))}
-                {filteredTable.length === 0 && (
+                {sortedTable.length === 0 && (
                   <tr>
                     <td
                       colSpan="5"

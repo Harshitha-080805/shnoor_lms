@@ -37,6 +37,7 @@ export default function SuperAdminReports() {
   const [learnerTypeFilter, setLearnerTypeFilter] = useState('ALL');
   const [orgFilter, setOrgFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortOption, setSortOption] = useState('Newest');
 
   // User Profile Modal
   const [selectedUser, setSelectedUser] = useState(null);
@@ -79,6 +80,53 @@ export default function SuperAdminReports() {
   const closeUserProfile = () => {
     setSelectedUser(null);
     setUserProfileData(null);
+  };
+
+  const handleRevokeAccess = async () => {
+    if (!window.confirm("Are you sure you want to revoke this user's subscription and deactivate their account?")) return;
+    try {
+      if (userProfileData.user.role === 'ORGANIZATION_ADMIN' && userProfileData.user.organization_id) {
+        await api.put(`/api/admin/reports/organizations/${userProfileData.user.organization_id}/revoke-subscription`);
+      } else {
+        await api.put(`/api/admin/reports/users/${userProfileData.user.id}/revoke-subscription`);
+      }
+      alert('Access revoked and account deactivated successfully.');
+      closeUserProfile();
+      fetchData(); // Refresh the list
+    } catch (error) {
+      console.error('Failed to revoke access', error);
+      alert(error.response?.data?.error || 'Failed to revoke access');
+    }
+  };
+
+  const handleRestoreAccess = async () => {
+    if (!window.confirm("Are you sure you want to restore access for this user/organization?")) return;
+    try {
+      if (userProfileData.user.role === 'ORGANIZATION_ADMIN' && userProfileData.user.organization_id) {
+        await api.put(`/api/admin/reports/organizations/${userProfileData.user.organization_id}/restore-access`);
+      } else {
+        await api.put(`/api/admin/reports/users/${userProfileData.user.id}/restore-access`);
+      }
+      alert('Access restored successfully.');
+      closeUserProfile();
+      fetchData(); // Refresh the list
+    } catch (error) {
+      console.error('Failed to restore access', error);
+      alert(error.response?.data?.error || 'Failed to restore access');
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!window.confirm("CRITICAL ACTION: Are you sure you want to permanently delete this user? This action cannot be undone.")) return;
+    try {
+      await api.delete(`/api/admin/reports/users/${userProfileData.user.id}`);
+      alert('User permanently deleted.');
+      closeUserProfile();
+      fetchData(); // Refresh the list
+    } catch (error) {
+      console.error('Failed to delete user', error);
+      alert(error.response?.data?.error || 'Failed to delete user');
+    }
   };
 
   const exportPDF = () => {
@@ -264,19 +312,28 @@ export default function SuperAdminReports() {
     return matchesRole && matchesSearch && matchesLearnerType && matchesOrg;
   });
 
+  const sortedUsers = React.useMemo(() => {
+    let dataCopy = [...filteredUsers];
+    if (sortOption === "Newest") return dataCopy.sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    if (sortOption === "Oldest") return dataCopy.sort((a,b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+    if (sortOption === "Name A-Z") return dataCopy.sort((a,b) => (a.full_name||'').localeCompare(b.full_name||''));
+    if (sortOption === "Name Z-A") return dataCopy.sort((a,b) => (b.full_name||'').localeCompare(a.full_name||''));
+    return dataCopy;
+  }, [filteredUsers, sortOption]);
+
   if (loading || !dashboardData) return <div className="p-8 text-center text-slate-500 font-bold">Loading dashboard...</div>;
 
   const { summaryCards, userGrowthTrend, roleDistribution, topOrganizations, enrollmentsTrend, completionTrend, revenueTrend, recentActivity, popularCourses, learnerEngagement } = dashboardData;
 
   const summaryWidgets = [
-    { label: "Total Users", value: summaryCards.totalUsers.toLocaleString(), icon: <Users className="w-5 h-5" />, bg: "bg-blue-50", text: "text-blue-500" },
-    { label: "Active Learners", value: summaryCards.activeLearners.toLocaleString(), icon: <UserCheck className="w-5 h-5" />, bg: "bg-emerald-50", text: "text-emerald-500" },
-    { label: "Courses Published", value: summaryCards.coursesPublished.toLocaleString(), icon: <BookOpen className="w-5 h-5" />, bg: "bg-purple-50", text: "text-purple-500" },
-    { label: "Instructors", value: summaryCards.instructors.toLocaleString(), icon: <UserPlus className="w-5 h-5" />, bg: "bg-cyan-50", text: "text-cyan-500" },
-    { label: "Organizations", value: summaryCards.organizations.toLocaleString(), icon: <Building2 className="w-5 h-5" />, bg: "bg-pink-50", text: "text-pink-500" },
-    { label: "Certificates Issued", value: summaryCards.certificatesIssued.toLocaleString(), icon: <Award className="w-5 h-5" />, bg: "bg-blue-50", text: "text-blue-500" },
-    { label: "Completion Rate", value: `${summaryCards.completionRate}%`, icon: <Star className="w-5 h-5" />, bg: "bg-orange-50", text: "text-orange-500" },
-    { label: "Revenue This Month", value: `₹${summaryCards.revenueThisMonth.toLocaleString()}`, icon: <Wallet className="w-5 h-5" />, bg: "bg-yellow-50", text: "text-yellow-500" },
+    { label: "Total Users", value: summaryCards.totalUsers.toLocaleString(), icon: <Users className="w-5 h-5" />, bg: "bg-blue-950", border: "border-blue-900", iconBg: "bg-sky-500", iconShadow: "shadow-sky-500/20", text: "text-blue-200" },
+    { label: "Active Learners", value: summaryCards.activeLearners.toLocaleString(), icon: <UserCheck className="w-5 h-5" />, bg: "bg-blue-950", border: "border-blue-900", iconBg: "bg-emerald-500", iconShadow: "shadow-emerald-500/20", text: "text-blue-200" },
+    { label: "Courses Published", value: summaryCards.coursesPublished.toLocaleString(), icon: <BookOpen className="w-5 h-5" />, bg: "bg-blue-950", border: "border-blue-900", iconBg: "bg-purple-500", iconShadow: "shadow-purple-500/20", text: "text-blue-200" },
+    { label: "Instructors", value: summaryCards.instructors.toLocaleString(), icon: <UserPlus className="w-5 h-5" />, bg: "bg-blue-950", border: "border-blue-900", iconBg: "bg-indigo-500", iconShadow: "shadow-indigo-500/20", text: "text-blue-200" },
+    { label: "Organizations", value: summaryCards.organizations.toLocaleString(), icon: <Building2 className="w-5 h-5" />, bg: "bg-blue-950", border: "border-blue-900", iconBg: "bg-rose-500", iconShadow: "shadow-rose-500/20", text: "text-blue-200" },
+    { label: "Certificates Issued", value: summaryCards.certificatesIssued.toLocaleString(), icon: <Award className="w-5 h-5" />, bg: "bg-blue-950", border: "border-blue-900", iconBg: "bg-teal-500", iconShadow: "shadow-teal-500/20", text: "text-blue-200" },
+    { label: "Completion Rate", value: `${summaryCards.completionRate}%`, icon: <Star className="w-5 h-5" />, bg: "bg-blue-950", border: "border-blue-900", iconBg: "bg-amber-500", iconShadow: "shadow-amber-500/20", text: "text-blue-200" },
+    { label: "Revenue This Month", value: `₹${summaryCards.revenueThisMonth.toLocaleString()}`, icon: <Wallet className="w-5 h-5" />, bg: "bg-blue-950", border: "border-blue-900", iconBg: "bg-green-500", iconShadow: "shadow-green-500/20", text: "text-blue-200" },
   ];
 
   const scrollToUsers = () => {
@@ -308,15 +365,15 @@ export default function SuperAdminReports() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {summaryWidgets.map((widget, idx) => (
-          <div key={idx} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${widget.bg} ${widget.text} shrink-0`}>
+          <div key={idx} className={`${widget.bg} p-6 rounded-2xl border ${widget.border} shadow-sm flex items-center gap-4 transition-transform hover:-translate-y-1`}>
+            <div className={`p-3 rounded-xl ${widget.iconBg} text-white shadow-lg ${widget.iconShadow} flex items-center justify-center`}>
               {widget.icon}
             </div>
             <div>
-              <p className="text-xs font-bold text-slate-500">{widget.label}</p>
-              <h3 className="text-2xl font-black text-slate-800 tracking-tight">{widget.value}</h3>
+              <p className={`text-xs font-bold uppercase tracking-wider ${widget.text} mb-1`}>{widget.label}</p>
+              <h3 className="text-2xl font-black text-white">{widget.value}</h3>
             </div>
           </div>
         ))}
@@ -630,6 +687,17 @@ export default function SuperAdminReports() {
                   ))}
                 </select>
               )}
+
+              <select
+                className="px-4 py-2 text-sm border border-slate-300 rounded-lg bg-white shadow-sm font-medium"
+                value={sortOption}
+                onChange={(e) => setSortOption(e.target.value)}
+              >
+                <option value="Newest">Sort by: Newest</option>
+                <option value="Oldest">Sort by: Oldest</option>
+                <option value="Name A-Z">Name A-Z</option>
+                <option value="Name Z-A">Name Z-A</option>
+              </select>
             </div>
             <div className="flex items-center gap-2">
               <button onClick={exportExcel} className="flex items-center gap-2 px-3 py-2 text-xs font-semibold bg-emerald-600 border border-emerald-700 text-white rounded-lg hover:bg-emerald-700 transition shadow-sm">
@@ -654,7 +722,7 @@ export default function SuperAdminReports() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
-                {filteredUsers.map((user, idx) => {
+                {sortedUsers.map((user, idx) => {
                   const avatarColors = ['bg-blue-100 text-blue-700', 'bg-indigo-100 text-indigo-700', 'bg-purple-100 text-purple-700', 'bg-emerald-100 text-emerald-700', 'bg-orange-100 text-orange-700'];
                   const avatarColor = avatarColors[user.full_name?.charCodeAt(0) % avatarColors.length] || avatarColors[0];
                   
@@ -666,7 +734,12 @@ export default function SuperAdminReports() {
                           {user.full_name?.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">{user.full_name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">{user.full_name}</p>
+                            {user.is_revoked && (
+                              <span className="bg-rose-100 text-rose-700 text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider">Revoked</span>
+                            )}
+                          </div>
                           <p className="text-xs text-slate-500 font-medium">{user.email}</p>
                         </div>
                       </div>
@@ -717,7 +790,7 @@ export default function SuperAdminReports() {
                   </tr>
                   );
                 })}
-                {filteredUsers.length === 0 && (
+                {sortedUsers.length === 0 && (
                   <tr>
                     <td colSpan="6" className="px-6 py-12 text-center text-slate-500 font-medium">
                       No users found matching the filters.
@@ -748,9 +821,24 @@ export default function SuperAdminReports() {
                       <p className="text-white/80 font-medium text-sm mt-0.5">{userProfileData.user.email} • {userProfileData.user.role.replace('_', ' ')}</p>
                     </div>
                   </div>
-                  <button onClick={closeUserProfile} className="text-white/70 hover:text-white transition bg-white/10 hover:bg-white/20 p-2 rounded-full">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
-                  </button>
+                  <div className="flex items-center gap-3">
+                    {!userProfileData.user.is_revoked ? (
+                      <button onClick={handleRevokeAccess} className="text-sm font-bold bg-amber-500 hover:bg-amber-600 text-amber-950 px-4 py-2 rounded-xl transition shadow-sm">
+                        Revoke Access
+                      </button>
+                    ) : (
+                      <button onClick={handleRestoreAccess} className="text-sm font-bold bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl transition shadow-sm">
+                        Restore Access
+                      </button>
+                    )}
+                    <button onClick={handleDeleteUser} className="text-sm font-bold bg-rose-500 hover:bg-rose-600 text-white px-4 py-2 rounded-xl transition shadow-sm">
+                      Delete User
+                    </button>
+                    <div className="w-px h-8 bg-white/20 mx-1"></div>
+                    <button onClick={closeUserProfile} className="text-white/70 hover:text-white transition bg-white/10 hover:bg-white/20 p-2 rounded-full">
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                  </div>
                 </div>
                 
                 <div className="flex-1 overflow-y-auto p-8 bg-slate-50 custom-scrollbar space-y-8">
@@ -761,18 +849,44 @@ export default function SuperAdminReports() {
                       <div className="space-y-3 text-sm">
                         <div className="flex justify-between"><span className="text-slate-500">Joined</span><span className="font-bold text-slate-800">{new Date(userProfileData.user.created_at).toLocaleDateString()}</span></div>
                         <div className="flex justify-between"><span className="text-slate-500">Phone</span><span className="font-bold text-slate-800">{userProfileData.user.phone_number || '-'}</span></div>
-                        <div className="flex justify-between"><span className="text-slate-500">Status</span><span className={`font-bold ${userProfileData.user.is_active ? 'text-emerald-600' : 'text-rose-600'}`}>{userProfileData.user.is_active ? 'Active' : 'Inactive'}</span></div>
+                        <div className="flex justify-between"><span className="text-slate-500">Status</span><span className={`font-bold ${!userProfileData.user.is_revoked ? 'text-emerald-600' : 'text-rose-600'}`}>{!userProfileData.user.is_revoked ? 'Active' : 'Revoked (Access Suspended)'}</span></div>
                       </div>
                     </div>
                     
                     {(userProfileData.user.role === 'LEARNER' || userProfileData.user.role === 'ORGANIZATION_ADMIN') && (
-                      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Organizational Info</h4>
+                      <div className="bg-white rounded-xl border border-slate-100 p-5 shadow-sm">
+                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Organizational Info</h3>
                         <div className="space-y-3 text-sm">
                           <div className="flex justify-between"><span className="text-slate-500">Organization</span><span className="font-bold text-slate-800">{userProfileData.user.organization_name || 'Independent'}</span></div>
                           {userProfileData.user.learner_type && (
                             <div className="flex justify-between"><span className="text-slate-500">Learner Type</span><span className="font-bold text-slate-800 capitalize">{userProfileData.user.learner_type}</span></div>
                           )}
+                        </div>
+                      </div>
+                    )}
+
+                    {userProfileData.subscriptionData && (
+                      <div className="bg-white rounded-xl border border-slate-100 p-5 shadow-sm md:col-span-2">
+                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Subscription Info</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                          <div>
+                            <span className="block text-slate-500 text-xs mb-1">Plan Name</span>
+                            <span className="font-bold text-slate-800">{userProfileData.subscriptionData.plan_name}</span>
+                          </div>
+                          <div>
+                            <span className="block text-slate-500 text-xs mb-1">Billing Price</span>
+                            <span className="font-bold text-slate-800">₹{userProfileData.subscriptionData.price}/{userProfileData.subscriptionData.billing_cycle === 'yearly' ? 'yr' : 'mo'}</span>
+                          </div>
+                          <div>
+                            <span className="block text-slate-500 text-xs mb-1">Current Status</span>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold ${userProfileData.subscriptionData.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                              {userProfileData.subscriptionData.status.toUpperCase()}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="block text-slate-500 text-xs mb-1">Expiration Date</span>
+                            <span className="font-bold text-slate-800">{new Date(userProfileData.subscriptionData.end_date).toLocaleDateString()}</span>
+                          </div>
                         </div>
                       </div>
                     )}

@@ -14,6 +14,7 @@ function InstructorAssignments(){
   const[showGradeModal,setShowGradeModal]=useState(false);
   const[gradeInput,setGradeInput]=useState('');
   const[search,setSearch]=useState(location.state?.searchTerm || '');
+  const[sortOption,setSortOption]=useState('Newest');
   const[newTitle,setNewTitle]=useState('');
   const[newCourseId,setNewCourseId]=useState('');
   const[newDesc,setNewDesc]=useState('');
@@ -94,18 +95,30 @@ function InstructorAssignments(){
   const toGrade=submissions.filter(s=>!s.is_graded).length;
   const graded=submissions.filter(s=>s.is_graded).length;
 
-  const filteredSubmissions=submissions.filter(s=>{
-    if(search) return true;
-    if(activeTab==='active')return !s.is_graded;
-    if(activeTab==='completed')return s.is_graded;
-    return true;
-  });
-
-  const searchedSubmissions=filteredSubmissions.filter(s=>
-    (s.student_name||'').toLowerCase().includes(search.toLowerCase())||
-    (s.course_title||'').toLowerCase().includes(search.toLowerCase())||
-    (s.assessment_title||'').toLowerCase().includes(search.toLowerCase())
-  );
+  const sortedSubmissions = React.useMemo(() => {
+    if (!submissions) return [];
+    let dataCopy = [...submissions];
+    
+    if (activeTab === 'active') dataCopy = dataCopy.filter(s => !s.is_graded);
+    else if (activeTab === 'completed') dataCopy = dataCopy.filter(s => s.is_graded);
+    
+    // First apply search filters
+    if (search) {
+      dataCopy = dataCopy.filter(s => 
+        (s.student_name||'').toLowerCase().includes(search.toLowerCase())||
+        (s.course_title||'').toLowerCase().includes(search.toLowerCase())||
+        (s.assessment_title||'').toLowerCase().includes(search.toLowerCase())
+      );
+    }
+    
+    // Then apply sort
+    if (sortOption === 'Newest') return dataCopy.sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    if (sortOption === 'Oldest') return dataCopy.sort((a,b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+    if (sortOption === 'Title A-Z') return dataCopy.sort((a,b) => (a.assessment_title||'').localeCompare(b.assessment_title||''));
+    if (sortOption === 'Title Z-A') return dataCopy.sort((a,b) => (b.assessment_title||'').localeCompare(a.assessment_title||''));
+    
+    return dataCopy;
+  }, [submissions, search, activeTab, sortOption]);
 
   return(
     <div className="space-y-6">
@@ -124,31 +137,31 @@ function InstructorAssignments(){
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-950 flex items-center justify-center">
-            <FileText size={24} />
+        <div className="bg-blue-950 p-6 rounded-2xl border border-blue-900 shadow-sm flex items-center gap-5 transition-all hover:shadow-md">
+          <div className="w-14 h-14 rounded-xl bg-blue-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/20">
+            <FileText size={28} />
           </div>
           <div>
-            <p className="text-slate-500 text-sm font-medium">Total Submissions</p>
-            <h3 className="text-2xl font-bold text-slate-800">{totalSubmissions}</h3>
+            <h3 className="text-3xl font-black text-white leading-tight">{totalSubmissions}</h3>
+            <p className="text-blue-200 text-xs font-bold uppercase tracking-wider mt-1">Total Submissions</p>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-950 flex items-center justify-center">
-            <Clock size={24} />
+        <div className="bg-blue-950 p-6 rounded-2xl border border-blue-900 shadow-sm flex items-center gap-5 transition-all hover:shadow-md">
+          <div className="w-14 h-14 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/20">
+            <Clock size={28} />
           </div>
           <div>
-            <p className="text-slate-500 text-sm font-medium">To Grade</p>
-            <h3 className="text-2xl font-bold text-slate-800">{toGrade}</h3>
+            <h3 className="text-3xl font-black text-white leading-tight">{toGrade}</h3>
+            <p className="text-blue-200 text-xs font-bold uppercase tracking-wider mt-1">To Grade</p>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-950 flex items-center justify-center">
-            <CheckCircle size={24} />
+        <div className="bg-blue-950 p-6 rounded-2xl border border-blue-900 shadow-sm flex items-center gap-5 transition-all hover:shadow-md">
+          <div className="w-14 h-14 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/20">
+            <CheckCircle size={28} />
           </div>
           <div>
-            <p className="text-slate-500 text-sm font-medium">Graded</p>
-            <h3 className="text-2xl font-bold text-slate-800">{graded}</h3>
+            <h3 className="text-3xl font-black text-white leading-tight">{graded}</h3>
+            <p className="text-blue-200 text-xs font-bold uppercase tracking-wider mt-1">Graded</p>
           </div>
         </div>
       </div>
@@ -167,7 +180,17 @@ function InstructorAssignments(){
             ))}
           </div>
           
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-3 w-full sm:w-auto mt-4 sm:mt-0">
+            <select
+              value={sortOption}
+              onChange={(e) => setSortOption(e.target.value)}
+              className="px-3 py-2 bg-white border border-slate-200 text-slate-700 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+            >
+              <option value="Newest">Sort by: Newest</option>
+              <option value="Oldest">Sort by: Oldest</option>
+              <option value="Title A-Z">Title A-Z</option>
+              <option value="Title Z-A">Title Z-A</option>
+            </select>
             <div className="relative flex-1 sm:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input 
@@ -186,41 +209,50 @@ function InstructorAssignments(){
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-950"></div>
           </div>
         ):(
-          <div className="divide-y divide-slate-100">
-            {searchedSubmissions.map((submission)=>(
-              <div key={submission.id} className="p-6 hover:bg-slate-50 transition-colors group">
-                <div className="flex flex-col md:flex-row justify-between gap-6">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider ${!submission.is_graded?'bg-amber-100 text-amber-700':'bg-blue-100 text-blue-800'}`}>
-                        {!submission.is_graded?'pending':'graded'}
-                      </span>
-                      <span className="text-sm font-medium text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-md">{submission.course_title}</span>
-                    </div>
-                    <h4 className="text-lg font-bold text-slate-800 mb-1">{submission.assessment_title}</h4>
-                    <p className="text-sm text-slate-500 mb-2">
-                      Submitted by: <span className="font-semibold text-slate-700">{submission.student_name}</span> ({submission.student_email})
-                    </p>
-                    <p className="text-sm text-slate-500 flex items-center gap-4">
-                      <span className="flex items-center gap-1.5"><Clock size={14} /> Submitted: {new Date(submission.created_at).toLocaleDateString()}</span>
-                      {submission.is_graded&&<span className="flex items-center gap-1.5"><FileText size={14} /> Grade: {submission.grade}</span>}
-                    </p>
-                  </div>
-                  
+          <div className="p-6 bg-slate-50/50 space-y-4">
+            {sortedSubmissions.map((submission)=>(
+              <div key={submission.id} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row justify-between gap-6 items-start md:items-center">
+                <div className="flex-1 space-y-3">
                   <div className="flex items-center gap-2">
-                    <button 
-                      onClick={()=>handleOpenGradeModal(submission)}
-                      className="bg-blue-50 text-blue-950 hover:bg-blue-100 px-4 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-1.5"
-                    >
-                      <CheckCircle size={16} />
-                      {!submission.is_graded?'Grade Submission':'View / Edit Grade'}
-                    </button>
+                    <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${!submission.is_graded?'bg-amber-100 text-amber-700':'bg-emerald-100 text-emerald-700'}`}>
+                      {!submission.is_graded?'pending':'graded'}
+                    </span>
+                    <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">{submission.course_title}</span>
                   </div>
+                  <h4 className="text-xl font-bold text-slate-900">{submission.assessment_title}</h4>
+                  
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-slate-600">
+                    <p className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                      <span className="font-semibold text-slate-700">{submission.student_name}</span> 
+                      <span className="text-slate-400">({submission.student_email})</span>
+                    </p>
+                    <p className="flex items-center gap-1.5">
+                      <Clock size={16} className="text-slate-400" /> 
+                      <span className="text-slate-500 text-xs uppercase tracking-wider font-semibold">Submitted:</span> 
+                      <span className="font-medium text-slate-700">{new Date(submission.created_at).toLocaleDateString()}</span>
+                    </p>
+                    {submission.is_graded && (
+                      <p className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg font-medium border border-emerald-100">
+                        <FileText size={16} /> 
+                        Score: {submission.grade}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="w-full md:w-auto flex-shrink-0">
+                  <button 
+                    onClick={()=>handleOpenGradeModal(submission)}
+                    className="w-full md:w-auto bg-blue-950 text-white hover:bg-blue-900 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                  >
+                    <CheckCircle size={18} />
+                    {!submission.is_graded ? 'Grade Submission' : 'View / Edit Grade'}
+                  </button>
                 </div>
               </div>
             ))}
-            {searchedSubmissions.length===0&&(
-              <div className="p-8 text-center text-slate-500">No submissions found.</div>
+            {sortedSubmissions.length===0&&(
+              <div className="py-12 text-center text-slate-500 font-medium">No submissions found.</div>
             )}
           </div>
         )}

@@ -14,7 +14,7 @@ module.exports = (authMiddleware) => {
       if (req.user.role === 'INSTRUCTOR') {
         const result = await pool.query(`
           SELECT pa.*, c.title as target_course_title,
-            (SELECT COUNT(*) FROM practice_mcq_questions pmq JOIN practice_quizzes pq ON pmq.practice_quiz_id = pq.id WHERE pq.practice_arena_id = pa.id) as mcq_count,
+            (SELECT COUNT(*) FROM practice_mcq_questions pmq WHERE pmq.practice_arena_id = pa.id) as mcq_count,
             (SELECT COUNT(*) FROM practice_coding_questions pcq WHERE pcq.practice_arena_id = pa.id) as coding_count
           FROM practice_arenas pa
           LEFT JOIN courses c ON pa.target_course_id = c.id
@@ -25,7 +25,7 @@ module.exports = (authMiddleware) => {
         const studentId = req.user.userId;
         const result = await pool.query(`
           SELECT pa.*, u.full_name as instructor_name,
-            (SELECT COUNT(*) FROM practice_mcq_questions pmq JOIN practice_quizzes pq ON pmq.practice_quiz_id = pq.id WHERE pq.practice_arena_id = pa.id) as mcq_count,
+            (SELECT COUNT(*) FROM practice_mcq_questions pmq WHERE pmq.practice_arena_id = pa.id) as mcq_count,
             (SELECT COUNT(*) FROM practice_coding_questions pcq WHERE pcq.practice_arena_id = pa.id) as coding_count
           FROM practice_arenas pa
           LEFT JOIN users u ON pa.instructor_id = u.id
@@ -65,7 +65,7 @@ module.exports = (authMiddleware) => {
 
       const recentRes = await pool.query(`
         SELECT paa.*, pa.title, 
-               (SELECT COUNT(*) FROM practice_mcq_questions pmq JOIN practice_quizzes pq ON pmq.practice_quiz_id = pq.id WHERE pq.practice_arena_id = pa.id) as mcq_count,
+               (SELECT COUNT(*) FROM practice_mcq_questions pmq WHERE pmq.practice_arena_id = pa.id) as mcq_count,
                (SELECT COUNT(*) FROM practice_coding_questions pcq WHERE pcq.practice_arena_id = pa.id) as coding_count
         FROM practice_arena_attempts paa
         JOIN practice_arenas pa ON paa.practice_arena_id = pa.id
@@ -117,18 +117,21 @@ module.exports = (authMiddleware) => {
       }
 
       // Fetch Quizzes and MCQs
-      const quizzesRes = await pool.query('SELECT * FROM practice_quizzes WHERE practice_arena_id = $1 ORDER BY created_at ASC', [arena.id]);
-      const mcqRes = await pool.query('SELECT * FROM practice_mcq_questions WHERE practice_quiz_id IN (SELECT id FROM practice_quizzes WHERE practice_arena_id = $1)', [arena.id]);
-      
-      arena.quizzes = quizzesRes.rows.map(q => ({
-        ...q,
-        mcqs: mcqRes.rows.filter(m => m.practice_quiz_id === q.id)
-      }));
+      const mcqRes = await pool.query('SELECT * FROM practice_mcq_questions WHERE practice_arena_id = $1', [arena.id]);
+      if (mcqRes.rows.length > 0) {
+        arena.quizzes = [{
+          id: 'default',
+          title: 'General Quiz',
+          mcqs: mcqRes.rows
+        }];
+      } else {
+        arena.quizzes = [];
+      }
 
       // Fetch Coding
       const codingRes = await pool.query(`
         SELECT cq.*, 
-               (SELECT COUNT(DISTINCT student_id) FROM practice_submissions WHERE coding_question_id = cq.id AND submission_type = 'CODING') as attempt_count
+               (SELECT COUNT(DISTINCT ps.student_id) FROM practice_submissions ps JOIN coding_submissions cs ON ps.id = cs.practice_submission_id WHERE cs.coding_question_id = cq.id AND ps.submission_type = 'CODING') as attempt_count
         FROM practice_coding_questions cq
         WHERE cq.practice_arena_id = $1
       `, [arena.id]);
@@ -210,21 +213,15 @@ module.exports = (authMiddleware) => {
       );
       const arenaId = inserted.rows[0].id;
 
-      // Insert Quizzes and MCQs
+      // Insert MCQs
       if (quizzes && quizzes.length > 0) {
         for (const q of quizzes) {
-          const qRes = await pool.query(
-            'INSERT INTO practice_quizzes (practice_arena_id, title) VALUES ($1, $2) RETURNING id',
-            [arenaId, q.title || 'General Quiz']
-          );
-          const quizId = qRes.rows[0].id;
-
           if (q.mcqs && q.mcqs.length > 0) {
             for (const m of q.mcqs) {
               await pool.query(
-                `INSERT INTO practice_mcq_questions (practice_quiz_id, question, option_a, option_b, option_c, option_d, correct_answer, marks, explanation)
+                `INSERT INTO practice_mcq_questions (practice_arena_id, question, option_a, option_b, option_c, option_d, correct_answer, marks, explanation)
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-                [quizId, m.question, m.option_a, m.option_b, m.option_c, m.option_d, m.correct_answer, m.marks || 1, m.explanation]
+                [arenaId, m.question, m.option_a, m.option_b, m.option_c, m.option_d, m.correct_answer, m.marks || 1, m.explanation]
               );
             }
           }
@@ -281,26 +278,19 @@ module.exports = (authMiddleware) => {
         [title, description, visibility || 'GLOBAL', target_course_id || null, is_mcq_enabled, is_coding_enabled, time_limit_minutes || 60, difficulty || 'Medium', id]
       );
 
-      // Delete existing questions and quizzes to fully replace
-      await pool.query('DELETE FROM practice_quizzes WHERE practice_arena_id = $1', [id]);
-      // (practice_mcq_questions cascade deletes when quiz deletes)
+      // Delete existing questions to fully replace
+      await pool.query('DELETE FROM practice_mcq_questions WHERE practice_arena_id = $1', [id]);
       await pool.query('DELETE FROM practice_coding_questions WHERE practice_arena_id = $1', [id]);
 
-      // Insert Quizzes and MCQs
+      // Insert MCQs
       if (quizzes && quizzes.length > 0) {
         for (const q of quizzes) {
-          const qRes = await pool.query(
-            'INSERT INTO practice_quizzes (practice_arena_id, title) VALUES ($1, $2) RETURNING id',
-            [id, q.title || 'General Quiz']
-          );
-          const quizId = qRes.rows[0].id;
-
           if (q.mcqs && q.mcqs.length > 0) {
             for (const m of q.mcqs) {
               await pool.query(
-                `INSERT INTO practice_mcq_questions (practice_quiz_id, question, option_a, option_b, option_c, option_d, correct_answer, marks, explanation)
+                `INSERT INTO practice_mcq_questions (practice_arena_id, question, option_a, option_b, option_c, option_d, correct_answer, marks, explanation)
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-                [quizId, m.question, m.option_a, m.option_b, m.option_c, m.option_d, m.correct_answer, m.marks || 1, m.explanation]
+                [id, m.question, m.option_a, m.option_b, m.option_c, m.option_d, m.correct_answer, m.marks || 1, m.explanation]
               );
             }
           }
@@ -375,24 +365,21 @@ module.exports = (authMiddleware) => {
       }
 
       const reqLang = language.toLowerCase();
-      let executionMode = 'local';
-      let compiler = 'python'; 
+      let executionMode = 'wandbox';
+      let compiler = 'cpython-3.12.7'; 
       
       if (reqLang === 'javascript' || reqLang === 'js') {
-        compiler = 'javascript';
+        compiler = 'nodejs-18.20.4';
       } else if (reqLang === 'python') {
-        compiler = 'python';
-      } else if (reqLang === 'c') {
-        compiler = 'c';
-      } else if (reqLang === 'c++' || reqLang === 'cpp') {
-        compiler = 'cpp';
-      } else if (reqLang === 'java') {
-        compiler = 'java';
-      } else if (reqLang === 'php') {
-        compiler = 'php';
-      } else {
-        executionMode = 'wandbox';
         compiler = 'cpython-3.12.7';
+      } else if (reqLang === 'c') {
+        compiler = 'clang-15.0.7-c';
+      } else if (reqLang === 'c++' || reqLang === 'cpp') {
+        compiler = 'clang-15.0.7';
+      } else if (reqLang === 'java') {
+        compiler = 'openjdk-jdk-22+36';
+      } else if (reqLang === 'php') {
+        compiler = 'php-7.4.33';
       }
 
       let passedCount = 0;
@@ -415,7 +402,7 @@ module.exports = (authMiddleware) => {
           } else if (compiler === 'cpp') {
             fileName = 'main.cpp'; dockerImage = 'gcc:latest'; compileCmd = 'g++ main.cpp -o out 2> compile_error.txt'; runCmdTemplate = './out < input_IDX.txt > output_IDX.txt 2> error_IDX.txt';
           } else if (compiler === 'java') {
-            fileName = 'Main.java'; dockerImage = 'eclipse-temurin:17-alpine'; compileCmd = 'javac Main.java 2> compile_error.txt'; runCmdTemplate = 'java Main < input_IDX.txt > output_IDX.txt 2> error_IDX.txt';
+            fileName = 'Main.java'; dockerImage = 'eclipse-temurin:17-jdk'; compileCmd = 'javac Main.java 2> compile_error.txt'; runCmdTemplate = 'java Main < input_IDX.txt > output_IDX.txt 2> error_IDX.txt';
           } else if (compiler === 'php') {
             fileName = 'script.php'; dockerImage = 'php:8.2-cli-alpine'; runCmdTemplate = 'php script.php < input_IDX.txt > output_IDX.txt 2> error_IDX.txt';
           }
@@ -531,7 +518,7 @@ module.exports = (authMiddleware) => {
         console.log('DEBUG 526 params:', { userId, arenaId, type: 'CODING', coding_question_id });
         console.log('DEBUG types:', { userId: typeof userId, arenaId: typeof arenaId, coding: typeof coding_question_id });
         const existing = await pool.query(
-          'SELECT id FROM practice_submissions WHERE student_id = $1 AND practice_arena_id = $2 AND submission_type = $3 AND coding_question_id = $4',
+          'SELECT ps.id FROM practice_submissions ps JOIN coding_submissions cs ON ps.id = cs.practice_submission_id WHERE ps.student_id = $1 AND ps.practice_arena_id = $2 AND ps.submission_type = $3 AND cs.coding_question_id = $4',
           [userId, arenaId, 'CODING', coding_question_id]
         );
 
@@ -548,9 +535,9 @@ module.exports = (authMiddleware) => {
           );
         } else {
           const pSub = await pool.query(
-            `INSERT INTO practice_submissions (student_id, practice_arena_id, submission_type, score, status, coding_question_id)
-             VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-            [userId, arenaId, 'CODING', score, 'COMPLETED', coding_question_id]
+            `INSERT INTO practice_submissions (student_id, practice_arena_id, submission_type, score, status)
+             VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+            [userId, arenaId, 'CODING', score, 'COMPLETED']
           );
           pSubId = pSub.rows[0].id;
           await pool.query(
@@ -576,8 +563,8 @@ module.exports = (authMiddleware) => {
 
     try {
       const existing = await pool.query(
-        'SELECT id, status FROM practice_submissions WHERE student_id = $1 AND practice_arena_id = $2 AND practice_quiz_id = $3 AND submission_type = $4',
-        [userId, arenaId, quizId, 'MCQ']
+        'SELECT id, status FROM practice_submissions WHERE student_id = $1 AND practice_arena_id = $2 AND submission_type = $3',
+        [userId, arenaId, 'MCQ']
       );
 
       if (existing.rows.length > 0) {
@@ -586,14 +573,14 @@ module.exports = (authMiddleware) => {
           return res.json({ message: 'Ignored auto-save' });
         }
         await pool.query(
-          'UPDATE practice_submissions SET score = $1, mcq_answers = $2, status = $3, submitted_at = NOW() WHERE student_id = $4 AND practice_arena_id = $5 AND practice_quiz_id = $6 AND submission_type = $7',
-          [score, JSON.stringify(mcqAnswers), status, userId, arenaId, quizId, 'MCQ']
+          'UPDATE practice_submissions SET score = $1, status = $2, submitted_at = NOW() WHERE student_id = $3 AND practice_arena_id = $4 AND submission_type = $5',
+          [score, 'COMPLETED', userId, arenaId, 'MCQ']
         );
       } else {
         await pool.query(
-          `INSERT INTO practice_submissions (student_id, practice_arena_id, practice_quiz_id, submission_type, score, mcq_answers, status)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-          [userId, arenaId, quizId, 'MCQ', score, JSON.stringify(mcqAnswers), status]
+          `INSERT INTO practice_submissions (student_id, practice_arena_id, submission_type, score, status)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [userId, arenaId, 'MCQ', score, 'COMPLETED']
         );
       }
       res.json({ message: 'MCQ answers saved' });

@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../api';
-import { CheckCircle2, Zap, CreditCard, Calendar, Clock, ArrowRight } from 'lucide-react';
+import { 
+    CreditCard, CheckCircle2, Zap, AlertTriangle, ChevronRight, X, User,
+    LayoutDashboard, Users, UserPlus, ShieldAlert, BadgeInfo, Calendar, Clock, ArrowRight
+} from 'lucide-react';
 import PaymentGatewayModal from '../../../components/PaymentGatewayModal';
 
 const InstituteSubscriptions = () => {
@@ -107,9 +110,15 @@ const InstituteSubscriptions = () => {
                                 <div>
                                     <h2 className="text-xl font-black text-blue-950">{activeSubscription.plan_name}</h2>
                                     <div className="flex items-center gap-3 mt-2">
-                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-100">
-                                            <CheckCircle2 className="w-3 h-3" /> ACTIVE
-                                        </span>
+                                        {activeSubscription.status === 'revoked' ? (
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-rose-50 text-rose-700 text-xs font-bold border border-rose-100">
+                                                <AlertTriangle className="w-3 h-3" /> SUSPENDED
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-100">
+                                                <CheckCircle2 className="w-3 h-3" /> ACTIVE
+                                            </span>
+                                        )}
                                         <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
                                             Auto-renews on {new Date(activeSubscription.end_date).toLocaleDateString()}
                                         </span>
@@ -187,8 +196,10 @@ const InstituteSubscriptions = () => {
                             <h3 className="text-sm font-bold text-blue-950">Payment Details</h3>
                         </div>
                         {activeSubscription ? (
-                            <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
-                                <p className="text-sm font-bold text-blue-950">{activeSubscription.plan_name} ending in {calculateDaysLeft(activeSubscription.end_date)} days</p>
+                            <div className={`border rounded-xl p-4 ${activeSubscription.status === 'revoked' ? 'bg-rose-50 border-rose-100' : 'bg-slate-50 border-slate-100'}`}>
+                                <p className={`text-sm font-bold ${activeSubscription.status === 'revoked' ? 'text-rose-950' : 'text-blue-950'}`}>
+                                    {activeSubscription.plan_name} {activeSubscription.status === 'revoked' ? '(Suspended)' : `ending in ${calculateDaysLeft(activeSubscription.end_date)} days`}
+                                </p>
                                 <p className="text-xs text-slate-500 mt-1">Expires {new Date(activeSubscription.end_date).toLocaleDateString()}</p>
                             </div>
                         ) : (

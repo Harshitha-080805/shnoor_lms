@@ -92,149 +92,233 @@ function Register(){
   };
 
   return(
-    <div className="h-screen grid lg:grid-cols-2 bg-white overflow-hidden font-sans">
+    <div className="min-h-screen flex flex-col lg:flex-row font-sans bg-[#EFEAE2]">
       {/* LEFT PANEL */}
-      <div className="hidden lg:flex h-screen sticky top-0 bg-blue-950 text-white flex-col justify-between p-16 relative">
-        <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#eab308 1px, transparent 1px)', backgroundSize: '32px 32px' }}></div>
-        <div className="flex items-center gap-4 relative z-10">
-          <div className="bg-white p-1.5 rounded-xl shadow-sm">
-            <img src={logo} alt="SHNOOR" className="h-12 w-auto"/>
+      <div className="hidden lg:flex lg:w-[45%] bg-[#0F2F2B] text-white flex-col p-12 lg:p-16 xl:p-20 justify-between h-screen sticky top-0 shadow-2xl z-10">
+        <div className="flex items-center gap-4 mb-12 lg:mb-16">
+          <div className="bg-white p-1 rounded shadow-sm">
+            <img src={logo} alt="SHNOOR" className="h-10 w-auto" />
           </div>
           <div>
-            <h1 className="text-3xl font-black tracking-tight">SHNOOR LMS</h1>
-            <p className="text-yellow-400 font-bold mt-1 text-sm tracking-wide uppercase">Professional LMS Platform</p>
+            <h1 className="text-2xl font-bold tracking-tight text-yellow-500">SHNOOR <span className="text-white">LMS</span></h1>
+            <p className="text-slate-300 text-xs mt-0.5">Smart Learning, Better Future</p>
           </div>
         </div>
-        <div className="max-w-xl relative z-10">
-          <h2 className="text-6xl font-black leading-tight">Join our learning <span className="text-yellow-400">community.</span></h2>
-          <p className="mt-8 text-xl text-blue-100 leading-relaxed font-medium">Create a learner, instructor or organization account to experience a professional LMS.</p>
+        
+        <div className="mb-10">
+          <h2 className="text-3xl lg:text-4xl font-bold mb-4">Join our community</h2>
+          <p className="text-slate-300 text-sm lg:text-base">Create an account to start your learning journey.</p>
         </div>
-        <div className="text-blue-200 text-sm font-medium relative z-10">© 2026 SHNOOR International LLC</div>
+        
+        <div className="space-y-6 lg:space-y-8 mb-12 flex-1 flex flex-col justify-center">
+          <div className="flex items-center gap-4 lg:gap-6">
+            <div className="w-12 h-12 rounded-lg bg-[#163935] border border-emerald-900/50 flex items-center justify-center shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-500"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+            </div>
+            <p className="text-sm lg:text-base text-slate-200 leading-snug">Access your courses<br/>anytime, anywhere</p>
+          </div>
+          <div className="flex items-center gap-4 lg:gap-6">
+            <div className="w-12 h-12 rounded-lg bg-[#163935] border border-emerald-900/50 flex items-center justify-center shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-500"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+            </div>
+            <p className="text-sm lg:text-base text-slate-200 leading-snug">Track your progress<br/>and performance</p>
+          </div>
+          <div className="flex items-center gap-4 lg:gap-6">
+            <div className="w-12 h-12 rounded-lg bg-[#163935] border border-emerald-900/50 flex items-center justify-center shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-500"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+            </div>
+            <p className="text-sm lg:text-base text-slate-200 leading-snug">Earn Certificates<br/>and achieve goals</p>
+          </div>
+        </div>
+        
+        <div className="mt-auto pt-8">
+          <div className="w-10 h-1 bg-yellow-600 mb-6"></div>
+          <p className="text-xs lg:text-sm text-slate-300 leading-relaxed pr-8 max-w-sm">
+            shnoor LMS is a powerful platform designed for institutes, instructors and students
+          </p>
+        </div>
       </div>
       
       {/* RIGHT PANEL (FORM) */}
-      <div className="h-screen overflow-y-auto flex justify-center px-8 lg:px-20 py-12 bg-slate-50 relative">
-        <div className="w-full max-w-md relative z-10 pb-16">
-          <div className="lg:hidden flex items-center gap-3 mb-12 mt-4">
-            <div className="bg-white p-1.5 rounded-lg shadow-sm border border-slate-100">
-              <img src={logo} alt="SHNOOR" className="h-10 w-auto"/>
-            </div>
-            <h1 className="text-2xl font-black tracking-tight text-blue-950">SHNOOR LMS</h1>
-          </div>
-          
-          <Link to="/" className="inline-flex items-center text-sm font-bold text-slate-500 hover:text-blue-950 transition-colors mb-8">
-            ← Back to Home
+      <div className="w-full lg:w-[55%] flex flex-col justify-center p-8 sm:p-12 lg:p-16 xl:p-24 min-h-screen">
+        <div className="max-w-xl w-full mx-auto">
+          <Link to="/" className="text-xs flex items-center gap-1.5 text-slate-600 hover:text-[#0F2F2B] mb-12 inline-flex font-medium transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+            Back to home
           </Link>
 
-          <h2 className="text-4xl lg:text-5xl font-black text-blue-950 leading-tight">Create account</h2>
-          <p className="text-slate-600 mt-4 text-lg font-medium">Join us and start your journey today.</p>
+          <div className="lg:hidden flex items-center gap-4 mb-8">
+            <div className="bg-white p-1 rounded shadow-sm">
+              <img src={logo} alt="SHNOOR" className="h-8 w-auto" />
+            </div>
+            <h1 className="text-xl font-bold tracking-tight text-[#0F2F2B]">SHNOOR LMS</h1>
+          </div>
+
+          <h2 className="text-3xl lg:text-4xl font-bold text-[#0F2F2B] mb-3">Create account</h2>
+          <p className="text-sm lg:text-base text-slate-600 mb-12">Join us and start your journey today.</p>
           
-          <form onSubmit={handleRegister} className="mt-10 grid gap-6">
+          <form onSubmit={handleRegister} className="flex flex-col gap-6">
             <div>
-              <label className={labelClass}>Select Role</label>
-              <select value={role} onChange={(e)=>setRole(e.target.value)} className={inputClass}>
-                <option>Learner</option>
-                <option>Instructor</option>
-                <option>Organization Admin</option>
-              </select>
-            </div>
-            <div>
-              <label className={labelClass}>Full Name</label>
-              <input type="text" placeholder="Enter your full name" value={name} onChange={(e)=>setName(e.target.value)} className={inputClass}/>
-            </div>
-            <div>
-              <label className={labelClass}>Email Address</label>
-              <input type="email" placeholder="Enter your email" value={email} onChange={(e)=>setEmail(e.target.value)} className={inputClass}/>
-            </div>
-            {role==="Learner"&&(
-              <>
-                <div className="pt-2 border-t border-slate-200">
-                  <label className={labelClass}>Learner Type</label>
-                  <select value={learnerType} onChange={(e)=>setLearnerType(e.target.value)} className={inputClass}>
-                    <option>Independent Learner</option>
-                    <option>Student</option>
-                    <option>Employee</option>
-                  </select>
+              <label className="text-sm font-bold text-[#0F2F2B] mb-3 block">Select Role</label>
+              <div className="relative">
+                <select value={role} onChange={(e)=>setRole(e.target.value)} className="w-full bg-[#FCFBF8] border border-[#DDD7CF] text-[#0F2F2B] rounded-lg py-3.5 pl-4 pr-10 outline-none focus:border-[#0F2F2B] focus:ring-1 focus:ring-[#0F2F2B] transition-all font-medium text-base appearance-none cursor-pointer">
+                  <option>Learner</option>
+                  <option>Instructor</option>
+                  <option>Organization Admin</option>
+                </select>
+                <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-600"><path d="m6 9 6 6 6-6"/></svg>
                 </div>
-                {learnerType==="Student"&&(
-                  <div className="grid gap-6 bg-blue-50/50 p-5 rounded-2xl border border-blue-100">
+              </div>
+            </div>
+            
+            <div>
+              <label className="text-sm font-bold text-[#0F2F2B] mb-3 block">Full Name</label>
+              <input type="text" placeholder="Full Name" value={name} onChange={(e)=>setName(e.target.value)} className="w-full bg-[#FCFBF8] border border-[#DDD7CF] placeholder-slate-400 text-[#0F2F2B] rounded-lg py-3.5 px-4 outline-none focus:border-[#0F2F2B] focus:ring-1 focus:ring-[#0F2F2B] transition-all font-medium text-base" />
+            </div>
+
+            {role === "Learner" && (
+              <>
+                <div className="pt-2 border-t border-[#0F2F2B]/10">
+                  <label className="text-sm font-bold text-[#0F2F2B] mb-2 block">Learner Type</label>
+                  <div className="relative">
+                    <select value={learnerType} onChange={(e)=>setLearnerType(e.target.value)} className="w-full bg-[#FCFBF8] border border-[#DDD7CF] text-[#0F2F2B] rounded-lg py-3 pl-4 pr-10 outline-none focus:border-[#0F2F2B] focus:ring-1 focus:ring-[#0F2F2B] transition-all font-medium text-sm appearance-none cursor-pointer">
+                      <option>Independent Learner</option>
+                      <option>Student</option>
+                      <option>Employee</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-600"><path d="m6 9 6 6 6-6"/></svg>
+                    </div>
+                  </div>
+                </div>
+                {learnerType === "Student" && (
+                  <div className="flex flex-col gap-4 bg-[#FCFBF8] p-4 rounded-xl border border-[#DDD7CF] mt-1 border-dashed">
                     <div>
-                      <label className={labelClass}>Organization Code <span className="text-slate-400 font-normal">(Optional)</span></label>
-                      <input type="text" placeholder="Enter organization code" value={organizationCode} onChange={(e)=>setOrganizationCode(e.target.value)} className={inputClass}/>
+                      <label className="text-sm font-bold text-[#0F2F2B] mb-2 block">Organization Code <span className="text-slate-500 font-normal">(Optional)</span></label>
+                      <input type="text" placeholder="Enter organization code" value={organizationCode} onChange={(e)=>setOrganizationCode(e.target.value)} className="w-full bg-white border border-[#DDD7CF] placeholder-slate-400 text-[#0F2F2B] rounded-lg py-2.5 px-4 outline-none focus:border-[#0F2F2B] focus:ring-1 focus:ring-[#0F2F2B] transition-all font-medium text-sm" />
                     </div>
                     <div>
-                      <label className={labelClass}>Roll Number <span className="text-slate-400 font-normal">(Optional)</span></label>
-                      <input type="text" placeholder="Enter roll number" value={rollNumber} onChange={(e)=>setRollNumber(e.target.value)} className={inputClass}/>
+                      <label className="text-sm font-bold text-[#0F2F2B] mb-2 block">Roll Number <span className="text-slate-500 font-normal">(Optional)</span></label>
+                      <input type="text" placeholder="Enter roll number" value={rollNumber} onChange={(e)=>setRollNumber(e.target.value)} className="w-full bg-white border border-[#DDD7CF] placeholder-slate-400 text-[#0F2F2B] rounded-lg py-2.5 px-4 outline-none focus:border-[#0F2F2B] focus:ring-1 focus:ring-[#0F2F2B] transition-all font-medium text-sm" />
                     </div>
                   </div>
                 )}
-                {learnerType==="Employee"&&(
-                  <div className="grid gap-6 bg-blue-50/50 p-5 rounded-2xl border border-blue-100">
+                {learnerType === "Employee" && (
+                  <div className="flex flex-col gap-4 bg-[#FCFBF8] p-4 rounded-xl border border-[#DDD7CF] mt-1 border-dashed">
                     <div>
-                      <label className={labelClass}>Organization Code <span className="text-slate-400 font-normal">(Optional)</span></label>
-                      <input type="text" placeholder="Enter organization code" value={organizationCode} onChange={(e)=>setOrganizationCode(e.target.value)} className={inputClass}/>
+                      <label className="text-sm font-bold text-[#0F2F2B] mb-2 block">Organization Code <span className="text-slate-500 font-normal">(Optional)</span></label>
+                      <input type="text" placeholder="Enter organization code" value={organizationCode} onChange={(e)=>setOrganizationCode(e.target.value)} className="w-full bg-white border border-[#DDD7CF] placeholder-slate-400 text-[#0F2F2B] rounded-lg py-2.5 px-4 outline-none focus:border-[#0F2F2B] focus:ring-1 focus:ring-[#0F2F2B] transition-all font-medium text-sm" />
                     </div>
                     <div>
-                      <label className={labelClass}>Employee ID <span className="text-slate-400 font-normal">(Optional)</span></label>
-                      <input type="text" placeholder="Enter employee ID" value={employeeId} onChange={(e)=>setEmployeeId(e.target.value)} className={inputClass}/>
+                      <label className="text-sm font-bold text-[#0F2F2B] mb-2 block">Employee ID <span className="text-slate-500 font-normal">(Optional)</span></label>
+                      <input type="text" placeholder="Enter employee ID" value={employeeId} onChange={(e)=>setEmployeeId(e.target.value)} className="w-full bg-white border border-[#DDD7CF] placeholder-slate-400 text-[#0F2F2B] rounded-lg py-2.5 px-4 outline-none focus:border-[#0F2F2B] focus:ring-1 focus:ring-[#0F2F2B] transition-all font-medium text-sm" />
                     </div>
                   </div>
                 )}
               </>
             )}
-            {role==="Instructor"&&(
-              <div className="grid gap-6 bg-blue-50/50 p-5 rounded-2xl border border-blue-100">
-                <div>
-                  <label className={labelClass}>Organization Code <span className="text-slate-400 font-normal">(Optional)</span></label>
-                  <input type="text" placeholder="Enter organization code" value={organizationCode} onChange={(e)=>setOrganizationCode(e.target.value)} className={inputClass}/>
-                </div>
-                <div>
-                  <label className={labelClass}>Employee ID <span className="text-slate-400 font-normal">(Optional)</span></label>
-                  <input type="text" placeholder="Enter employee ID" value={employeeId} onChange={(e)=>setEmployeeId(e.target.value)} className={inputClass}/>
-                </div>
-              </div>
-            )}
-            {role==="Organization Admin"&&(
-              <div className="grid gap-6 bg-blue-50/50 p-5 rounded-2xl border border-blue-100">
-                <div>
-                  <label className={labelClass}>Organization Type</label>
-                  <select value={organizationType} onChange={(e)=>setOrganizationType(e.target.value)} className={inputClass}>
-                    <option>Company</option>
-                    <option>Institute</option>
-                  </select>
-                </div>
-                <div>
-                  <label className={labelClass}>Organization Name</label>
-                  <input type="text" placeholder="Enter organization name" value={organizationName} onChange={(e)=>setOrganizationName(e.target.value)} className={inputClass}/>
-                </div>
-                <div>
-                  <label className={labelClass}>Organization Code</label>
-                  <input type="text" placeholder="Enter organization code" value={organizationCode} onChange={(e)=>setOrganizationCode(e.target.value)} className={inputClass}/>
-                </div>
-                <div>
-                  <label className={labelClass}>Location</label>
-                  <input type="text" placeholder="Enter location" value={organizationLocation} onChange={(e)=>setOrganizationLocation(e.target.value)} className={inputClass}/>
-                </div>
-                <div>
-                  <label className={labelClass}>Website <span className="text-slate-400 font-normal">(Optional)</span></label>
-                  <input type="text" placeholder="Enter website URL" value={website} onChange={(e)=>setWebsite(e.target.value)} className={inputClass}/>
+
+            {role === "Instructor" && (
+              <div className="bg-[#FCFBF8] border border-[#DDD7CF] p-5 rounded-xl border-dashed mt-1">
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <label className="text-sm font-bold text-[#0F2F2B] mb-2 block">Organization Code <span className="text-slate-500 font-normal">(Optional)</span></label>
+                    <input type="text" placeholder="Enter organization code" value={organizationCode} onChange={(e)=>setOrganizationCode(e.target.value)} className="w-full bg-white border border-[#DDD7CF] placeholder-slate-400 text-[#0F2F2B] rounded-lg py-2.5 px-4 outline-none focus:border-[#0F2F2B] focus:ring-1 focus:ring-[#0F2F2B] transition-all font-medium text-sm" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-bold text-[#0F2F2B] mb-2 block">Employee ID <span className="text-slate-500 font-normal">(Optional)</span></label>
+                    <input type="text" placeholder="Enter employee ID" value={employeeId} onChange={(e)=>setEmployeeId(e.target.value)} className="w-full bg-white border border-[#DDD7CF] placeholder-slate-400 text-[#0F2F2B] rounded-lg py-2.5 px-4 outline-none focus:border-[#0F2F2B] focus:ring-1 focus:ring-[#0F2F2B] transition-all font-medium text-sm" />
+                  </div>
                 </div>
               </div>
             )}
-            <div className="pt-2 border-t border-slate-200">
-              <label className={labelClass}>Password</label>
-              <input type="password" placeholder="Create password" value={password} onChange={(e)=>setPassword(e.target.value)} className={inputClass}/>
-            </div>
+
+            {role === "Organization Admin" && (
+              <div className="flex flex-col gap-4 bg-[#FCFBF8] p-5 rounded-xl border border-[#DDD7CF] mt-1 border-dashed">
+                <h3 className="font-bold text-[#0F2F2B] mb-2 flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-600"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/></svg>
+                  Organization Details
+                </h3>
+                <div>
+                  <label className="text-sm font-bold text-[#0F2F2B] mb-2 block">Organization Type</label>
+                  <div className="relative">
+                    <select value={organizationType} onChange={(e)=>setOrganizationType(e.target.value)} className="w-full bg-white border border-[#DDD7CF] text-[#0F2F2B] rounded-lg py-2.5 pl-4 pr-10 outline-none focus:border-[#0F2F2B] focus:ring-1 focus:ring-[#0F2F2B] transition-all font-medium text-sm appearance-none cursor-pointer">
+                      <option>Company</option>
+                      <option>Institute</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-600"><path d="m6 9 6 6 6-6"/></svg>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-bold text-[#0F2F2B] mb-2 block">Organization Name</label>
+                    <input type="text" placeholder="Enter organization name" value={organizationName} onChange={(e)=>setOrganizationName(e.target.value)} className="w-full bg-white border border-[#DDD7CF] placeholder-slate-400 text-[#0F2F2B] rounded-lg py-2.5 px-4 outline-none focus:border-[#0F2F2B] focus:ring-1 focus:ring-[#0F2F2B] transition-all font-medium text-sm" />
+                  </div>
+                  <div>
+                    <label className="text-sm font-bold text-[#0F2F2B] mb-2 block">Organization Code</label>
+                    <input type="text" placeholder="Enter organization code" value={organizationCode} onChange={(e)=>setOrganizationCode(e.target.value)} className="w-full bg-white border border-[#DDD7CF] placeholder-slate-400 text-[#0F2F2B] rounded-lg py-2.5 px-4 outline-none focus:border-[#0F2F2B] focus:ring-1 focus:ring-[#0F2F2B] transition-all font-medium text-sm" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-bold text-[#0F2F2B] mb-2 block">Location</label>
+                  <input type="text" placeholder="Enter location" value={organizationLocation} onChange={(e)=>setOrganizationLocation(e.target.value)} className="w-full bg-white border border-[#DDD7CF] placeholder-slate-400 text-[#0F2F2B] rounded-lg py-2.5 px-4 outline-none focus:border-[#0F2F2B] focus:ring-1 focus:ring-[#0F2F2B] transition-all font-medium text-sm" />
+                </div>
+                <div>
+                  <label className="text-sm font-bold text-[#0F2F2B] mb-2 block">Website <span className="text-slate-500 font-normal">(Optional)</span></label>
+                  <input type="text" placeholder="Enter website URL" value={website} onChange={(e)=>setWebsite(e.target.value)} className="w-full bg-white border border-[#DDD7CF] placeholder-slate-400 text-[#0F2F2B] rounded-lg py-2.5 px-4 outline-none focus:border-[#0F2F2B] focus:ring-1 focus:ring-[#0F2F2B] transition-all font-medium text-sm" />
+                </div>
+              </div>
+            )}
+
+            <div className="pt-2 border-t border-[#0F2F2B]/10"></div>
+
             <div>
-              <label className={labelClass}>Confirm Password</label>
-              <input type="password" placeholder="Confirm password" value={confirmPassword} onChange={(e)=>setConfirmPassword(e.target.value)} className={inputClass}/>
+              <label className="text-sm font-bold text-[#0F2F2B] mb-3 block">Email Address</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#0F2F2B]"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                </div>
+                <input type="email" placeholder="Email Address" value={email} onChange={(e)=>setEmail(e.target.value)} className="w-full bg-[#FCFBF8] border border-[#DDD7CF] placeholder-slate-400 text-[#0F2F2B] rounded-lg py-3.5 pl-12 pr-4 outline-none focus:border-[#0F2F2B] focus:ring-1 focus:ring-[#0F2F2B] transition-all font-medium text-base" />
+              </div>
             </div>
-            <button type="submit" className="bg-yellow-500 hover:bg-yellow-400 transition-colors text-blue-950 py-4 rounded-xl font-black text-lg shadow-[0_4px_20px_-4px_rgba(234,179,8,0.5)] hover:-translate-y-0.5 mt-4">Complete Registration</button>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+              <div>
+                <label className="text-sm font-bold text-[#0F2F2B] mb-3 block">Password</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#0F2F2B]"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  </div>
+                  <input type="password" placeholder="Password" value={password} onChange={(e)=>setPassword(e.target.value)} className="w-full bg-[#FCFBF8] border border-[#DDD7CF] placeholder-slate-400 text-[#0F2F2B] rounded-lg py-3.5 pl-12 pr-4 outline-none focus:border-[#0F2F2B] focus:ring-1 focus:ring-[#0F2F2B] transition-all font-medium text-base" />
+                </div>
+              </div>
+              
+              <div>
+                <label className="text-sm font-bold text-[#0F2F2B] mb-3 block">Confirm Password</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#0F2F2B]"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  </div>
+                  <input type="password" placeholder="Confirm Password" value={confirmPassword} onChange={(e)=>setConfirmPassword(e.target.value)} className="w-full bg-[#FCFBF8] border border-[#DDD7CF] placeholder-slate-400 text-[#0F2F2B] rounded-lg py-3.5 pl-12 pr-4 outline-none focus:border-[#0F2F2B] focus:ring-1 focus:ring-[#0F2F2B] transition-all font-medium text-base" />
+                </div>
+              </div>
+            </div>
+            
+            <button type="submit" className="w-full bg-[#0F2F2B] hover:bg-[#123A38] text-white py-4 rounded-lg font-bold flex items-center justify-center gap-2 mt-4 shadow-lg transition-transform hover:-translate-y-0.5 text-base">
+              Create Account <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </button>
           </form>
-          <p className="mt-10 text-center text-slate-600 font-medium">Already have an account? <Link to="/login" className="text-blue-950 hover:text-blue-700 transition-colors font-black ml-1">Login here</Link></p>
+          
+          <div className="mt-8 text-center text-sm font-medium text-slate-600 pb-4">
+            Already have an account? <Link to="/login" className="text-[#0F2F2B] hover:text-[#123A38] font-bold ml-1">Login here</Link>
+          </div>
         </div>
       </div>
     </div>
+  
   );
 }
 export default Register;

@@ -33,10 +33,10 @@ function InstructorOverview() {
         const activeStudents = coursesList.reduce((acc, c) => acc + (parseInt(c.enrollments_count) || 0), 0);
         const pendingSubmissions = subsList.filter(s => !s.is_graded).length;
         setStats([
-          { label: "Total Courses", value: totalCourses.toString(), icon: <BookOpen className="text-blue-950" size={24} />, bgColor: "bg-blue-50" },
-          { label: "Active Students", value: activeStudents.toString(), icon: <Users className="text-blue-950" size={24} />, bgColor: "bg-blue-50" },
-          { label: "Pending Assignments", value: pendingSubmissions.toString(), icon: <Clock className="text-blue-950" size={24} />, bgColor: "bg-blue-50" },
-          { label: "Unread Messages", value: "0", icon: <AlertCircle className="text-blue-950" size={24} />, bgColor: "bg-blue-50" },
+          { label: "Total Courses", value: totalCourses.toString(), icon: <BookOpen className="text-white" size={24} />, bgColor: "bg-sky-500" },
+          { label: "Active Students", value: activeStudents.toString(), icon: <Users className="text-white" size={24} />, bgColor: "bg-teal-500" },
+          { label: "Pending Assignments", value: pendingSubmissions.toString(), icon: <Clock className="text-white" size={24} />, bgColor: "bg-amber-500" },
+          { label: "Unread Messages", value: "0", icon: <AlertCircle className="text-white" size={24} />, bgColor: "bg-rose-500" },
         ]);
         
         const courseCompletions = studentsList.filter(e => {
@@ -86,11 +86,11 @@ function InstructorOverview() {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             {stats.map((stat, idx) => (
-              <div key={idx} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] flex items-center gap-5 hover:shadow-md transition-shadow">
+              <div key={idx} className="bg-blue-950 p-5 rounded-2xl border border-blue-900 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] flex items-center gap-5 hover:shadow-md transition-shadow">
                 <div className={`p-4 rounded-xl ${stat.bgColor}`}>{stat.icon}</div>
                 <div className="flex flex-col">
-                  <p className="text-xs font-semibold text-slate-500 mb-0.5">{stat.label}</p>
-                  <h3 className="text-2xl font-bold text-slate-900 leading-tight">{stat.value}</h3>
+                  <p className="text-xs font-semibold text-blue-200 mb-0.5">{stat.label}</p>
+                  <h3 className="text-2xl font-bold text-white leading-tight">{stat.value}</h3>
                 </div>
               </div>
             ))}

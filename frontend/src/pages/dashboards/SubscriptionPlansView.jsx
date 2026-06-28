@@ -123,7 +123,7 @@ function SubscriptionPlansView() {
           <div key={plan.id} className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm flex flex-col hover:shadow-md transition-shadow">
             <div className="mb-4 flex justify-between items-center">
               <span className="inline-block px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-black uppercase tracking-widest border border-blue-100">
-                {plan.plan_type.toUpperCase()}
+                {(plan.plan_type || 'learner').toUpperCase()}
               </span>
               <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">{plan.billing_cycle}</span>
             </div>

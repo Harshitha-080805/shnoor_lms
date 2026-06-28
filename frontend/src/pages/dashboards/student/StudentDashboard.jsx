@@ -16,6 +16,8 @@ import {
   Bell,
   Trophy,
   User,
+  TrendingUp,
+  FileCheck,
 } from "lucide-react";
 
 const isTokenValid = (t) => {
@@ -40,8 +42,9 @@ function StudentDashboard() {
     { name: "My Courses", path: "/student-dashboard/courses", icon: <BookOpen size={20} /> },
     { name: "Quizzes", path: "/student-dashboard/quizzes", icon: <ClipboardList size={20} /> },
     { name: "Assignments", path: "/student-dashboard/assignments", icon: <FileText size={20} /> },
+    { name: "Exams", path: "/student-dashboard/exams", icon: <FileCheck size={20} /> },
     { name: "Practice Arena", path: "/student-dashboard/practice-arena", icon: <Target size={20} /> },
-    { name: "Progress Tracker", path: "/student-dashboard/progress", icon: <Target size={20} /> },
+    { name: "Progress Tracker", path: "/student-dashboard/progress", icon: <TrendingUp size={20} /> },
     { name: "Certificates", path: "/student-dashboard/certificates", icon: <Award size={20} /> },
     { name: "Subscription", path: "/student-dashboard/subscription", icon: <CreditCard size={20} /> },
     { name: "Leaderboards", path: "/student-dashboard/leaderboards", icon: <Trophy size={20} /> },
@@ -169,7 +172,7 @@ function StudentDashboard() {
         
       </aside>
       <main className="ml-60 flex-1 flex flex-col min-h-screen">
-        <header className="bg-white px-8 py-4 border-b border-slate-200 flex justify-between items-center sticky top-0 z-10">
+        <header className="bg-white px-8 py-4 border-b border-slate-200 flex justify-between items-center sticky top-0 z-50">
           <div className="flex flex-col">
             <h2 className="text-xl font-bold text-slate-800 tracking-tight">
               {getPageTitle()}

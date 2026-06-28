@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import logo from "../../assets/shnoor-logo.jpeg";
 import api from '../../api';
@@ -22,12 +22,24 @@ import SuperAdminReports from "./SuperAdminReports";
 function AdminDashboard() {
   const navigate = useNavigate();
   const [activePage, setActivePage] = useState("Overview");
+  const [approvedAccountsSort, setApprovedAccountsSort] = useState("Newest");
+  const [manageCoursesSort, setManageCoursesSort] = useState("Newest");
+  const [userManagementSort, setUserManagementSort] = useState("Newest");
+  const [paymentsSort, setPaymentsSort] = useState("Newest");
+  const [certificatesSort, setCertificatesSort] = useState("Newest");
   const [pendingUsers, setPendingUsers] = useState([]);
   const [approvedUsers, setApprovedUsers] = useState([]);
   const [pendingCourses, setPendingCourses] = useState([]);
   const [approvedCourses, setApprovedCourses] = useState([]);
   const [pendingCertificates, setPendingCertificates] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [contactQueries, setContactQueries] = useState([]);
+  const [selectedQueryGroup, setSelectedQueryGroup] = useState(null);
+  const [replyText, setReplyText] = useState('');
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [isReplying, setIsReplying] = useState(false);
+  const [contactSearch, setContactSearch] = useState('');
+  const [contactSort, setContactSort] = useState('Newest');
   const [unreadCount, setUnreadCount] = useState(0);
   const [profilePic, setProfilePic] = useState(sessionStorage.getItem("profile_pic"));
   const location = useLocation();
@@ -118,6 +130,26 @@ function AdminDashboard() {
       })
       .catch(() => { });
   };
+  const fetchContactQueries = () => {
+    api.get('/api/contact')
+      .then(res => setContactQueries(res.data))
+      .catch(() => {});
+  };
+  const handleReplySubmit = async (queryId) => {
+    if (!replyText.trim()) return;
+    setIsReplying(true);
+    try {
+      await api.post(`/api/contact/${queryId}/reply`, { replyMessage: replyText });
+      setReplyText('');
+      setReplyingTo(null);
+      fetchContactQueries();
+      alert('Reply sent successfully!');
+    } catch (err) {
+      alert('Failed to send reply. Please try again.');
+    } finally {
+      setIsReplying(false);
+    }
+  };
   useEffect(() => {
     const token = sessionStorage.getItem("access");
     const role = sessionStorage.getItem("role");
@@ -138,6 +170,7 @@ function AdminDashboard() {
       loadApprovedCourses();
       loadPendingCertificates();
       loadPayments();
+      fetchContactQueries();
     }
   }, [navigate, activePage]);
   const approveUser = (email) => {
@@ -257,8 +290,10 @@ function AdminDashboard() {
       <TabbedSection
         activeTitle="Approved Courses"
         pendingTitle="Pending Courses"
-        activeData={approvedCourses}
-        pendingData={pendingCourses}
+        activeData={sortedApprovedCourses}
+        pendingData={sortedPendingCourses}
+        sortOption={manageCoursesSort}
+        setSortOption={setManageCoursesSort}
         typeName="Courses"
         renderActiveTable={(data) => (
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -363,7 +398,20 @@ function AdminDashboard() {
   };
   const renderCertificatesView = () => {
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-fade-in-up">
+        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white gap-4">
+          <h3 className="text-lg font-extrabold text-slate-800 tracking-tight whitespace-nowrap">Certificate Requests</h3>
+          <select
+            value={certificatesSort}
+            onChange={(e) => setCertificatesSort(e.target.value)}
+            className="px-3 py-2 bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+          >
+            <option value="Newest">Sort by: Newest</option>
+            <option value="Oldest">Sort by: Oldest</option>
+            <option value="Student A-Z">Student A-Z</option>
+            <option value="Student Z-A">Student Z-A</option>
+          </select>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead className="bg-slate-50 border-b border-slate-200">
@@ -375,7 +423,7 @@ function AdminDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {pendingCertificates.length === 0 ? (
+              {sortedCertificates.length === 0 ? (
                 <tr>
                   <td colSpan="4" className="text-center py-16">
                     <div className="flex flex-col items-center justify-center text-center">
@@ -387,7 +435,7 @@ function AdminDashboard() {
                   </td>
                 </tr>
               ) : (
-                pendingCertificates.map((c, index) => (
+                sortedCertificates.map((c, index) => (
                   <tr key={index} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
@@ -469,6 +517,52 @@ function AdminDashboard() {
   const allApprovedAccounts = approvedUsers.filter(
     (user) => user.role !== "Super Admin"
   );
+  
+  const sortedApprovedAccounts = React.useMemo(() => {
+    let dataCopy = [...(allApprovedAccounts || [])].filter(Boolean);
+    if (approvedAccountsSort === "Newest") return dataCopy.sort((a,b) => new Date(b?.created_at || 0) - new Date(a?.created_at || 0));
+    if (approvedAccountsSort === "Oldest") return dataCopy.sort((a,b) => new Date(a?.created_at || 0) - new Date(b?.created_at || 0));
+    if (approvedAccountsSort === "Title A-Z") return dataCopy.sort((a,b) => ((a?.name || a?.full_name || '').localeCompare(b?.name || b?.full_name || '')));
+    if (approvedAccountsSort === "Title Z-A") return dataCopy.sort((a,b) => ((b?.name || b?.full_name || '').localeCompare(a?.name || a?.full_name || '')));
+    return dataCopy;
+  }, [allApprovedAccounts, approvedAccountsSort]);
+
+  const sortedApprovedCourses = React.useMemo(() => {
+    let dataCopy = [...(approvedCourses || [])].filter(Boolean);
+    if (manageCoursesSort === "Newest") return dataCopy.sort((a,b) => new Date(b?.created_at || 0) - new Date(a?.created_at || 0));
+    if (manageCoursesSort === "Oldest") return dataCopy.sort((a,b) => new Date(a?.created_at || 0) - new Date(b?.created_at || 0));
+    if (manageCoursesSort === "Title A-Z") return dataCopy.sort((a,b) => ((a?.title || '').localeCompare(b?.title || '')));
+    if (manageCoursesSort === "Title Z-A") return dataCopy.sort((a,b) => ((b?.title || '').localeCompare(a?.title || '')));
+    return dataCopy;
+  }, [approvedCourses, manageCoursesSort]);
+
+  const sortedPendingCourses = React.useMemo(() => {
+    let dataCopy = [...(pendingCourses || [])].filter(Boolean);
+    if (manageCoursesSort === "Newest") return dataCopy.sort((a,b) => new Date(b?.created_at || 0) - new Date(a?.created_at || 0));
+    if (manageCoursesSort === "Oldest") return dataCopy.sort((a,b) => new Date(a?.created_at || 0) - new Date(b?.created_at || 0));
+    if (manageCoursesSort === "Title A-Z") return dataCopy.sort((a,b) => ((a?.title || '').localeCompare(b?.title || '')));
+    if (manageCoursesSort === "Title Z-A") return dataCopy.sort((a,b) => ((b?.title || '').localeCompare(a?.title || '')));
+    return dataCopy;
+  }, [pendingCourses, manageCoursesSort]);
+
+  const sortedCertificates = React.useMemo(() => {
+    let dataCopy = [...(pendingCertificates || [])].filter(Boolean);
+    if (certificatesSort === "Newest") return dataCopy.sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    if (certificatesSort === "Oldest") return dataCopy.sort((a,b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+    if (certificatesSort === "Student A-Z") return dataCopy.sort((a,b) => (a.student_name||'').localeCompare(b.student_name||''));
+    if (certificatesSort === "Student Z-A") return dataCopy.sort((a,b) => (b.student_name||'').localeCompare(a.student_name||''));
+    return dataCopy;
+  }, [pendingCertificates, certificatesSort]);
+
+  const sortedPayments = React.useMemo(() => {
+    let dataCopy = [...payments];
+    if (paymentsSort === "Newest") return dataCopy.sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    if (paymentsSort === "Oldest") return dataCopy.sort((a,b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+    if (paymentsSort === "Highest Amount") return dataCopy.sort((a,b) => parseFloat(b.amount || 0) - parseFloat(a.amount || 0));
+    if (paymentsSort === "Lowest Amount") return dataCopy.sort((a,b) => parseFloat(a.amount || 0) - parseFloat(b.amount || 0));
+    return dataCopy;
+  }, [payments, paymentsSort]);
+
   return (
     <div className="min-h-screen bg-slate-100 flex">
       <aside className="w-60 bg-blue-950 text-white h-screen fixed left-0 top-0 flex flex-col justify-between z-20">
@@ -517,7 +611,7 @@ function AdminDashboard() {
         </div>
       </aside>
       <main className="ml-60 flex-1 w-[calc(100%-15rem)] min-w-0">
-        <header className="bg-white px-8 py-3 border-b border-slate-200 flex justify-between items-center sticky top-0 z-40 shadow-sm">
+        <header className="bg-white px-8 py-3 border-b border-slate-200 flex justify-between items-center sticky top-0 z-50 shadow-sm">
           <div className="flex flex-col">
             <h2 className="text-lg font-extrabold text-slate-900 tracking-tight">
               {activePage}
@@ -571,17 +665,17 @@ function AdminDashboard() {
                 {/* 4 Stat Cards */}
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
                   {[
-                    { title: "TOTAL LEARNERS", value: learners.length, bg: "bg-blue-50/50", iconBg: "bg-blue-100", iconColor: "text-blue-950", icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg> },
-                    { title: "TOTAL EMPLOYEES", value: employeeRequests.length + approvedEmployees.length, bg: "bg-emerald-50/50", iconBg: "bg-emerald-100", iconColor: "text-emerald-600", icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg> },
-                    { title: "TOTAL INSTRUCTORS", value: instructorRequests.length + allApprovedAccounts.filter(u => u.role === "Instructor").length, bg: "bg-violet-50/50", iconBg: "bg-violet-100", iconColor: "text-violet-600", icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9.5a2.5 2.5 0 00-2.5-2.5H14" /></svg> },
-                    { title: "TOTAL ORGANIZATIONS", value: organizationRequests.length + allApprovedAccounts.filter(u => u.role === "Organization Admin").length, bg: "bg-rose-50/50", iconBg: "bg-rose-100", iconColor: "text-rose-600", icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg> },
+                    { title: "TOTAL LEARNERS", value: learners.length, iconBg: "bg-sky-500", iconShadow: "shadow-sky-500/20", icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg> },
+                    { title: "TOTAL EMPLOYEES", value: employeeRequests.length + approvedEmployees.length, iconBg: "bg-teal-500", iconShadow: "shadow-teal-500/20", icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg> },
+                    { title: "TOTAL INSTRUCTORS", value: instructorRequests.length + allApprovedAccounts.filter(u => u.role === "Instructor").length, iconBg: "bg-purple-500", iconShadow: "shadow-purple-500/20", icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9.5a2.5 2.5 0 00-2.5-2.5H14" /></svg> },
+                    { title: "TOTAL ORGANIZATIONS", value: organizationRequests.length + allApprovedAccounts.filter(u => u.role === "Organization Admin").length, iconBg: "bg-amber-500", iconShadow: "shadow-amber-500/20", icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg> },
                   ].map((card, idx) => (
-                    <div key={idx} className={`${card.bg} rounded-2xl p-5 border border-slate-100 flex items-start justify-between shadow-sm`}>
+                    <div key={idx} className="bg-blue-950 rounded-2xl p-5 border border-blue-900 flex items-start justify-between shadow-sm">
                       <div>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">{card.title}</p>
-                        <h3 className="text-3xl font-extrabold text-slate-800">{card.value}</h3>
+                        <p className="text-[10px] font-bold text-blue-200 uppercase tracking-wider mb-1">{card.title}</p>
+                        <h3 className="text-3xl font-extrabold text-white">{card.value}</h3>
                       </div>
-                      <div className={`w-10 h-10 rounded-xl ${card.iconBg} ${card.iconColor} flex items-center justify-center`}>
+                      <div className={`w-10 h-10 rounded-xl ${card.iconBg} text-white shadow-lg ${card.iconShadow} flex items-center justify-center`}>
                         {card.icon}
                       </div>
                     </div>
@@ -606,7 +700,7 @@ function AdminDashboard() {
                           return (
                             <div key={i} className="flex items-center gap-4 pb-4 border-b border-slate-50 last:border-0 last:pb-0">
                               <div className={`w-10 h-10 rounded-full ${bgColors[i % 4]} text-white flex items-center justify-center font-bold text-sm shadow-sm`}>
-                                {user.name.charAt(0).toUpperCase()}
+                                {(user.name || "?").charAt(0).toUpperCase()}
                               </div>
                               <div>
                                 <p className="text-sm font-bold text-slate-800">{user.name}</p>
@@ -726,6 +820,8 @@ function AdminDashboard() {
               activeData={learners}
               pendingData={learnerRequests}
               typeName="Learners"
+              sortOption={userManagementSort}
+              setSortOption={setUserManagementSort}
               renderActiveTable={(data) => (
                 <UserTable
                   users={data}
@@ -751,6 +847,8 @@ function AdminDashboard() {
               activeData={approvedEmployees}
               pendingData={employeeRequests}
               typeName="Employees"
+              sortOption={userManagementSort}
+              setSortOption={setUserManagementSort}
               renderActiveTable={(data) => (
                 <ApprovalTable
                   users={data.map(u => ({ ...u, _status: 'approved' }))}
@@ -776,6 +874,8 @@ function AdminDashboard() {
               activeData={allApprovedAccounts.filter(u => u.role === "Instructor")}
               pendingData={instructorRequests}
               typeName="Instructors"
+              sortOption={userManagementSort}
+              setSortOption={setUserManagementSort}
               renderActiveTable={(data) => (
                 <ApprovalTable
                   users={data.map(u => ({ ...u, _status: 'approved' }))}
@@ -801,6 +901,8 @@ function AdminDashboard() {
               activeData={allApprovedAccounts.filter(u => u.role === "Organization Admin")}
               pendingData={organizationRequests}
               typeName="Organizations"
+              sortOption={userManagementSort}
+              setSortOption={setUserManagementSort}
               renderActiveTable={(data) => (
                 <ApprovalTable
                   users={data.map(u => ({ ...u, _status: 'approved' }))}
@@ -820,12 +922,27 @@ function AdminDashboard() {
             />
           )}
           {activePage === "Approved Accounts" && (
-            <UserTable
-              users={allApprovedAccounts}
-              type="all"
-              pendingCertificates={pendingCertificates}
-              handleCertificateAction={handleCertificateAction}
-            />
+            <div className="space-y-4 animate-fade-in-up">
+              <UserTable
+                title="Approved Accounts"
+                headerAction={
+                  <select
+                    value={approvedAccountsSort}
+                    onChange={(e) => setApprovedAccountsSort(e.target.value)}
+                    className="px-3 py-2 bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                  >
+                    <option value="Newest">Sort by: Newest</option>
+                    <option value="Oldest">Sort by: Oldest</option>
+                    <option value="Title A-Z">Name A-Z</option>
+                    <option value="Title Z-A">Name Z-A</option>
+                  </select>
+                }
+                users={sortedApprovedAccounts}
+                type="all"
+                pendingCertificates={pendingCertificates}
+                handleCertificateAction={handleCertificateAction}
+              />
+            </div>
           )}
           {activePage === "Manage Courses" && renderCoursesView()}
           {activePage === "Certificate Approvals" && renderCertificatesView()}
@@ -834,16 +951,28 @@ function AdminDashboard() {
           )}
           {activePage === "Payments" && (
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-fade-in-up">
-              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white">
-                <h3 className="text-lg font-extrabold text-slate-800 tracking-tight">Payment History</h3>
-                <button 
-                  onClick={exportPaymentsExcel}
+              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white gap-4">
+                <h3 className="text-lg font-extrabold text-slate-800 tracking-tight whitespace-nowrap">Payment History</h3>
+                <div className="flex items-center gap-3">
+                  <select
+                    value={paymentsSort}
+                    onChange={(e) => setPaymentsSort(e.target.value)}
+                    className="px-3 py-2 bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                  >
+                    <option value="Newest">Sort by: Newest</option>
+                    <option value="Oldest">Sort by: Oldest</option>
+                    <option value="Highest Amount">Highest Amount</option>
+                    <option value="Lowest Amount">Lowest Amount</option>
+                  </select>
+                  <button 
+                    onClick={exportPaymentsExcel}
                   disabled={payments.length === 0}
                   className="bg-yellow-500 hover:bg-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed text-blue-950 font-black shadow-[0_4px_20px_-4px_rgba(234,179,8,0.5)] px-4 py-2 rounded-xl text-xs transition">
                   Export Excel
                 </button>
               </div>
-              <div className="overflow-x-auto">
+            </div>
+            <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead className="bg-slate-50 border-b border-slate-200">
                     <tr>
@@ -855,7 +984,7 @@ function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {payments.length === 0 ? (
+                    {sortedPayments.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="text-center py-20 bg-white">
                           <div className="flex flex-col items-center justify-center text-center">
@@ -870,7 +999,7 @@ function AdminDashboard() {
                         </td>
                       </tr>
                     ) : (
-                      payments.map((p, i) => (
+                      sortedPayments.map((p, i) => (
                         <tr key={i} className="hover:bg-slate-50/50 transition-colors">
                           <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-slate-700">{p.transaction_id}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-800">{p.user_name || "Unknown"}</td>
@@ -893,9 +1022,210 @@ function AdminDashboard() {
           {activePage === "Reports" && (
             <SuperAdminReports />
           )}
-          {activePage === "Contact Queries" && (
-            <PlaceholderTable title="Support Queries" emptyText="No support tickets pending" columns={["Ticket ID", "User Contact", "Subject", "Status", "Action"]} />
-          )}
+          {activePage === "Contact Queries" && (() => {
+            const groups = Object.values(
+              contactQueries.reduce((acc, q) => {
+                if (!acc[q.email]) {
+                  acc[q.email] = { email: q.email, name: q.name, latest_date: q.created_at, messages: [] };
+                }
+                acc[q.email].messages.push(q);
+                if (new Date(q.created_at) > new Date(acc[q.email].latest_date)) {
+                  acc[q.email].latest_date = q.created_at;
+                }
+                return acc;
+              }, {})
+            ).sort((a, b) => {
+              if (contactSort === 'Newest') return new Date(b.latest_date) - new Date(a.latest_date);
+              if (contactSort === 'Oldest') return new Date(a.latest_date) - new Date(b.latest_date);
+              if (contactSort === 'A-Z') return a.name.localeCompare(b.name);
+              if (contactSort === 'Z-A') return b.name.localeCompare(a.name);
+              return 0;
+            }).filter(g =>
+              !contactSearch ||
+              g.name.toLowerCase().includes(contactSearch.toLowerCase()) ||
+              g.email.toLowerCase().includes(contactSearch.toLowerCase())
+            );
+
+            // Auto-select first group if none selected
+            const activeGroup = selectedQueryGroup 
+              ? (groups.find(g => g.email === selectedQueryGroup.email) || (groups.length > 0 ? groups[0] : null))
+              : (groups.length > 0 ? groups[0] : null);
+
+            return (
+              <div className="animate-fade-in-up bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden" style={{ height: 'calc(100vh - 160px)', display: 'flex' }}>
+                {/* LEFT: INBOX PANEL */}
+                <div className="w-72 shrink-0 border-r border-slate-200 flex flex-col bg-slate-50">
+                  <div className="p-4 border-b border-slate-200 bg-white">
+                    <h3 className="text-sm font-extrabold text-slate-800 mb-3">Inbox</h3>
+                    {/* Search */}
+                    <div className="relative mb-2">
+                      <svg className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                      <input
+                        type="text"
+                        placeholder="Search inquiries..."
+                        value={contactSearch}
+                        onChange={e => setContactSearch(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                    {/* Sort */}
+                    <select
+                      value={contactSort}
+                      onChange={e => setContactSort(e.target.value)}
+                      className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="Newest">Sort: Newest First</option>
+                      <option value="Oldest">Sort: Oldest First</option>
+                      <option value="A-Z">Sort: A-Z</option>
+                      <option value="Z-A">Sort: Z-A</option>
+                    </select>
+                  </div>
+                  {/* Contact List */}
+                  <div className="flex-1 overflow-y-auto">
+                    {groups.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-full text-center p-6">
+                        <svg className="w-8 h-8 text-slate-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                        <p className="text-xs font-semibold text-slate-400">No inquiries found</p>
+                      </div>
+                    ) : (
+                      groups.map((group, idx) => {
+                        const isActive = activeGroup && activeGroup.email === group.email;
+                        const pending = group.messages.filter(m => m.status === 'PENDING').length;
+                        return (
+                          <div
+                            key={idx}
+                            onClick={() => { setSelectedQueryGroup(group); setReplyingTo(null); setReplyText(''); }}
+                            className={`px-4 py-3 cursor-pointer border-b border-slate-100 transition-colors ${
+                              isActive ? 'bg-blue-600 text-white' : 'hover:bg-white'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-0.5">
+                              <p className={`text-xs font-bold truncate ${isActive ? 'text-white' : 'text-slate-800'}`}>{group.name}</p>
+                              <p className={`text-[10px] shrink-0 ml-2 ${isActive ? 'text-blue-200' : 'text-slate-400'}`}>
+                                {new Date(group.latest_date).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <p className={`text-[11px] truncate mb-1.5 ${isActive ? 'text-blue-200' : 'text-slate-500'}`}>{group.email}</p>
+                            <div className="flex items-center gap-2">
+                              {pending > 0 ? (
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${isActive ? 'bg-blue-500 text-white' : 'bg-amber-50 text-amber-600 border border-amber-100'}`}>
+                                  PENDING
+                                </span>
+                              ) : (
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${isActive ? 'bg-blue-500 text-white' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
+                                  REPLIED
+                                </span>
+                              )}
+                              <span className={`text-[10px] ${isActive ? 'text-blue-200' : 'text-slate-400'}`}>{group.messages.length} msg{group.messages.length !== 1 ? 's' : ''}</span>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                {/* RIGHT: CONVERSATION PANEL */}
+                <div className="flex-1 flex flex-col min-w-0">
+                  {!activeGroup ? (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                        <svg className="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                      </div>
+                      <p className="text-sm font-semibold text-slate-500">Select a conversation</p>
+                      <p className="text-xs text-slate-400 mt-1">Choose an inquiry from the inbox to view messages</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Conversation Header */}
+                      <div className="px-6 py-4 border-b border-slate-200 bg-white shrink-0">
+                        <p className="text-sm font-extrabold text-slate-800">{activeGroup.name}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{activeGroup.email}</p>
+                      </div>
+
+                      {/* Messages Area */}
+                      <div className="flex-1 overflow-y-auto p-6 space-y-5 bg-slate-50">
+                        {[...activeGroup.messages].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)).map((msg, idx) => (
+                          <div key={idx} className="space-y-3">
+                            {/* User bubble (left) */}
+                            <div className="flex gap-3 items-start">
+                              <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-800 border border-blue-200 flex items-center justify-center font-bold text-xs shrink-0">
+                                {(activeGroup.name || "?").charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <div className="bg-white border border-slate-200 rounded-xl rounded-tl-none px-4 py-3 max-w-lg shadow-sm">
+                                  <p className="text-sm text-slate-700 leading-relaxed">{msg.message}</p>
+                                </div>
+                                <p className="text-[10px] text-slate-400 mt-1 ml-1">{new Date(msg.created_at).toLocaleString()}</p>
+                              </div>
+                            </div>
+
+                            {/* Admin reply (right) */}
+                            {msg.reply_message && (
+                              <div className="flex gap-3 items-start justify-end">
+                                <div className="flex flex-col items-end">
+                                  <div className="bg-emerald-50 border border-emerald-100 rounded-xl rounded-tr-none px-4 py-3 max-w-lg shadow-sm">
+                                    <p className="text-sm text-slate-700 leading-relaxed">{msg.reply_message}</p>
+                                  </div>
+                                  <p className="text-[10px] text-slate-400 mt-1 mr-1">
+                                    Replied on {msg.updated_at ? new Date(msg.updated_at).toLocaleString() : ''}
+                                  </p>
+                                </div>
+                                <div className="w-8 h-8 rounded-full bg-slate-700 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                                  A
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Reply Box — always visible at bottom */}
+                      {(() => {
+                        const unrepliedMsg = activeGroup.messages.find(m => m.status === 'PENDING' && !m.reply_message);
+                        if (!unrepliedMsg) {
+                          return (
+                            <div className="px-6 py-4 border-t border-slate-200 bg-white shrink-0">
+                              <div className="flex items-center gap-2 text-sm text-emerald-600">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <span className="font-semibold">All messages replied</span>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="px-6 py-4 border-t border-slate-200 bg-white shrink-0">
+                            <div className="flex gap-3 items-end">
+                              <textarea
+                                rows={2}
+                                value={replyText}
+                                onChange={e => setReplyText(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleReplySubmit(unrepliedMsg.id); } }}
+                                placeholder="Type your reply and press Enter..."
+                                className="flex-1 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none bg-slate-50"
+                              />
+                              <button
+                                onClick={() => handleReplySubmit(unrepliedMsg.id)}
+                                disabled={isReplying || !replyText.trim()}
+                                className="px-5 py-2.5 bg-blue-950 hover:bg-blue-900 text-white text-sm font-bold rounded-xl transition disabled:opacity-50 shrink-0 flex items-center gap-2"
+                              >
+                                {isReplying ? (
+                                  <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                                ) : (
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                                )}
+                                {isReplying ? 'Sending...' : 'Send'}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
           {activePage === "Announcements" && (
             <InstituteAnnouncements />
           )}
@@ -937,9 +1267,15 @@ function StatCard({ title, value, icon, trend, colorClass }) {
     </div>
   );
 }
-function UserTable({ users, type, pendingCertificates, handleCertificateAction }) {
+function UserTable({ users, type, pendingCertificates, handleCertificateAction, title, headerAction }) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      {(title || headerAction) && (
+        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white gap-4">
+          {title && <h3 className="text-lg font-extrabold text-slate-800 tracking-tight whitespace-nowrap">{title}</h3>}
+          {headerAction && <div className="flex items-center gap-3">{headerAction}</div>}
+        </div>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead className="bg-slate-50 border-b border-slate-200">
@@ -968,7 +1304,7 @@ function UserTable({ users, type, pendingCertificates, handleCertificateAction }
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full bg-blue-50 border border-blue-100 text-blue-950 flex items-center justify-center font-bold text-sm shadow-sm">
-                        {user.name ? user.name.charAt(0).toUpperCase() : "-"}
+                        {(user.name || "?").charAt(0).toUpperCase()}
                       </div>
                       <div className="flex flex-col">
                         <span className="text-sm font-bold text-slate-800">{user.name || "-"}</span>
@@ -1064,7 +1400,7 @@ function ApprovalTable({ users, approveUser, rejectUser, type }) {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full bg-blue-50 border border-blue-100 text-blue-950 flex items-center justify-center font-bold text-sm shadow-sm">
-                        {user.name ? user.name.charAt(0).toUpperCase() : "-"}
+                        {(user.name || "?").charAt(0).toUpperCase()}
                       </div>
                       <div className="flex flex-col">
                         <span className="text-sm font-bold text-slate-800">{user.name || "-"}</span>
@@ -1216,14 +1552,24 @@ function EmptyState({ title, description, icon }) {
   );
 }
 
-function TabbedSection({ activeTitle, pendingTitle, activeData, pendingData, renderActiveTable, renderPendingTable, typeName }) {
+function TabbedSection({ activeTitle, pendingTitle, activeData, pendingData, renderActiveTable, renderPendingTable, typeName, sortOption, setSortOption }) {
   const [activeTab, setActiveTab] = useState('active');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const currentData = activeTab === 'active' ? activeData : pendingData;
-  const filteredData = currentData.filter(item =>
-    JSON.stringify(item).toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const currentData = (activeTab === 'active' ? activeData : pendingData) || [];
+  const filteredData = React.useMemo(() => {
+    if (!Array.isArray(currentData)) return [];
+    let dataCopy = currentData.filter(item => {
+      if (!item) return false;
+      const str = JSON.stringify(item);
+      return str ? str.toLowerCase().includes(searchQuery.toLowerCase()) : false;
+    });
+    if (sortOption === "Newest") return dataCopy.sort((a,b) => new Date(b?.created_at || 0) - new Date(a?.created_at || 0));
+    if (sortOption === "Oldest") return dataCopy.sort((a,b) => new Date(a?.created_at || 0) - new Date(b?.created_at || 0));
+    if (sortOption === "Title A-Z") return dataCopy.sort((a,b) => ((a?.title || a?.name || a?.full_name || '').localeCompare(b?.title || b?.name || b?.full_name || '')));
+    if (sortOption === "Title Z-A") return dataCopy.sort((a,b) => ((b?.title || b?.name || b?.full_name || '').localeCompare(a?.title || a?.name || a?.full_name || '')));
+    return dataCopy;
+  }, [currentData, searchQuery, sortOption]);
 
   return (
     <div className="space-y-6 animate-fade-in-up">
@@ -1246,15 +1592,29 @@ function TabbedSection({ activeTitle, pendingTitle, activeData, pendingData, ren
           </button>
         </div>
 
-        <div className="relative w-full sm:w-72">
-          <svg className="w-5 h-5 absolute left-3 top-2.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-          <input
-            type="text"
-            placeholder={`Search ${typeName}...`}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-          />
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          {sortOption !== undefined && setSortOption && (
+            <select
+              value={sortOption}
+              onChange={(e) => setSortOption(e.target.value)}
+              className="px-3 py-2 bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="Newest">Sort by: Newest</option>
+              <option value="Oldest">Sort by: Oldest</option>
+              <option value="Title A-Z">Title A-Z</option>
+              <option value="Title Z-A">Title Z-A</option>
+            </select>
+          )}
+          <div className="relative w-full sm:w-72">
+            <svg className="w-5 h-5 absolute left-3 top-2.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <input
+              type="text"
+              placeholder={`Search ${typeName}...`}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            />
+          </div>
         </div>
       </div>
 

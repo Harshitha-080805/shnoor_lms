@@ -42,6 +42,7 @@ function InstituteDashboard() {
     { name: "Course Catalog", path: "/institute-dashboard/courses", icon: <BookOpen size={20} /> },
     { name: "Learning Progress", path: "/institute-dashboard/progress", icon: <TrendingUp size={20} /> },
     { name: "Reports and Analytics", path: "/institute-dashboard/reports", icon: <BarChart3 size={20} /> },
+    { name: "Exam Evaluation", path: "/institute-dashboard/exams", icon: <Award size={20} /> },
     { name: "Subscriptions", path: "/institute-dashboard/subscriptions", icon: <CreditCard size={20} /> },
     { name: "Certificates", path: "/institute-dashboard/certificates", icon: <Award size={20} /> },
     { name: "Profile", path: "/institute-dashboard/profile", icon: <User size={20} /> },
@@ -172,7 +173,7 @@ function InstituteDashboard() {
       </aside>
       
       <main className="ml-60 flex-1 flex flex-col min-h-screen min-w-0 w-[calc(100%-15rem)]">
-        <header className="bg-white px-8 py-4 border-b border-slate-200 flex justify-between items-center sticky top-0 z-40">
+        <header className="bg-white px-8 py-4 border-b border-slate-200 flex justify-between items-center sticky top-0 z-50">
           <div className="flex flex-col">
             <h2 className="text-xl font-bold text-slate-800 tracking-tight">
               {getPageTitle()}

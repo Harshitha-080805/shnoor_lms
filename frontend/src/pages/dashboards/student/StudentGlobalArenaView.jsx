@@ -582,14 +582,18 @@ function StudentGlobalArenaView() {
               </div>
             </div>
 
-            <div className="flex-1 relative bg-[#1e1e2e]">
+            <div className="flex-1 relative bg-[#1e1e2e] overflow-hidden">
               {/* Optional: Add line numbers visually */}
-              <div className="absolute left-0 top-0 bottom-0 w-12 bg-[#181825] border-r border-[#313244] text-[#6c7086] font-mono text-sm py-4 px-2 text-right select-none opacity-80 z-0">
+              <div id={`line-numbers-${activeProblem.id}`} className="absolute left-0 top-0 bottom-0 w-12 bg-[#181825] border-r border-[#313244] text-[#6c7086] font-mono text-sm py-4 px-2 text-right select-none opacity-80 z-0 overflow-hidden">
                 {codeDrafts[activeProblem.id]?.split('\n').map((_, i) => <div key={i}>{i+1}</div>) || <div>1</div>}
               </div>
               <textarea
                 value={codeDrafts[activeProblem.id] || ''}
                 onChange={(e) => handleCodeChange(e.target.value)}
+                onScroll={(e) => {
+                  const lineNumbers = document.getElementById(`line-numbers-${activeProblem.id}`);
+                  if (lineNumbers) lineNumbers.scrollTop = e.target.scrollTop;
+                }}
                 className="absolute inset-0 w-full h-full bg-transparent text-[#cdd6f4] py-4 pl-16 pr-4 font-mono text-sm resize-none focus:outline-none focus:ring-0 z-10 leading-relaxed"
                 spellCheck="false"
               />

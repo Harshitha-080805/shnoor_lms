@@ -196,14 +196,20 @@ router.get('/users', async (req, res) => {
         o.name as organization_name,
         (SELECT COUNT(*) FROM enrollments e WHERE e.student_id = u.id) as courses_enrolled,
         (SELECT COUNT(*) FROM courses c WHERE c.instructor_id = u.id) as courses_published,
-        (SELECT COUNT(*) FROM certificate_requests cr JOIN enrollments e ON cr.enrollment_id = e.id WHERE e.student_id = u.id AND cr.status = 'APPROVED') as certificates_received
+        (SELECT COUNT(*) FROM certificate_requests cr JOIN enrollments e ON cr.enrollment_id = e.id WHERE e.student_id = u.id AND cr.status = 'APPROVED') as certificates_received,
+        (SELECT status FROM subscriptions s WHERE s.organization_id = u.organization_id AND s.status = 'revoked' LIMIT 1) as org_sub_status,
+        (SELECT status FROM subscriptions s WHERE s.user_id = u.id AND s.status = 'revoked' LIMIT 1) as user_sub_status
       FROM users u
       LEFT JOIN organizations o ON u.organization_id = o.id
       WHERE u.role != 'ADMIN'
       ORDER BY u.created_at DESC
     `;
     const result = await pool.query(query);
-    res.json(result.rows);
+    const users = result.rows.map(user => {
+      const isRevoked = user.is_active === false || user.org_sub_status === 'revoked' || user.user_sub_status === 'revoked';
+      return { ...user, is_revoked: isRevoked };
+    });
+    res.json(users);
   } catch (error) {
     console.error('Error fetching users for reports:', error);
     res.status(500).json({ error: 'Server error fetching users report' });
@@ -215,7 +221,9 @@ router.get('/users/:id', async (req, res) => {
   try {
     const userQuery = `
       SELECT u.id, u.full_name, u.email, u.role, u.learner_type, u.is_active, u.created_at, u.phone_number,
-             u.organization_id, o.name as organization_name
+             u.organization_id, o.name as organization_name,
+             (SELECT status FROM subscriptions s WHERE s.organization_id = u.organization_id AND s.status = 'revoked' LIMIT 1) as org_sub_status,
+             (SELECT status FROM subscriptions s WHERE s.user_id = u.id AND s.status = 'revoked' LIMIT 1) as user_sub_status
       FROM users u
       LEFT JOIN organizations o ON u.organization_id = o.id
       WHERE u.id = $1
@@ -223,6 +231,7 @@ router.get('/users/:id', async (req, res) => {
     const userRes = await pool.query(userQuery, [id]);
     if (userRes.rows.length === 0) return res.status(404).json({ error: 'User not found' });
     const user = userRes.rows[0];
+    user.is_revoked = user.is_active === false || user.org_sub_status === 'revoked' || user.user_sub_status === 'revoked';
 
     const enrollmentsQuery = `
       SELECT 
@@ -238,7 +247,27 @@ router.get('/users/:id', async (req, res) => {
 
     let publishedCourses = [];
     let orgStats = null;
+    let subscriptionData = null;
     
+    if (user.role === 'ORGANIZATION_ADMIN' && user.organization_id) {
+        const subRes = await pool.query(`
+            SELECT s.*, p.name as plan_name, p.price, p.billing_cycle 
+            FROM subscriptions s 
+            JOIN subscription_plans p ON s.plan_id = p.id 
+            WHERE s.organization_id = $1 AND s.status IN ('active', 'revoked') 
+            ORDER BY s.end_date DESC LIMIT 1
+        `, [user.organization_id]);
+        if (subRes.rows.length > 0) subscriptionData = subRes.rows[0];
+    } else if (user.role === 'LEARNER' && user.learner_type === 'independent') {
+        const subRes = await pool.query(`
+            SELECT s.*, p.name as plan_name, p.price, p.billing_cycle 
+            FROM subscriptions s 
+            JOIN subscription_plans p ON s.plan_id = p.id 
+            WHERE s.user_id = $1 AND s.status IN ('active', 'revoked') 
+            ORDER BY s.end_date DESC LIMIT 1
+        `, [id]);
+        if (subRes.rows.length > 0) subscriptionData = subRes.rows[0];
+    }
     if (user.role === 'INSTRUCTOR' || user.role === 'ADMIN') {
         const publishedCoursesQuery = `
             SELECT c.id, c.title, c.is_approved, c.is_published, c.created_at,
@@ -280,7 +309,8 @@ router.get('/users/:id', async (req, res) => {
       user,
       enrollments: enrollmentsRes.rows,
       publishedCourses,
-      orgStats
+      orgStats,
+      subscriptionData
     });
   } catch (error) {
     console.error('Error fetching user profile for reports:', error);
@@ -295,7 +325,7 @@ router.get('/payments', async (req, res) => {
       SELECT p.id, p.transaction_id, p.amount, p.status, p.created_at, COALESCE(u.full_name, o.name) as user_name
       FROM payments p
       LEFT JOIN users u ON p.user_id = u.id
-      LEFT JOIN organizations o ON p.organization_id = o.id
+      LEFT JOIN organizations o ON u.organization_id = o.id
       ORDER BY p.created_at DESC
     `;
     const paymentsRes = await pool.query(paymentsQuery);
@@ -303,6 +333,90 @@ router.get('/payments', async (req, res) => {
   } catch (error) {
     console.error('Error fetching payments:', error);
     res.status(500).json({ error: 'Server error fetching payments' });
+  }
+});
+
+// 11. Revoke an organization's subscription
+router.put('/organizations/:orgId/revoke-subscription', async (req, res) => {
+  const { orgId } = req.params;
+  try {
+    const subRes = await pool.query("UPDATE subscriptions SET status = 'revoked' WHERE organization_id = $1 RETURNING id", [orgId]);
+    if (subRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Active subscription not found for this organization.' });
+    }
+    // Deactivate learners and instructors
+    await pool.query("UPDATE users SET is_active = false WHERE organization_id = $1 AND role IN ('LEARNER', 'INSTRUCTOR')", [orgId]);
+    res.json({ message: 'Organization subscription revoked and users deactivated successfully.' });
+  } catch (err) {
+    console.error('Error revoking organization subscription:', err);
+    res.status(500).json({ error: 'Server error revoking organization subscription' });
+  }
+});
+
+// 12. Revoke a user's individual subscription
+router.put('/users/:userId/revoke-subscription', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const subRes = await pool.query("UPDATE subscriptions SET status = 'revoked' WHERE user_id = $1 RETURNING id", [userId]);
+    if (subRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Active subscription not found for this user.' });
+    }
+    // Deactivate user
+    await pool.query("UPDATE users SET is_active = false WHERE id = $1 AND role IN ('LEARNER', 'INSTRUCTOR')", [userId]);
+    res.json({ message: 'User subscription revoked and account deactivated successfully.' });
+  } catch (err) {
+    console.error('Error revoking user subscription:', err);
+    res.status(500).json({ error: 'Server error revoking user subscription' });
+  }
+});
+
+// 13. Delete an organization completely
+router.delete('/organizations/:orgId', async (req, res) => {
+  const { orgId } = req.params;
+  try {
+    await pool.query("DELETE FROM organizations WHERE id = $1", [orgId]);
+    res.json({ message: 'Organization deleted successfully.' });
+  } catch (err) {
+    console.error('Error deleting organization:', err);
+    res.status(500).json({ error: 'Server error deleting organization' });
+  }
+});
+
+// 14. Delete a user completely
+router.delete('/users/:userId', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    await pool.query("DELETE FROM users WHERE id = $1", [userId]);
+    res.json({ message: 'User deleted successfully.' });
+  } catch (err) {
+    console.error('Error deleting user:', err);
+    res.status(500).json({ error: 'Server error deleting user' });
+  }
+});
+
+// 15. Restore an organization's access
+router.put('/organizations/:orgId/restore-access', async (req, res) => {
+  const { orgId } = req.params;
+  try {
+    await pool.query("UPDATE subscriptions SET status = 'active' WHERE organization_id = $1 AND status = 'revoked'", [orgId]);
+    await pool.query("UPDATE users SET is_active = true WHERE organization_id = $1 AND role IN ('LEARNER', 'INSTRUCTOR')", [orgId]);
+    res.json({ message: 'Organization access restored successfully.' });
+  } catch (err) {
+    console.error('Error restoring organization access:', err);
+    res.status(500).json({ error: 'Server error restoring organization access' });
+  }
+});
+
+// 16. Restore an individual user's access
+router.put('/users/:userId/restore-access', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    await pool.query("UPDATE subscriptions SET status = 'active' WHERE user_id = $1 AND status = 'revoked'", [userId]);
+    await pool.query("UPDATE users SET is_active = true WHERE id = $1 AND role IN ('LEARNER', 'INSTRUCTOR')", [userId]);
+    res.json({ message: 'User access restored successfully.' });
+  } catch (err) {
+    console.error('Error restoring user access:', err);
+    res.status(500).json({ error: 'Server error restoring user access' });
   }
 });
 

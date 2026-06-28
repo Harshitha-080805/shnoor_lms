@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Target, Plus, X, Save, Code, CheckSquare, Settings, Edit, Trash, Eye, EyeOff } from 'lucide-react';
+import { Target, Plus, X, Save, Code, CheckSquare, Settings, Edit, Trash, Eye, EyeOff, Search } from 'lucide-react';
 import api from '../../../api';
 
 function InstructorGlobalArenas() {
   const [arenas, setArenas] = useState([]);
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [sortOption, setSortOption] = useState('Newest');
 
   // View states
   const [activeArenaId, setActiveArenaId] = useState(null);
@@ -74,6 +76,25 @@ function InstructorGlobalArenas() {
     }
   };
 
+  const sortedArenas = React.useMemo(() => {
+    if (!arenas) return [];
+    let dataCopy = [...arenas];
+    
+    if (search) {
+      dataCopy = dataCopy.filter(a => 
+        (a.title || '').toLowerCase().includes(search.toLowerCase()) ||
+        (a.description || '').toLowerCase().includes(search.toLowerCase())
+      );
+    }
+    
+    if (sortOption === 'Newest') return dataCopy.sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    if (sortOption === 'Oldest') return dataCopy.sort((a,b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+    if (sortOption === 'Title A-Z') return dataCopy.sort((a,b) => (a.title||'').localeCompare(b.title||''));
+    if (sortOption === 'Title Z-A') return dataCopy.sort((a,b) => (b.title||'').localeCompare(a.title||''));
+    
+    return dataCopy;
+  }, [arenas, search, sortOption]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-48 bg-white rounded-2xl border border-slate-200 shadow-sm">
@@ -106,8 +127,25 @@ function InstructorGlobalArenas() {
         </button>
       </div>
 
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <select
+          value={sortOption}
+          onChange={(e) => setSortOption(e.target.value)}
+          className="px-3 py-2.5 bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all w-full sm:w-auto"
+        >
+          <option value="Newest">Sort by: Newest</option>
+          <option value="Oldest">Sort by: Oldest</option>
+          <option value="Title A-Z">Title A-Z</option>
+          <option value="Title Z-A">Title Z-A</option>
+        </select>
+        <div className="relative flex-1 w-full sm:max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20}/>
+          <input type="text" placeholder="Search arenas..." value={search} onChange={(e)=>setSearch(e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"/>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {arenas.map(arena => (
+        {sortedArenas.map(arena => (
           <div key={arena.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
             <div className="p-5 flex-1">
               <div className="flex justify-between items-start mb-2">
@@ -146,9 +184,9 @@ function InstructorGlobalArenas() {
             </div>
           </div>
         ))}
-        {arenas.length === 0 && (
+        {sortedArenas.length === 0 && (
           <div className="col-span-full bg-white p-12 rounded-2xl border border-slate-200 shadow-sm text-center text-slate-500">
-            You haven't created any Practice Arenas yet.
+            No practice arenas found.
           </div>
         )}
       </div>

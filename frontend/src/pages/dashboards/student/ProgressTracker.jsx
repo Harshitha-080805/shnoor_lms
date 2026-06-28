@@ -55,7 +55,7 @@ function ProgressTracker() {
   };
 
   const stats = getStats();
-  const approvedCerts = requests.filter((r) => r.status === "approved").length;
+  const approvedCerts = requests.filter((r) => r.status?.toLowerCase() === "approved").length;
 
   return (
     <div className="space-y-6">
@@ -75,61 +75,61 @@ function ProgressTracker() {
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-              <div className="w-12 h-12 bg-blue-50 text-blue-950 rounded-xl flex items-center justify-center">
+            <div className="bg-blue-950 p-6 rounded-2xl border border-blue-900 shadow-sm flex items-center gap-4">
+              <div className="w-12 h-12 bg-blue-500/20 text-blue-400 rounded-xl flex items-center justify-center">
                 <BookOpen size={24} />
               </div>
 
               <div>
-                <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">
+                <p className="text-blue-200 text-xs font-bold uppercase tracking-wider">
                   Courses Enrolled
                 </p>
-                <h3 className="text-xl font-bold text-slate-800">
+                <h3 className="text-xl font-bold text-white">
                   {enrollments.length}
                 </h3>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-              <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
+            <div className="bg-blue-950 p-6 rounded-2xl border border-blue-900 shadow-sm flex items-center gap-4">
+              <div className="w-12 h-12 bg-emerald-500/20 text-emerald-400 rounded-xl flex items-center justify-center">
                 <CheckCircle size={24} />
               </div>
 
               <div>
-                <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">
+                <p className="text-blue-200 text-xs font-bold uppercase tracking-wider">
                   Lessons Done
                 </p>
-                <h3 className="text-xl font-bold text-slate-800">
+                <h3 className="text-xl font-bold text-white">
                   {stats.completedL}/{stats.totalL}
                 </h3>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-              <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
+            <div className="bg-blue-950 p-6 rounded-2xl border border-blue-900 shadow-sm flex items-center gap-4">
+              <div className="w-12 h-12 bg-indigo-500/20 text-indigo-400 rounded-xl flex items-center justify-center">
                 <ClipboardList size={24} />
               </div>
 
               <div>
-                <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">
+                <p className="text-blue-200 text-xs font-bold uppercase tracking-wider">
                   Quizzes Passed
                 </p>
-                <h3 className="text-xl font-bold text-slate-800">
+                <h3 className="text-xl font-bold text-white">
                   {stats.passedQ}/{stats.totalQ}
                 </h3>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-              <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center">
+            <div className="bg-blue-950 p-6 rounded-2xl border border-blue-900 shadow-sm flex items-center gap-4">
+              <div className="w-12 h-12 bg-purple-500/20 text-purple-400 rounded-xl flex items-center justify-center">
                 <Target size={24} />
               </div>
 
               <div>
-                <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">
+                <p className="text-blue-200 text-xs font-bold uppercase tracking-wider">
                   Certificates Earned
                 </p>
-                <h3 className="text-xl font-bold text-slate-800">
+                <h3 className="text-xl font-bold text-white">
                   {approvedCerts}
                 </h3>
               </div>

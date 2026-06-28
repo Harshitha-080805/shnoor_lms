@@ -80,6 +80,7 @@ function UserTable({ type, users, status, onApprove, onReject }) {
 function InstituteInstructors() {
   const [activeTab, setActiveTab] = useState('active');
   const [search, setSearch] = useState('');
+  const [sortOption, setSortOption] = useState('Newest');
   const [activeUsers, setActiveUsers] = useState([]);
   const [pendingUsers, setPendingUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -118,7 +119,11 @@ function InstituteInstructors() {
         fetchData();
       }
     } catch (err) {
-      alert("Failed to approve user.");
+      if (err.response && err.response.data && err.response.data.error) {
+        alert(err.response.data.error);
+      } else {
+        alert("Failed to approve user.");
+      }
     }
   };
 
@@ -130,15 +135,30 @@ function InstituteInstructors() {
         fetchData();
       }
     } catch (err) {
-      alert("Failed to reject user.");
+      if (err.response && err.response.data && err.response.data.error) {
+        alert(err.response.data.error);
+      } else {
+        alert("Failed to reject user.");
+      }
     }
   };
 
   const currentUsers = activeTab === 'active' ? activeUsers : pendingUsers;
-  const filteredUsers = currentUsers.filter(u => 
-    (u.full_name || '').toLowerCase().includes(search.toLowerCase()) || 
-    (u.email || '').toLowerCase().includes(search.toLowerCase())
-  );
+  
+  const sortedUsers = React.useMemo(() => {
+    let dataCopy = [...currentUsers];
+    if (search) {
+      dataCopy = dataCopy.filter(u => 
+        (u.full_name || '').toLowerCase().includes(search.toLowerCase()) || 
+        (u.email || '').toLowerCase().includes(search.toLowerCase())
+      );
+    }
+    if (sortOption === "Newest") return dataCopy.sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    if (sortOption === "Oldest") return dataCopy.sort((a,b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+    if (sortOption === "Title A-Z") return dataCopy.sort((a,b) => (a.full_name||'').localeCompare(b.full_name||''));
+    if (sortOption === "Title Z-A") return dataCopy.sort((a,b) => (b.full_name||'').localeCompare(a.full_name||''));
+    return dataCopy;
+  }, [currentUsers, search, sortOption]);
 
   return (
     <div className="space-y-6 animate-fade-in-up">
@@ -161,15 +181,27 @@ function InstituteInstructors() {
           </button>
         </div>
         
-        <div className="relative w-full sm:w-72">
-          <svg className="w-5 h-5 absolute left-3 top-2.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-          <input 
-            type="text" 
-            placeholder="Search instructors..." 
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
-          />
+        <div className="flex items-center gap-3 w-full sm:w-auto mt-4 sm:mt-0">
+          <select
+            value={sortOption}
+            onChange={(e) => setSortOption(e.target.value)}
+            className="px-3 py-2 bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="Newest">Sort by: Newest</option>
+            <option value="Oldest">Sort by: Oldest</option>
+            <option value="Title A-Z">Name A-Z</option>
+            <option value="Title Z-A">Name Z-A</option>
+          </select>
+          <div className="relative w-full sm:w-72">
+            <svg className="w-5 h-5 absolute left-3 top-2.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <input 
+              type="text" 
+              placeholder="Search instructors..." 
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" 
+            />
+          </div>
         </div>
       </div>
       
@@ -180,7 +212,7 @@ function InstituteInstructors() {
       ) : (
         <UserTable 
           type="Instructor" 
-          users={filteredUsers} 
+          users={sortedUsers} 
           status={activeTab === 'active' ? 'Active' : 'Pending'} 
           onApprove={handleApprove}
           onReject={handleReject}

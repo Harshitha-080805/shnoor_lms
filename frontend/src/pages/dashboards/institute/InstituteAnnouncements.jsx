@@ -20,6 +20,7 @@ function InstituteAnnouncements() {
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState(location.state?.searchTerm || "");
+  const [sortOption, setSortOption] = useState("Newest");
   const [showModal, setShowModal] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newContent, setNewContent] = useState("");
@@ -144,6 +145,17 @@ function InstituteAnnouncements() {
     return { label: 'GENERAL', bg: 'bg-blue-50', text: 'text-blue-600' };
   };
 
+  const sortedAnnouncements = React.useMemo(() => {
+    let dataCopy = announcements.filter(a => !search || a.title.toLowerCase().includes(search.toLowerCase()) || a.content.toLowerCase().includes(search.toLowerCase()));
+
+    if (sortOption === "Newest") return dataCopy.sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    if (sortOption === "Oldest") return dataCopy.sort((a,b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+    if (sortOption === "Title A-Z") return dataCopy.sort((a,b) => (a.title||'').localeCompare(b.title||''));
+    if (sortOption === "Title Z-A") return dataCopy.sort((a,b) => (b.title||'').localeCompare(a.title||''));
+
+    return dataCopy;
+  }, [announcements, search, sortOption]);
+
   return (
     <div className="space-y-6 animate-fade-in-up max-w-5xl mx-auto pb-10">
       
@@ -173,13 +185,23 @@ function InstituteAnnouncements() {
 
 
       {/* Tabs */}
-      <div className="flex items-center gap-3 py-2">
+      <div className="flex items-center justify-between py-2 gap-4">
         <button 
           onClick={() => setActiveTab('all')}
           className={`px-5 py-2 rounded-full text-sm font-bold transition-colors ${activeTab === 'all' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
         >
           All Broadcasts
         </button>
+        <select
+          value={sortOption}
+          onChange={(e) => setSortOption(e.target.value)}
+          className="bg-white border border-slate-200 text-slate-700 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block px-4 py-2 shadow-sm"
+        >
+          <option value="Newest">Sort by: Newest</option>
+          <option value="Oldest">Sort by: Oldest</option>
+          <option value="Title A-Z">Title A-Z</option>
+          <option value="Title Z-A">Title Z-A</option>
+        </select>
       </div>
 
       {/* Announcements List */}
@@ -188,7 +210,7 @@ function InstituteAnnouncements() {
           <div className="flex items-center justify-center h-48 bg-white rounded-2xl border border-slate-200 shadow-sm">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-950"></div>
           </div>
-        ) : announcements.filter(a => !search || a.title.toLowerCase().includes(search.toLowerCase()) || a.content.toLowerCase().includes(search.toLowerCase())).length === 0 ? (
+        ) : sortedAnnouncements.length === 0 ? (
           <EmptyState 
             title="No Announcements" 
             description="You have not published any organization-wide announcements yet or no announcements match your search. Click 'Create Announcement' to get started." 
@@ -196,8 +218,7 @@ function InstituteAnnouncements() {
           />
         ) : (
           <div className="space-y-4">
-            {announcements
-              .filter(a => !search || a.title.toLowerCase().includes(search.toLowerCase()) || a.content.toLowerCase().includes(search.toLowerCase()))
+            {sortedAnnouncements
               .map((announcement) => {
               const theme = getCategoryTheme(announcement.title);
               

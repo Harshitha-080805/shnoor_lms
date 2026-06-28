@@ -7,6 +7,7 @@ function InstructorCourses(){
   const navigate=useNavigate();
   const location=useLocation();
   const[searchTerm,setSearchTerm]=useState(location.state?.searchTerm || "");
+  const[sortOption,setSortOption]=useState("Newest");
   const[courses,setCourses]=useState([]);
   const[loading,setLoading]=useState(true);
 
@@ -55,16 +56,43 @@ function InstructorCourses(){
         return<span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">{status}</span>;
     }
   };
-  const filteredCourses=courses.filter(c=> {
-    if (location.state?.targetCourseId && c.id === location.state.targetCourseId) return true;
-    return c.title.toLowerCase().includes(searchTerm.toLowerCase());
-  });
+  const sortedCourses = React.useMemo(() => {
+    if (!courses) return [];
+    let dataCopy = [...courses];
+    
+    // First apply search filters
+    dataCopy = dataCopy.filter(c => {
+      if (location.state?.targetCourseId && c.id === location.state.targetCourseId) return true;
+      if (searchTerm) return c.title.toLowerCase().includes(searchTerm.toLowerCase());
+      return true;
+    });
+    
+    // Then apply sort
+    if (sortOption === 'Newest') return dataCopy.sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    if (sortOption === 'Oldest') return dataCopy.sort((a,b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+    if (sortOption === 'Title A-Z') return dataCopy.sort((a,b) => (a.title||'').localeCompare(b.title||''));
+    if (sortOption === 'Title Z-A') return dataCopy.sort((a,b) => (b.title||'').localeCompare(a.title||''));
+    
+    return dataCopy;
+  }, [courses, searchTerm, sortOption, location.state]);
   return(
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20}/>
-          <input type="text" placeholder="Search courses..." value={searchTerm} onChange={(e)=>setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"/>
+        <div className="flex items-center gap-3 flex-1 max-w-xl">
+          <select
+            value={sortOption}
+            onChange={(e) => setSortOption(e.target.value)}
+            className="px-3 py-2.5 bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all shadow-sm"
+          >
+            <option value="Newest">Sort by: Newest</option>
+            <option value="Oldest">Sort by: Oldest</option>
+            <option value="Title A-Z">Title A-Z</option>
+            <option value="Title Z-A">Title Z-A</option>
+          </select>
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20}/>
+            <input type="text" placeholder="Search courses..." value={searchTerm} onChange={(e)=>setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"/>
+          </div>
         </div>
         <button onClick={()=>navigate("/instructor-dashboard/courses/new/build")} className="bg-blue-900 hover:bg-blue-800 text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 transition-colors shadow-md shadow-blue-600/20">
           <Plus size={18}/>
@@ -112,7 +140,7 @@ function InstructorCourses(){
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredCourses.map((course)=>(
+              {sortedCourses.map((course)=>(
                 <tr key={course.id} className="hover:bg-slate-50 transition-colors group">
                   <td className="p-4 pl-6">
                     <div>
@@ -139,7 +167,7 @@ function InstructorCourses(){
                   </td>
                 </tr>
               ))}
-              {filteredCourses.length===0&&(
+              {sortedCourses.length===0&&(
                 <tr>
                   <td colSpan="4" className="p-8 text-center text-slate-500">No courses found matching your search.</td>
                 </tr>

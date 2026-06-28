@@ -11,6 +11,7 @@ function InstructorQuizzes(){
   const[quizzes,setQuizzes]=useState([]);
   const[loading,setLoading]=useState(true);
   const[search,setSearch]=useState(location.state?.searchTerm || '');
+  const[sortOption,setSortOption]=useState('Newest');
   const[showCreateModal,setShowCreateModal]=useState(false);
 
   const[quizTitle,setQuizTitle]=useState('');
@@ -91,10 +92,26 @@ function InstructorQuizzes(){
   const totalQuestions=quizzes.reduce((sum,q)=>sum+q.questionsCount,0);
   const coursesWithQuizzes=new Set(quizzes.map(q=>q.courseId)).size;
 
-  const searchedQuizzes=quizzes.filter(q=>
-    (q.title||'').toLowerCase().includes(search.toLowerCase())||
-    (q.courseTitle||'').toLowerCase().includes(search.toLowerCase())
-  );
+  const sortedQuizzes = React.useMemo(() => {
+    if (!quizzes) return [];
+    let dataCopy = [...quizzes];
+    
+    // First apply search filters
+    if (search) {
+      dataCopy = dataCopy.filter(q => 
+        (q.title||'').toLowerCase().includes(search.toLowerCase())||
+        (q.courseTitle||'').toLowerCase().includes(search.toLowerCase())
+      );
+    }
+    
+    // Then apply sort
+    if (sortOption === 'Newest') return dataCopy.sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    if (sortOption === 'Oldest') return dataCopy.sort((a,b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+    if (sortOption === 'Title A-Z') return dataCopy.sort((a,b) => (a.title||'').localeCompare(b.title||''));
+    if (sortOption === 'Title Z-A') return dataCopy.sort((a,b) => (b.title||'').localeCompare(a.title||''));
+    
+    return dataCopy;
+  }, [quizzes, search, sortOption]);
 
   const selectedCourse=courses.find(c=>c.id===parseInt(selectedCourseId));
   const modulesList=selectedCourse?selectedCourse.modules||[]:[];
@@ -116,31 +133,31 @@ function InstructorQuizzes(){
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-950 flex items-center justify-center">
+        <div className="bg-blue-950 p-6 rounded-2xl border border-blue-900 shadow-sm flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-500/20">
             <ClipboardList size={24} />
           </div>
           <div>
-            <p className="text-slate-500 text-sm font-medium">Total Quizzes</p>
-            <h3 className="text-2xl font-bold text-slate-800">{totalQuizzes}</h3>
+            <p className="text-blue-200 text-sm font-medium">Total Quizzes</p>
+            <h3 className="text-2xl font-bold text-white">{totalQuizzes}</h3>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-950 flex items-center justify-center">
+        <div className="bg-blue-950 p-6 rounded-2xl border border-blue-900 shadow-sm flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-500/20">
             <HelpCircle size={24} />
           </div>
           <div>
-            <p className="text-slate-500 text-sm font-medium">Question Bank</p>
-            <h3 className="text-2xl font-bold text-slate-800">{totalQuestions}</h3>
+            <p className="text-blue-200 text-sm font-medium">Question Bank</p>
+            <h3 className="text-2xl font-bold text-white">{totalQuestions}</h3>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-950 flex items-center justify-center">
+        <div className="bg-blue-950 p-6 rounded-2xl border border-blue-900 shadow-sm flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20">
             <BookOpen size={24} />
           </div>
           <div>
-            <p className="text-slate-500 text-sm font-medium">Courses with Quizzes</p>
-            <h3 className="text-2xl font-bold text-slate-800">{coursesWithQuizzes}</h3>
+            <p className="text-blue-200 text-sm font-medium">Courses with Quizzes</p>
+            <h3 className="text-2xl font-bold text-white">{coursesWithQuizzes}</h3>
           </div>
         </div>
       </div>
@@ -177,6 +194,16 @@ function InstructorQuizzes(){
           </div>
           
           <div className="flex items-center gap-3 w-full sm:w-auto">
+            <select
+              value={sortOption}
+              onChange={(e) => setSortOption(e.target.value)}
+              className="px-3 py-2 bg-white border border-slate-200 text-slate-700 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+            >
+              <option value="Newest">Sort by: Newest</option>
+              <option value="Oldest">Sort by: Oldest</option>
+              <option value="Title A-Z">Title A-Z</option>
+              <option value="Title Z-A">Title Z-A</option>
+            </select>
             <div className="relative flex-1 sm:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input 
@@ -196,7 +223,7 @@ function InstructorQuizzes(){
           </div>
         ):(
           <div className="divide-y divide-slate-100">
-            {searchedQuizzes.map((quiz)=>(
+            {sortedQuizzes.map((quiz)=>(
               <div key={quiz.id} className="p-6 hover:bg-slate-50 transition-colors group">
                 <div className="flex flex-col md:flex-row justify-between gap-6">
                   <div className="flex-1">
@@ -225,7 +252,7 @@ function InstructorQuizzes(){
                 </div>
               </div>
             ))}
-            {searchedQuizzes.length===0&&(
+            {sortedQuizzes.length===0&&(
               <div className="p-8 text-center text-slate-500">No quizzes found.</div>
             )}
           </div>

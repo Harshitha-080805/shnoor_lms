@@ -6,6 +6,7 @@ import api from '../../../api';
 function StudentGlobalArenas() {
   const [arenas, setArenas] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortOption, setSortOption] = useState("Newest");
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -38,6 +39,29 @@ function StudentGlobalArenas() {
     return `${mins}m ${secs}s`;
   };
 
+  const sortedArenas = React.useMemo(() => {
+    let dataCopy = [...arenas];
+
+    const q = searchQuery.toLowerCase().trim();
+    if (q) {
+      dataCopy = dataCopy.filter(a => {
+        if (a.title?.toLowerCase().includes(q)) return true;
+        if (a.difficulty?.toLowerCase().includes(q)) return true;
+        if (a.time_limit_minutes?.toString().includes(q)) return true;
+        if ((q.includes('mcq') || q.includes('mcqs')) && a.is_mcq_enabled) return true;
+        if ((q.includes('cod') || q.includes('code')) && a.is_coding_enabled) return true;
+        return false;
+      });
+    }
+
+    if (sortOption === "Newest") return dataCopy.sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    if (sortOption === "Oldest") return dataCopy.sort((a,b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+    if (sortOption === "Title A-Z") return dataCopy.sort((a,b) => (a.title||'').localeCompare(b.title||''));
+    if (sortOption === "Title Z-A") return dataCopy.sort((a,b) => (b.title||'').localeCompare(a.title||''));
+
+    return dataCopy;
+  }, [arenas, searchQuery, sortOption]);
+
   if (loading || !dashboard) {
     return (
       <div className="flex items-center justify-center h-48 bg-white rounded-2xl border border-slate-200 shadow-sm">
@@ -47,17 +71,6 @@ function StudentGlobalArenas() {
   }
 
   const { stats, recent, leaderboard } = dashboard;
-
-  const filteredArenas = arenas.filter(a => {
-    const q = searchQuery.toLowerCase().trim();
-    if (!q) return true;
-    if (a.title?.toLowerCase().includes(q)) return true;
-    if (a.difficulty?.toLowerCase().includes(q)) return true;
-    if (a.time_limit_minutes?.toString().includes(q)) return true;
-    if ((q.includes('mcq') || q.includes('mcqs')) && a.is_mcq_enabled) return true;
-    if ((q.includes('cod') || q.includes('code')) && a.is_coding_enabled) return true;
-    return false;
-  });
 
   return (
     <div className="space-y-6">
@@ -102,20 +115,32 @@ function StudentGlobalArenas() {
       <div>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
           <h2 className="text-xl font-bold text-slate-900">Your Practice Arenas</h2>
-          <div className="relative w-full sm:w-auto">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input 
-              type="text" 
-              placeholder="Search arenas..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full sm:w-64 pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all placeholder:font-normal"
-            />
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <select
+              value={sortOption}
+              onChange={(e) => setSortOption(e.target.value)}
+              className="bg-white border border-slate-200 text-slate-700 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block px-4 py-2 w-full sm:w-auto shadow-sm"
+            >
+              <option value="Newest">Sort by: Newest</option>
+              <option value="Oldest">Sort by: Oldest</option>
+              <option value="Title A-Z">Title A-Z</option>
+              <option value="Title Z-A">Title Z-A</option>
+            </select>
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <input 
+                type="text" 
+                placeholder="Search arenas..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all placeholder:font-normal"
+              />
+            </div>
           </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {filteredArenas.map((arena, i) => {
+          {sortedArenas.map((arena, i) => {
             const colors = [
               { bg: 'bg-amber-100', text: 'text-amber-600', border: 'border-amber-200' },
               { bg: 'bg-blue-100', text: 'text-blue-600', border: 'border-blue-200' },
@@ -162,7 +187,7 @@ function StudentGlobalArenas() {
               </div>
             );
           })}
-          {filteredArenas.length === 0 && (
+          {sortedArenas.length === 0 && (
             <div className="col-span-full bg-white p-8 rounded-2xl border border-slate-200 text-center text-slate-500">
               No practice arenas found.
             </div>

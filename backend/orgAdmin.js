@@ -28,14 +28,44 @@ module.exports = (authMiddleware) => {
     const { id } = req.params;
     const orgId = req.user.organization_id;
     try {
+      // Get user role first
+      const userCheck = await pool.query("SELECT role FROM users WHERE id = $1 AND organization_id = $2 AND is_approved = false", [id, orgId]);
+      if (userCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'User not found or already approved' });
+      }
+      const userRole = userCheck.rows[0].role;
+
+      // Check active subscription and limits
+      const subQuery = await pool.query(`
+        SELECT p.name, f.feature_value, s.end_date 
+        FROM subscriptions s 
+        JOIN subscription_plans p ON s.plan_id = p.id 
+        LEFT JOIN plan_features f ON p.id = f.plan_id AND f.feature_name ILIKE $1
+        WHERE s.organization_id = $2 AND s.status = 'active'
+        ORDER BY s.end_date DESC LIMIT 1
+      `, [userRole === 'INSTRUCTOR' ? '%Instructor%' : '%Learner%', orgId]);
+
+      if (subQuery.rows.length === 0) {
+        return res.status(403).json({ error: 'Cannot approve user: Organization does not have an active subscription.' });
+      }
+
+      const featureValue = subQuery.rows[0].feature_value;
+      const endDate = subQuery.rows[0].end_date ? new Date(subQuery.rows[0].end_date).toLocaleDateString() : 'the next billing cycle';
+      
+      if (featureValue && featureValue.toLowerCase() !== 'unlimited') {
+        const maxAllowed = parseInt(featureValue, 10);
+        const currentCountRes = await pool.query("SELECT COUNT(*) FROM users WHERE role = $1 AND is_approved = true AND organization_id = $2", [userRole, orgId]);
+        const currentCount = parseInt(currentCountRes.rows[0].count, 10);
+        
+        if (currentCount >= maxAllowed) {
+           return res.status(403).json({ error: `Cannot approve user: You have reached the limit of your respective plan and need to wait till ${endDate} for further access.` });
+        }
+      }
+
       const result = await pool.query(
         "UPDATE users SET is_approved = true, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND role IN ('LEARNER', 'INSTRUCTOR') AND organization_id = $2 RETURNING id, email, full_name, role, is_approved",
         [id, orgId]
       );
-
-      if (result.rows.length === 0) {
-        return res.status(404).json({ error: 'User not found, already approved, or does not belong to your organization' });
-      }
 
       const chatEvents = require('./chatEvents');
       await chatEvents.addUserToOrgGroup(id, orgId);
@@ -141,7 +171,14 @@ module.exports = (authMiddleware) => {
 
       //Get enrollments with course details
       const enrollmentsResult = await pool.query(`
-        SELECT e.id as enrollment_id, e.student_id, e.course_id, e.completed_at, c.title as course_title
+        SELECT e.id as enrollment_id, e.student_id, e.course_id, 
+        CASE 
+          WHEN (SELECT COUNT(*) FROM lessons l JOIN modules m ON l.module_id = m.id WHERE m.course_id = c.id) > 0 
+               AND (SELECT COUNT(*) FROM lessons l JOIN modules m ON l.module_id = m.id WHERE m.course_id = c.id) = (SELECT COUNT(*) FROM lesson_progress lp WHERE lp.enrollment_id = e.id AND lp.is_completed = true)
+          THEN CURRENT_TIMESTAMP
+          ELSE e.completed_at
+        END as completed_at, 
+        c.title as course_title
         FROM enrollments e
         JOIN courses c ON e.course_id = c.id
         WHERE e.student_id = ANY($1)
@@ -364,6 +401,49 @@ module.exports = (authMiddleware) => {
     }
   });
 
+  // 18. Get Exam Analytics
+  router.get('/exams/analytics', async (req, res) => {
+    try {
+      const orgId = req.user.organization_id;
+      
+      const attemptsRes = await pool.query(`
+        SELECT a.id, a.status, a.total_score, a.started_at, a.submitted_at, 
+               u.full_name as student_name,
+               e.title as exam_title,
+               c.title as course_title
+        FROM course_exam_attempts a
+        JOIN users u ON a.student_id = u.id
+        JOIN course_exams e ON a.exam_id = e.id
+        JOIN courses c ON e.course_id = c.id
+        WHERE u.organization_id = $1 AND a.status != 'IN_PROGRESS'
+        ORDER BY a.started_at DESC NULLS LAST
+      `, [orgId]);
+
+      const attempts = attemptsRes.rows;
+
+      const totalAttempts = attempts.length;
+      const uniqueExams = new Set(attempts.map(a => a.exam_title)).size;
+      
+      const passedCount = attempts.filter(a => a.status === 'PASSED').length;
+      const averagePassRate = totalAttempts > 0 ? Math.round((passedCount / totalAttempts) * 100) : 0;
+      
+      const totalScoreSum = attempts.reduce((sum, a) => sum + parseFloat(a.total_score || 0), 0);
+      const averageScore = totalAttempts > 0 ? (totalScoreSum / totalAttempts).toFixed(1) : 0;
+
+      res.json({
+        totalExamsConducted: uniqueExams,
+        averagePassRate,
+        totalAttempts,
+        averageScore,
+        recentAttempts: attempts
+      });
+
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Server error fetching exam analytics' });
+    }
+  });
+
   // 17. Get Overview Stats for Institute Dashboard
   router.get('/overview-stats', async (req, res) => {
     try {
@@ -380,10 +460,16 @@ module.exports = (authMiddleware) => {
 
       // 4. Avg Completion
       const completionRes = await pool.query(`
-        SELECT COUNT(CASE WHEN completed_at IS NOT NULL THEN 1 END)::FLOAT / NULLIF(COUNT(*), 0) * 100 as avg_completion 
-        FROM enrollments e
-        JOIN users u ON e.student_id = u.id
-        WHERE u.organization_id = $1
+        WITH CourseStats AS (
+          SELECT e.id as enrollment_id,
+            (SELECT COUNT(*) FROM lessons l JOIN modules m ON l.module_id = m.id WHERE m.course_id = e.course_id) as total_lessons,
+            (SELECT COUNT(*) FROM lesson_progress lp WHERE lp.enrollment_id = e.id AND lp.is_completed = true) as completed_lessons
+          FROM enrollments e
+          JOIN users u ON e.student_id = u.id
+          WHERE u.organization_id = $1
+        )
+        SELECT COUNT(CASE WHEN total_lessons > 0 AND total_lessons = completed_lessons THEN 1 END)::FLOAT / NULLIF(COUNT(*), 0) * 100 as avg_completion 
+        FROM CourseStats
       `, [orgId]);
       const avgCompletion = completionRes.rows[0].avg_completion ? Math.round(completionRes.rows[0].avg_completion) : 0;
 

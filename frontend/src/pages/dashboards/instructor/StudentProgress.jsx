@@ -9,6 +9,7 @@ function StudentProgress(){
   const[loading,setLoading]=useState(true);
   const[activeCourse,setActiveCourse]=useState('all');
   const[search,setSearch]=useState(location.state?.searchTerm || '');
+  const[sortOption,setSortOption]=useState('Newest');
 
 
   const fetchEnrollments=async()=>{
@@ -55,12 +56,28 @@ function StudentProgress(){
     :0;
   const activeCoursesCount=new Set(filteredEnrollments.map(e=>e.course?.id)).size;
 
-  const searchedEnrollments=filteredEnrollments.filter(e=>{
-    const sName=(e.student?.full_name||'').toLowerCase();
-    const sEmail=(e.student?.email||'').toLowerCase();
-    const query=search.toLowerCase();
-    return sName.includes(query)||sEmail.includes(query);
-  });
+  const sortedEnrollments = React.useMemo(() => {
+    if (!filteredEnrollments) return [];
+    let dataCopy = [...filteredEnrollments];
+    
+    // First apply search filters
+    if (search) {
+      dataCopy = dataCopy.filter(e => {
+        const sName=(e.student?.full_name||'').toLowerCase();
+        const sEmail=(e.student?.email||'').toLowerCase();
+        const query=search.toLowerCase();
+        return sName.includes(query)||sEmail.includes(query);
+      });
+    }
+    
+    // Then apply sort
+    if (sortOption === 'Newest') return dataCopy.sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    if (sortOption === 'Oldest') return dataCopy.sort((a,b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+    if (sortOption === 'Title A-Z') return dataCopy.sort((a,b) => (a.student?.full_name||'').localeCompare(b.student?.full_name||''));
+    if (sortOption === 'Title Z-A') return dataCopy.sort((a,b) => (b.student?.full_name||'').localeCompare(a.student?.full_name||''));
+    
+    return dataCopy;
+  }, [filteredEnrollments, search, sortOption]);
 
   return(
     <div className="space-y-6">
@@ -72,40 +89,40 @@ function StudentProgress(){
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-950 flex items-center justify-center">
+        <div className="bg-blue-950 p-5 rounded-2xl border border-blue-900 shadow-sm flex items-center gap-4">
+          <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-500/20">
             <Users size={20} />
           </div>
           <div>
-            <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">Total Students</p>
-            <h3 className="text-xl font-bold text-slate-800">{totalStudents}</h3>
+            <p className="text-blue-200 text-xs font-medium uppercase tracking-wider">Total Students</p>
+            <h3 className="text-xl font-bold text-white">{totalStudents}</h3>
           </div>
         </div>
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
+        <div className="bg-blue-950 p-5 rounded-2xl border border-blue-900 shadow-sm flex items-center gap-4">
+          <div className="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20">
             <Award size={20} />
           </div>
           <div>
-            <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">Completions</p>
-            <h3 className="text-xl font-bold text-slate-800">{completions}</h3>
+            <p className="text-blue-200 text-xs font-medium uppercase tracking-wider">Completions</p>
+            <h3 className="text-xl font-bold text-white">{completions}</h3>
           </div>
         </div>
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center">
+        <div className="bg-blue-950 p-5 rounded-2xl border border-blue-900 shadow-sm flex items-center gap-4">
+          <div className="w-10 h-10 rounded-full bg-purple-500 text-white flex items-center justify-center shadow-lg shadow-purple-500/20">
             <TrendingUp size={20} />
           </div>
           <div>
-            <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">Avg Progress</p>
-            <h3 className="text-xl font-bold text-slate-800">{avgProgress}%</h3>
+            <p className="text-blue-200 text-xs font-medium uppercase tracking-wider">Avg Progress</p>
+            <h3 className="text-xl font-bold text-white">{avgProgress}%</h3>
           </div>
         </div>
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center">
+        <div className="bg-blue-950 p-5 rounded-2xl border border-blue-900 shadow-sm flex items-center gap-4">
+          <div className="w-10 h-10 rounded-full bg-orange-500 text-white flex items-center justify-center shadow-lg shadow-orange-500/20">
             <BookOpen size={20} />
           </div>
           <div>
-            <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">Active Courses</p>
-            <h3 className="text-xl font-bold text-slate-800">{activeCoursesCount}</h3>
+            <p className="text-blue-200 text-xs font-medium uppercase tracking-wider">Active Courses</p>
+            <h3 className="text-xl font-bold text-white">{activeCoursesCount}</h3>
           </div>
         </div>
       </div>
@@ -126,7 +143,17 @@ function StudentProgress(){
             </select>
           </div>
           
-          <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="flex items-center gap-3 w-full md:w-auto mt-4 md:mt-0">
+            <select
+              value={sortOption}
+              onChange={(e) => setSortOption(e.target.value)}
+              className="px-3 py-2 bg-white border border-slate-200 text-slate-700 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+            >
+              <option value="Newest">Sort by: Newest</option>
+              <option value="Oldest">Sort by: Oldest</option>
+              <option value="Title A-Z">Title A-Z</option>
+              <option value="Title Z-A">Title Z-A</option>
+            </select>
             <div className="relative flex-1 md:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input 
@@ -158,7 +185,7 @@ function StudentProgress(){
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {searchedEnrollments.map((e)=>{
+                {sortedEnrollments.map((e)=>{
                   const pct=getProgress(e);
                   const score=getQuizScorePct(e);
                   const name=e.student?.full_name||'Student';
@@ -220,7 +247,7 @@ function StudentProgress(){
                     </tr>
                   );
                 })}
-                {searchedEnrollments.length===0&&(
+                {sortedEnrollments.length===0&&(
                   <tr>
                     <td colSpan="6" className="p-8 text-center text-slate-500">
                       No students found.

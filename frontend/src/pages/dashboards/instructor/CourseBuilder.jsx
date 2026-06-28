@@ -1,7 +1,7 @@
 import React,{useState,useEffect}from"react";
 import api from '../../../api';
 import{useParams,useNavigate}from"react-router-dom";
-import{ArrowLeft,Plus,Video,FileText,File,Save,Send,Trash,Image,Music,X}from"lucide-react";
+import{ArrowLeft,Plus,Video,FileText,File,Save,Send,Trash,Image,Music,X, Trash2}from"lucide-react";
 function CourseBuilder(){
   const{courseId}=useParams();
   const navigate=useNavigate();
@@ -12,6 +12,13 @@ function CourseBuilder(){
   const[desc,setDesc]=useState('');
   const[thumbUrl,setThumbUrl]=useState('');
   const[thumbFile,setThumbFile]=useState(null);
+  const[prerequisites,setPrerequisites]=useState([]);
+  const[estimatedDuration,setEstimatedDuration]=useState('');
+  const[learningOutcomes,setLearningOutcomes]=useState('');
+  const[skillsGained,setSkillsGained]=useState('');
+  const[difficultyLevel,setDifficultyLevel]=useState('Beginner');
+  const[prerequisitesEnabled,setPrerequisitesEnabled]=useState(false);
+  const[allCourses,setAllCourses]=useState([]);
   const[loading,setLoading]=useState(true);
   const[showModModal,setShowModModal]=useState(false);
   const[modTitle,setModTitle]=useState('');
@@ -36,7 +43,38 @@ function CourseBuilder(){
   const[optD,setOptD]=useState('');
   const[correct,setCorrect]=useState('');
 
+  // Advanced Exam State Variables
+  const [courseExam, setCourseExam] = useState(null);
+  const [examBuilderData, setExamBuilderData] = useState(null);
+  const [showAdvancedQuesModal, setShowAdvancedQuesModal] = useState(false);
+  const [advQText, setAdvQText] = useState('');
+  const [advQType, setAdvQType] = useState('single_mcq');
+  const [advMarks, setAdvMarks] = useState(1);
+  const [advOptA, setAdvOptA] = useState('');
+  const [advOptB, setAdvOptB] = useState('');
+  const [advOptC, setAdvOptC] = useState('');
+  const [advOptD, setAdvOptD] = useState('');
+  const [advCorrect, setAdvCorrect] = useState(''); 
+  const [advCorrectText, setAdvCorrectText] = useState('');
+  const [advLang, setAdvLang] = useState('javascript');
+  const [advTemplate, setAdvTemplate] = useState('');
+  const [advTestCases, setAdvTestCases] = useState([{ stdin: '', expected_output: '', is_hidden: false }]);
+
+  const loadExamBuilder = async (examId) => {
+    try {
+       const res = await api.get(`/api/exams/${examId}/builder`);
+       setExamBuilderData(res.data);
+    } catch(e) {}
+  };
+
   const loadCourse=async()=>{
+    try {
+      const allRes = await api.get('/api/courses/');
+      if (allRes.status >= 200 && allRes.status < 300) {
+        setAllCourses(allRes.data);
+      }
+    } catch(e) {}
+
     if(courseId==='new'){
       setLoading(false);
       return;
@@ -50,14 +88,35 @@ function CourseBuilder(){
         setDesc(data.description||'');
         setThumbUrl(data.thumbnail_url||'');
         setModules(data.modules||[]);
+        setEstimatedDuration(data.estimated_duration || '');
+        setLearningOutcomes(data.learning_outcomes || '');
+        setSkillsGained(data.skills_gained || '');
+        setDifficultyLevel(data.difficulty_level || 'Beginner');
+        setPrerequisitesEnabled(data.prerequisites_enabled || false);
+        if(data.prerequisites) {
+          setPrerequisites(data.prerequisites.map(p => ({
+            id: String(p.id),
+            minimum_completion_percentage: p.minimum_completion_percentage || 0,
+            minimum_quiz_score: p.minimum_quiz_score || 0,
+            certificate_required: p.certificate_required || false
+          })));
+        }
+      }
+      
+      const examRes = await api.get(`/api/exams/courses/${courseId}`);
+      if(examRes.data && examRes.data.length > 0) {
+        setCourseExam(examRes.data[0]);
+        loadExamBuilder(examRes.data[0].id);
       }
     }catch(e){}finally{
       setLoading(false);
     }
   };
+
   useEffect(()=>{
     loadCourse();
   },[courseId]);
+
   const handleSaveStep1=async(e)=>{
     e.preventDefault();
     if(!title.trim()||!desc.trim()){
@@ -69,27 +128,39 @@ function CourseBuilder(){
     formData.append("description",desc);
     if(thumbUrl)formData.append("thumbnail_url",thumbUrl);
     if(thumbFile)formData.append("thumbnail_file",thumbFile);
+    formData.append("estimated_duration", estimatedDuration);
+    formData.append("learning_outcomes", learningOutcomes);
+    formData.append("skills_gained", skillsGained);
+    formData.append("difficulty_level", difficultyLevel);
+    formData.append("prerequisites_enabled", prerequisitesEnabled);
     try{
+      let savedCourseId = courseId;
       if(courseId==='new'){
         const res=await api.post(`/api/courses/`, formData);
         if((res.status >= 200 && res.status < 300)){
           const data=res.data;
+          savedCourseId = data.id;
           alert("Course details saved!");
-          navigate(`/instructor-dashboard/courses/${data.id}/build`);
-          setStep(2);
         }else{
-          alert("Failed to save details");
+          alert("Failed to save details"); return;
         }
       }else{
         const res=await api.put(`/api/courses/${courseId}`, formData);
         if((res.status >= 200 && res.status < 300)){
           alert("Course details updated!");
-          await loadCourse();
-          setStep(2);
         }else{
-          alert("Failed to save details");
+          alert("Failed to save details"); return;
         }
       }
+
+      await api.post(`/api/courses/${savedCourseId}/prerequisites`, { prerequisites: prerequisites });
+
+      if(courseId==='new'){
+        navigate(`/instructor-dashboard/courses/${savedCourseId}/build`);
+      } else {
+        await loadCourse();
+      }
+      setStep(2);
     }catch(e){
       alert("Failed to save details");
     }
@@ -251,6 +322,89 @@ function CourseBuilder(){
       }
     }catch(e){}
   };
+
+  const handleConfigureCourseExam = async () => {
+    try {
+      const res = await api.post(`/api/exams/courses/${courseId}`, {
+         title: 'Course Final Exam',
+         description: 'Mandatory final exam to complete this course.',
+         duration_minutes: 60,
+         pass_percentage: 60,
+         attempt_limit: 3
+      });
+      const newExam = res.data;
+      setCourseExam(newExam);
+      
+      const secRes = await api.post(`/api/exams/${newExam.id}/sections`, {
+         title: 'General',
+         description: 'General questions section'
+      });
+      
+      await loadExamBuilder(newExam.id);
+    } catch(e) {
+      console.error(e);
+      alert("Failed to configure course exam");
+    }
+  };
+
+  const handleAddAdvancedQuestion = async (e) => {
+    e.preventDefault();
+    if(!advQText.trim()) return;
+    
+    let options = [];
+    if (advQType === 'single_mcq' || advQType === 'multiple_mcq') {
+        if (!advCorrect) return alert('Select the correct answer');
+        options = [
+          { option_text: advOptA, is_correct: advCorrect.includes('A') },
+          { option_text: advOptB, is_correct: advCorrect.includes('B') }
+        ];
+        if (advOptC) options.push({ option_text: advOptC, is_correct: advCorrect.includes('C') });
+        if (advOptD) options.push({ option_text: advOptD, is_correct: advCorrect.includes('D') });
+    } else if (advQType === 'fill_blank') {
+        if (!advCorrectText) return alert('Enter the correct answer for the blank');
+        options = [
+          { option_text: advCorrectText, is_correct: true }
+        ];
+    }
+    
+    let payload = {
+      question_text: advQText,
+      question_type: advQType,
+      marks: advMarks,
+      options
+    };
+
+    if (advQType === 'coding') {
+       payload.language = advLang;
+       payload.starter_code = advTemplate;
+       payload.test_cases = advTestCases.filter(tc => tc.expected_output.trim() !== '');
+    }
+
+    try {
+      let activeSectionId = examBuilderData?.sections?.[0]?.id;
+      if(!activeSectionId) { 
+          const secRes = await api.post(`/api/exams/${courseExam.id}/sections`, {
+             title: 'General', description: 'General questions'
+          });
+          activeSectionId = secRes.data.id;
+      }
+      
+      await api.post(`/api/exams/sections/${activeSectionId}/questions`, payload);
+      
+      setAdvQText('');
+      setAdvQType('single_mcq');
+      setAdvOptA(''); setAdvOptB(''); setAdvOptC(''); setAdvOptD('');
+      setAdvCorrect('');
+      setAdvCorrectText('');
+      setAdvTemplate(''); 
+      setAdvTestCases([{ stdin: '', expected_output: '', is_hidden: false }]);
+      setShowAdvancedQuesModal(false);
+      loadExamBuilder(courseExam.id);
+    } catch(err) {
+      console.error(err);
+      alert("Failed to add question");
+    }
+  };
   const handleSubmitForApproval=async()=>{
     try{
       const res=await api.put(`/api/courses/${courseId}`, {is_published:true});
@@ -326,6 +480,91 @@ function CourseBuilder(){
               <div>
                 <label className="block text-slate-700 mb-1.5 font-semibold">Course Description</label>
                 <textarea rows="4" value={desc} onChange={(e)=>setDesc(e.target.value)} required placeholder="Describe course details, objectives, requirements..." className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-medium bg-white"/>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-slate-700 mb-1.5 font-semibold">Estimated Duration</label>
+                  <input type="text" value={estimatedDuration} onChange={(e)=>setEstimatedDuration(e.target.value)} placeholder="e.g. 4 Weeks or 10 Hours" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-medium bg-white"/>
+                </div>
+                <div>
+                  <label className="block text-slate-700 mb-1.5 font-semibold">Difficulty Level</label>
+                  <select value={difficultyLevel} onChange={(e)=>setDifficultyLevel(e.target.value)} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-medium bg-white">
+                    <option value="Beginner">Beginner</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-slate-700 mb-1.5 font-semibold">Learning Outcomes</label>
+                <textarea rows="3" value={learningOutcomes} onChange={(e)=>setLearningOutcomes(e.target.value)} placeholder="What will the student achieve? (Comma separated)" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-medium bg-white"/>
+              </div>
+              <div>
+                <label className="block text-slate-700 mb-1.5 font-semibold">Skills Gained</label>
+                <textarea rows="2" value={skillsGained} onChange={(e)=>setSkillsGained(e.target.value)} placeholder="React, Node.js, Problem Solving..." className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-medium bg-white"/>
+              </div>
+              
+              <div className="border border-slate-200 rounded-xl p-4 bg-slate-50">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <label className="block text-slate-800 font-bold">Enable Prerequisites</label>
+                    <p className="text-xs text-slate-500">Require students to complete specific courses before enrolling.</p>
+                  </div>
+                  <input type="checkbox" checked={prerequisitesEnabled} onChange={(e)=>setPrerequisitesEnabled(e.target.checked)} className="w-5 h-5 cursor-pointer rounded text-blue-600 focus:ring-blue-500 border-slate-300"/>
+                </div>
+                
+                {prerequisitesEnabled && (
+                  <div className="mt-4 pt-4 border-t border-slate-200">
+                    <p className="text-xs font-semibold text-slate-700 mb-3">Select and Configure Prerequisite Courses:</p>
+                    <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
+                      {allCourses.filter(c => String(c.id) !== String(courseId)).length === 0 && (
+                        <span className="text-slate-400 text-xs italic">No other published courses available.</span>
+                      )}
+                      {allCourses.filter(c => String(c.id) !== String(courseId)).map(c => {
+                        const existingPrereq = prerequisites.find(p => String(p.id) === String(c.id));
+                        const isSelected = !!existingPrereq;
+                        
+                        return (
+                          <div key={c.id} className={`p-3 rounded-xl border ${isSelected ? 'bg-blue-50/50 border-blue-200 shadow-sm' : 'bg-white border-slate-200'}`}>
+                            <label className="flex items-center gap-2 cursor-pointer font-bold text-sm text-slate-800">
+                              <input type="checkbox" checked={isSelected} onChange={(e) => {
+                                if (e.target.checked) {
+                                  setPrerequisites([...prerequisites, { id: String(c.id), minimum_completion_percentage: 0, minimum_quiz_score: 0, certificate_required: false }]);
+                                } else {
+                                  setPrerequisites(prerequisites.filter(p => String(p.id) !== String(c.id)));
+                                }
+                              }} className="rounded cursor-pointer w-4 h-4 text-blue-600 focus:ring-blue-500"/>
+                              {c.title}
+                            </label>
+                            
+                            {isSelected && (
+                              <div className="mt-4 ml-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                  <label className="block text-[11px] uppercase tracking-wider font-bold text-slate-500 mb-1">Min Completion %</label>
+                                  <input type="number" min="0" max="100" value={existingPrereq.minimum_completion_percentage || 0} onChange={(e) => {
+                                    setPrerequisites(prerequisites.map(p => String(p.id) === String(c.id) ? {...p, minimum_completion_percentage: parseInt(e.target.value)} : p));
+                                  }} className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"/>
+                                </div>
+                                <div>
+                                  <label className="block text-[11px] uppercase tracking-wider font-bold text-slate-500 mb-1">Min Quiz Score %</label>
+                                  <input type="number" min="0" max="100" value={existingPrereq.minimum_quiz_score || 0} onChange={(e) => {
+                                    setPrerequisites(prerequisites.map(p => String(p.id) === String(c.id) ? {...p, minimum_quiz_score: parseInt(e.target.value)} : p));
+                                  }} className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"/>
+                                </div>
+                                <div className="flex items-center gap-2 mt-5">
+                                  <input type="checkbox" checked={existingPrereq.certificate_required || false} onChange={(e) => {
+                                    setPrerequisites(prerequisites.map(p => String(p.id) === String(c.id) ? {...p, certificate_required: e.target.checked} : p));
+                                  }} className="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-slate-300"/>
+                                  <label className="text-xs font-bold text-slate-700 cursor-pointer">Require Certificate</label>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -418,37 +657,46 @@ function CourseBuilder(){
           {step===3&&(
             <div className="space-y-6">
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
-                <h3 className="text-lg font-bold text-slate-800">Step 3: Final Quiz Configuration</h3>
-                {finalQuiz ? (
+                <h3 className="text-lg font-bold text-slate-800">Step 3: Course Exam Configuration</h3>
+                {courseExam ? (
                   <div className="p-4 border border-indigo-100 bg-indigo-50/20 rounded-xl space-y-3">
                     <div className="flex justify-between items-center">
-                      <div className="text-sm font-bold text-indigo-900">Final Quiz: {finalQuiz.title}</div>
+                      <div className="text-sm font-bold text-indigo-900">Final Exam: {courseExam.title}</div>
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-slate-500 font-medium">Passing Score Required:</span>
-                        <input type="number" min="0" max="100" value={finalQuiz.passing_score||60} onChange={async(e)=>{const val=parseInt(e.target.value)||60;await handleUpdateQuizScore(finalQuiz.id,val);}} className="w-12 p-0.5 border rounded text-xs text-center bg-white font-bold text-indigo-700"/>
+                        <input type="number" min="0" max="100" value={courseExam.pass_percentage||60} onChange={async(e)=>{
+                           const val=parseInt(e.target.value)||60;
+                           await api.put(`/api/exams/${courseExam.id}/settings`, {pass_percentage:val});
+                           setCourseExam({...courseExam, pass_percentage:val});
+                        }} className="w-12 p-0.5 border rounded text-xs text-center bg-white font-bold text-indigo-700"/>
                         <span className="text-xs text-slate-500 font-medium">%</span>
                       </div>
-                      <button onClick={()=>{setSelectedQuizId(finalQuiz.id);setShowQuesModal(true);}} className="text-xs text-indigo-600 font-semibold hover:underline">+ Add MCQ Question</button>
+                      <button onClick={()=>setShowAdvancedQuesModal(true)} className="text-xs text-indigo-600 font-semibold hover:underline">+ Add Question</button>
                     </div>
                     <div className="space-y-1.5">
-                      {finalQuiz.questions?.map((q,qIdx)=>(
-                        <div key={q.id} className="text-xs text-slate-600 pl-3">{qIdx+1}. {q.text}</div>
-                      ))}
-                      {(!finalQuiz.questions || finalQuiz.questions.length === 0) && (
-                        <div className="text-xs text-slate-400 italic">No questions added yet. Click "+ Add MCQ Question" to add questions.</div>
+                      {examBuilderData?.sections?.map(sec => 
+                        sec.questions?.map((q, qIdx) => (
+                           <div key={q.id} className="text-xs text-slate-600 pl-3 flex justify-between items-center">
+                             <span>{qIdx+1}. <span className="uppercase text-[10px] font-bold text-indigo-400 bg-indigo-50 px-1 py-0.5 rounded mr-1">{q.question_type.replace('_',' ')}</span> {q.question_text}</span>
+                             <button onClick={async()=>{await api.delete(`/api/exams/questions/${q.id}`); loadExamBuilder(courseExam.id);}} className="text-red-400 hover:text-red-600 p-1"><Trash2 size={12}/></button>
+                           </div>
+                        ))
+                      )}
+                      {(!examBuilderData?.sections?.[0]?.questions || examBuilderData.sections[0].questions.length === 0) && (
+                        <div className="text-xs text-slate-400 italic">No questions added yet. Click "+ Add Question" to add questions.</div>
                       )}
                     </div>
                   </div>
                 ) : (
                   <div className="text-center py-8 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl space-y-3">
-                    <p className="text-slate-500 text-sm">No final quiz configured. Students must pass the final quiz to request certificates.</p>
-                    <button type="button" onClick={handleCreateFinalQuiz} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl text-xs shadow">Configure Final Quiz</button>
+                    <p className="text-slate-500 text-sm">No course exam configured. Students must pass the course exam to complete the course.</p>
+                    <button type="button" onClick={handleConfigureCourseExam} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl text-xs shadow">Configure Course Exam</button>
                   </div>
                 )}
               </div>
               <div className="pt-4 border-t border-slate-100 flex justify-between">
                 <button onClick={()=>setStep(2)} className="px-6 py-2.5 border border-slate-200 text-slate-700 font-bold rounded-xl text-sm hover:bg-slate-50 transition">Back to Step 2</button>
-                <button onClick={handleSubmitForApproval} disabled={!finalQuiz} className="px-6 py-2.5 bg-green-600 text-white font-bold rounded-xl text-sm hover:bg-green-700 transition flex items-center gap-1.5 shadow disabled:opacity-50"><Send size={16}/> Submit Course for Approval</button>
+                <button onClick={handleSubmitForApproval} disabled={!courseExam} className="px-6 py-2.5 bg-green-600 text-white font-bold rounded-xl text-sm hover:bg-green-700 transition flex items-center gap-1.5 shadow disabled:opacity-50"><Send size={16}/> Submit Course for Approval</button>
               </div>
             </div>
           )}
@@ -619,6 +867,158 @@ function CourseBuilder(){
               <button type="submit" className="px-4 py-2 bg-yellow-500 text-blue-950 font-black text-xs font-bold rounded-xl hover:bg-blue-700">Add Question</button>
             </div>
           </form>
+        </div>
+      )}
+      {showAdvancedQuesModal&&(
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl">
+            <div className="flex justify-between items-center pb-4 border-b border-slate-100 mb-4">
+              <h3 className="text-lg font-bold text-slate-800">Add Question</h3>
+              <button type="button" onClick={()=>setShowAdvancedQuesModal(false)} className="text-slate-400 hover:text-slate-600"><X size={20}/></button>
+            </div>
+            <form onSubmit={handleAddAdvancedQuestion} className="space-y-4 text-sm">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Question Type</label>
+                <select value={advQType} onChange={(e)=>{setAdvQType(e.target.value);setAdvCorrect('');}} className="w-full p-2.5 border border-slate-200 rounded-xl outline-none bg-slate-50 font-medium">
+                  <option value="single_mcq">Single Choice MCQ</option>
+                  <option value="multiple_mcq">Multiple Choice MCQ</option>
+                  <option value="fill_blank">Fill in the Blanks</option>
+                  <option value="coding">Coding</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Question Text</label>
+                <textarea rows="3" value={advQText} onChange={(e)=>setAdvQText(e.target.value)} required placeholder="Enter the question..." className="w-full p-2.5 border border-slate-200 rounded-xl outline-none bg-white"/>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Marks</label>
+                <input type="number" min="1" value={advMarks} onChange={(e)=>setAdvMarks(parseInt(e.target.value)||1)} className="w-24 p-2.5 border border-slate-200 rounded-xl outline-none bg-white"/>
+              </div>
+
+              {(advQType === 'single_mcq' || advQType === 'multiple_mcq') && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <input type="text" value={advOptA} onChange={(e)=>setAdvOptA(e.target.value)} required placeholder="Option A" className="p-2 border border-slate-200 rounded-xl outline-none bg-white"/>
+                    <input type="text" value={advOptB} onChange={(e)=>setAdvOptB(e.target.value)} required placeholder="Option B" className="p-2 border border-slate-200 rounded-xl outline-none bg-white"/>
+                    <input type="text" value={advOptC} onChange={(e)=>setAdvOptC(e.target.value)} placeholder="Option C" className="p-2 border border-slate-200 rounded-xl outline-none bg-white"/>
+                    <input type="text" value={advOptD} onChange={(e)=>setAdvOptD(e.target.value)} placeholder="Option D" className="p-2 border border-slate-200 rounded-xl outline-none bg-white"/>
+                  </div>
+                  {advQType === 'single_mcq' ? (
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">Correct Answer Option</label>
+                      <select value={advCorrect} onChange={(e)=>setAdvCorrect(e.target.value)} required className="w-full p-2.5 border border-slate-200 rounded-xl outline-none bg-white">
+                        <option value="">Select Correct Option</option>
+                        <option value="A">Option A</option>
+                        <option value="B">Option B</option>
+                        <option value="C">Option C</option>
+                        <option value="D">Option D</option>
+                      </select>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-500 mb-1">Correct Answers (Check all that apply)</label>
+                      <div className="flex gap-4 p-2.5 border border-slate-200 rounded-xl bg-white">
+                        {['A','B','C','D'].map(k=>{
+                          const selected = advCorrect.split(',').map(s=>s.trim()).includes(k);
+                          return(
+                            <label key={k} className="flex items-center gap-2 font-bold cursor-pointer text-xs">
+                              <input type="checkbox" checked={selected} onChange={()=>{
+                                const parts=advCorrect?advCorrect.split(',').map(s=>s.trim()).filter(Boolean):[];
+                                const newParts=parts.includes(k)?parts.filter(o=>o!==k):[...parts,k];
+                                setAdvCorrect(newParts.sort().join(','));
+                              }} className="h-4 w-4"/>
+                              {k}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {advQType === 'fill_blank' && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">Correct Answer (Exact text matching)</label>
+                  <input type="text" value={advCorrectText} onChange={(e)=>setAdvCorrectText(e.target.value)} required placeholder="e.g. Variable" className="w-full p-2.5 border border-slate-200 rounded-xl outline-none bg-white"/>
+                </div>
+              )}
+
+              {advQType === 'coding' && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">Programming Language</label>
+                    <select value={advLang} onChange={(e)=>setAdvLang(e.target.value)} className="w-full p-2.5 border border-slate-200 rounded-xl outline-none bg-slate-50">
+                      <option value="javascript">JavaScript (Node.js)</option>
+                      <option value="python">Python</option>
+                      <option value="java">Java</option>
+                      <option value="cpp">C++</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1">Initial Code Template</label>
+                    <textarea rows="4" value={advTemplate} onChange={(e)=>setAdvTemplate(e.target.value)} placeholder="function solution() {\n  \n}" className="w-full p-2.5 border border-slate-200 rounded-xl outline-none bg-slate-900 text-green-400 font-mono text-xs"/>
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                       <label className="block text-xs font-semibold text-slate-500">Test Cases</label>
+                       <button type="button" onClick={() => setAdvTestCases([...advTestCases, { stdin:'', expected_output:'', is_hidden:false }])} className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-1 rounded font-bold hover:bg-indigo-100">+ Add Test Case</button>
+                    </div>
+                    <div className="space-y-3">
+                      {advTestCases.map((tc, idx) => (
+                        <div key={idx} className="p-3 border border-slate-200 rounded-xl space-y-2 bg-slate-50/50">
+                           <div className="flex justify-between items-center">
+                              <span className="text-xs font-bold text-slate-600">Case {idx+1}</span>
+                              <div className="flex items-center gap-3">
+                                 <label className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 cursor-pointer">
+                                   <input type="checkbox" checked={tc.is_hidden} onChange={(e)=>{
+                                      const newTc = [...advTestCases];
+                                      newTc[idx].is_hidden = e.target.checked;
+                                      setAdvTestCases(newTc);
+                                   }} className="h-3 w-3 rounded border-slate-300"/>
+                                   Hidden Case
+                                 </label>
+                                 {advTestCases.length > 1 && (
+                                   <button type="button" onClick={()=>{
+                                      const newTc = [...advTestCases];
+                                      newTc.splice(idx, 1);
+                                      setAdvTestCases(newTc);
+                                   }} className="text-red-400 hover:text-red-600"><Trash2 size={14}/></button>
+                                 )}
+                              </div>
+                           </div>
+                           <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <textarea rows="2" value={tc.stdin} onChange={(e)=>{
+                                   const newTc = [...advTestCases];
+                                   newTc[idx].stdin = e.target.value;
+                                   setAdvTestCases(newTc);
+                                }} placeholder="STDIN (Input)" className="w-full p-2 border border-slate-200 rounded outline-none font-mono text-xs bg-white"/>
+                              </div>
+                              <div>
+                                <textarea rows="2" value={tc.expected_output} onChange={(e)=>{
+                                   const newTc = [...advTestCases];
+                                   newTc[idx].expected_output = e.target.value;
+                                   setAdvTestCases(newTc);
+                                }} required placeholder="Expected STDOUT" className="w-full p-2 border border-slate-200 rounded outline-none font-mono text-xs bg-white"/>
+                              </div>
+                           </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                <button type="button" onClick={()=>setShowAdvancedQuesModal(false)} className="px-4 py-2 text-slate-500 text-xs font-bold hover:bg-slate-100 rounded-xl">Cancel</button>
+                <button type="submit" className="px-6 py-2 bg-yellow-500 text-blue-950 font-black text-sm rounded-xl hover:bg-blue-700 hover:text-white transition-colors">Add Question</button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

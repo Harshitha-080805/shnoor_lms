@@ -21,6 +21,7 @@ function InstituteProgress() {
   const learnerText = orgType === 'company' ? 'Employee' : 'Learner';
   const [progressData, setProgressData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [sortOption, setSortOption] = useState("Newest");
 
   useEffect(() => {
     const fetchProgress = async () => {
@@ -36,8 +37,33 @@ function InstituteProgress() {
     fetchProgress();
   }, []);
 
+  const sortedProgress = React.useMemo(() => {
+    let dataCopy = progressData.filter(item => !searchTerm || item.learner_name?.toLowerCase().includes(searchTerm.toLowerCase()) || item.course_title?.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    if (sortOption === "Newest") return dataCopy.sort((a,b) => new Date(b.last_active || 0) - new Date(a.last_active || 0));
+    if (sortOption === "Oldest") return dataCopy.sort((a,b) => new Date(a.last_active || 0) - new Date(b.last_active || 0));
+    if (sortOption === "Student A-Z") return dataCopy.sort((a,b) => (a.learner_name||'').localeCompare(b.learner_name||''));
+    if (sortOption === "Student Z-A") return dataCopy.sort((a,b) => (b.learner_name||'').localeCompare(a.learner_name||''));
+    if (sortOption === "Course A-Z") return dataCopy.sort((a,b) => (a.course_title||'').localeCompare(b.course_title||''));
+
+    return dataCopy;
+  }, [progressData, searchTerm, sortOption]);
+
   return (
     <div className="space-y-6 animate-fade-in-up">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <select
+          value={sortOption}
+          onChange={(e) => setSortOption(e.target.value)}
+          className="bg-white border border-slate-200 text-slate-700 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block px-4 py-2 w-full sm:w-auto shadow-sm"
+        >
+          <option value="Newest">Sort by: Newest</option>
+          <option value="Oldest">Sort by: Oldest</option>
+          <option value="Student A-Z">Learner A-Z</option>
+          <option value="Student Z-A">Learner Z-A</option>
+          <option value="Course A-Z">Course A-Z</option>
+        </select>
+      </div>
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <table className="w-full text-left">
           <thead className="bg-slate-50 border-b border-slate-200">
@@ -56,15 +82,14 @@ function InstituteProgress() {
                   Loading progress data...
                 </td>
               </tr>
-            ) : progressData.filter(item => !searchTerm || item.learner_name?.toLowerCase().includes(searchTerm.toLowerCase()) || item.course_title?.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 ? (
+            ) : sortedProgress.length === 0 ? (
               <tr>
                 <td colSpan="4" className="p-0">
                   <EmptyState title="No Progress Data" description={`When ${learnerText.toLowerCase()}s enroll and begin taking courses, their progress metrics will appear here.`} icon={<svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>} />
                 </td>
               </tr>
             ) : (
-              progressData
-                .filter(item => !searchTerm || item.learner_name?.toLowerCase().includes(searchTerm.toLowerCase()) || item.course_title?.toLowerCase().includes(searchTerm.toLowerCase()))
+              sortedProgress
                 .map((item, idx) => {
                 const total = parseInt(item.total_lessons) || 0;
                 const completed = parseInt(item.completed_lessons) || 0;

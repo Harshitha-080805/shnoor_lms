@@ -19,6 +19,7 @@ function InstituteCertificates() {
   const searchTerm = location.state?.searchTerm || '';
   const [pendingCerts, setPendingCerts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [sortOption, setSortOption] = useState("Newest");
 
   const loadPendingCerts = () => {
     setLoading(true);
@@ -33,6 +34,17 @@ function InstituteCertificates() {
   useEffect(() => {
     loadPendingCerts();
   }, []);
+
+  const sortedCerts = React.useMemo(() => {
+    let dataCopy = pendingCerts.filter(cert => !searchTerm || cert.course_title?.toLowerCase().includes(searchTerm.toLowerCase()) || cert.student_name?.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    if (sortOption === "Newest") return dataCopy.sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    if (sortOption === "Oldest") return dataCopy.sort((a,b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+    if (sortOption === "Student A-Z") return dataCopy.sort((a,b) => (a.student_name||'').localeCompare(b.student_name||''));
+    if (sortOption === "Student Z-A") return dataCopy.sort((a,b) => (b.student_name||'').localeCompare(a.student_name||''));
+
+    return dataCopy;
+  }, [pendingCerts, searchTerm, sortOption]);
 
   const handleReview = (id, action) => {
     if (!window.confirm(`Are you sure you want to ${action} this certificate request?`)) return;
@@ -57,6 +69,19 @@ function InstituteCertificates() {
         <p className="text-sm text-slate-500 mt-1">Review and approve certificate requests from your learners.</p>
       </div>
 
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <select
+          value={sortOption}
+          onChange={(e) => setSortOption(e.target.value)}
+          className="bg-white border border-slate-200 text-slate-700 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block px-4 py-2 w-full sm:w-auto shadow-sm"
+        >
+          <option value="Newest">Sort by: Newest</option>
+          <option value="Oldest">Sort by: Oldest</option>
+          <option value="Student A-Z">Learner A-Z</option>
+          <option value="Student Z-A">Learner Z-A</option>
+        </select>
+      </div>
+
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         {loading ? (
           <div className="p-12 flex justify-center items-center">
@@ -72,7 +97,7 @@ function InstituteCertificates() {
               </svg>
             }
           />
-        ) : pendingCerts.filter(cert => !searchTerm || cert.course_title?.toLowerCase().includes(searchTerm.toLowerCase()) || cert.student_name?.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 ? (
+        ) : sortedCerts.length === 0 ? (
           <EmptyState 
             title="No Matching Requests" 
             description="No certificate approval requests match your search criteria."
@@ -94,9 +119,7 @@ function InstituteCertificates() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {pendingCerts
-                  .filter(cert => !searchTerm || cert.course_title?.toLowerCase().includes(searchTerm.toLowerCase()) || cert.student_name?.toLowerCase().includes(searchTerm.toLowerCase()))
-                  .map(cert => (
+                {sortedCerts.map(cert => (
                   <tr key={cert.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="font-semibold text-slate-800">{cert.student_name}</div>

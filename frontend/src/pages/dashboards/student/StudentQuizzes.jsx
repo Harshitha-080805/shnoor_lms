@@ -11,6 +11,7 @@ function StudentQuizzes() {
   const [enrollments, setEnrollments] = useState([]);
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [sortOption, setSortOption] = useState("Title A-Z");
   const [quizAnswers, setQuizAnswers] = useState({});
   const [quizResult, setQuizResult] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -55,6 +56,24 @@ function StudentQuizzes() {
   useEffect(() => {
     loadData();
   }, []);
+
+  const sortedQuizzes = React.useMemo(() => {
+    let dataCopy = [...quizzes];
+
+    if (searchTerm) {
+      dataCopy = dataCopy.filter(q => 
+        q.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        q.course.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    if (sortOption === "Title A-Z") return dataCopy.sort((a,b) => (a.title||'').localeCompare(b.title||''));
+    if (sortOption === "Title Z-A") return dataCopy.sort((a,b) => (b.title||'').localeCompare(a.title||''));
+    if (sortOption === "Highest Score") return dataCopy.sort((a,b) => (b.scoreRaw || 0) - (a.scoreRaw || 0));
+    if (sortOption === "Lowest Score") return dataCopy.sort((a,b) => (a.scoreRaw || 0) - (b.scoreRaw || 0));
+
+    return dataCopy;
+  }, [quizzes, searchTerm, sortOption]);
 
   const handleStartQuiz = (quiz) => {
     setCurrentQuiz(quiz.rawQuiz);
@@ -175,80 +194,99 @@ function StudentQuizzes() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-5 transition-all hover:shadow-md">
-          <div className="w-14 h-14 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center shrink-0">
-            <PlayCircle size={28} />
+        {/* Total Quizzes Widget */}
+        <div className="bg-blue-950 p-6 rounded-xl border border-blue-900 shadow-sm flex items-center gap-5">
+          <div className="w-12 h-12 rounded-lg bg-white/10 text-white flex items-center justify-center shrink-0">
+            <PlayCircle size={24} />
           </div>
           <div>
-            <h3 className="text-3xl font-black text-slate-800 leading-tight">{totalQuizzes}</h3>
-            <p className="text-slate-500 text-xs font-bold uppercase tracking-wider mt-1">Total Quizzes</p>
+            <h3 className="text-2xl font-bold text-white leading-tight">{totalQuizzes}</h3>
+            <p className="text-blue-200 text-xs font-semibold uppercase tracking-wider mt-0.5">Total Quizzes</p>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-5 transition-all hover:shadow-md">
-          <div className="w-14 h-14 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center shrink-0">
-            <CheckCircle size={28} />
+        
+        {/* Passed Widget */}
+        <div className="bg-blue-950 p-6 rounded-xl border border-blue-900 shadow-sm flex items-center gap-5">
+          <div className="w-12 h-12 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+            <CheckCircle size={24} />
           </div>
           <div>
-            <h3 className="text-3xl font-black text-slate-800 leading-tight">{passedQuizzes}</h3>
-            <p className="text-slate-500 text-xs font-bold uppercase tracking-wider mt-1">Passed</p>
+            <h3 className="text-2xl font-bold text-white leading-tight">{passedQuizzes}</h3>
+            <p className="text-blue-200 text-xs font-semibold uppercase tracking-wider mt-0.5">Passed</p>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-5 transition-all hover:shadow-md">
-          <div className="w-14 h-14 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center shrink-0">
-            <Clock size={28} />
+        
+        {/* Pending Widget */}
+        <div className="bg-blue-950 p-6 rounded-xl border border-blue-900 shadow-sm flex items-center gap-5">
+          <div className="w-12 h-12 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+            <Clock size={24} />
           </div>
           <div>
-            <h3 className="text-3xl font-black text-slate-800 leading-tight">{pendingQuizzes}</h3>
-            <p className="text-slate-500 text-xs font-bold uppercase tracking-wider mt-1">Pending</p>
+            <h3 className="text-2xl font-bold text-white leading-tight">{pendingQuizzes}</h3>
+            <p className="text-blue-200 text-xs font-semibold uppercase tracking-wider mt-0.5">Pending</p>
           </div>
         </div>
       </div>
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-slate-200">
-          <h3 className="text-lg font-bold text-slate-900">Your Quizzes</h3>
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h3 className="text-lg font-bold text-slate-800">Your Quizzes</h3>
+          <select
+            value={sortOption}
+            onChange={(e) => setSortOption(e.target.value)}
+            className="bg-white border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block px-3 py-2 shadow-sm"
+          >
+            <option value="Title A-Z">Sort by: Title A-Z</option>
+            <option value="Title Z-A">Sort by: Title Z-A</option>
+            <option value="Highest Score">Highest Score</option>
+            <option value="Lowest Score">Lowest Score</option>
+          </select>
         </div>
         {loading ? (
           <div className="p-12 text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-950 mx-auto"></div>
           </div>
         ) : (
-          <div className="divide-y divide-slate-100">
-            {quizzes
-              .filter(q => !searchTerm || q.title.toLowerCase().includes(searchTerm.toLowerCase()) || q.course.toLowerCase().includes(searchTerm.toLowerCase()))
-              .map((quiz) => (
-              <div key={quiz.id} className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 hover:bg-slate-50 transition-colors">
+          <div className="divide-y divide-slate-200">
+            {sortedQuizzes.map((quiz) => (
+              <div key={quiz.id} className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white">
                 <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-1">
-                    <h4 className="font-bold text-slate-800">{quiz.title}</h4>
-                    {quiz.status === 'completed' && quiz.passed && <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Passed</span>}
-                    {quiz.status === 'completed' && !quiz.passed && <span className="bg-rose-100 text-rose-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Failed</span>}
+                  <div className="flex items-center gap-3 mb-1.5">
+                    <h4 className="font-bold text-slate-800 text-base">{quiz.title}</h4>
+                    {quiz.status === 'completed' && quiz.passed && (
+                      <span className="bg-emerald-100 text-emerald-700 text-xs font-bold px-2.5 py-0.5 rounded uppercase tracking-wider">
+                        Passed
+                      </span>
+                    )}
+                    {quiz.status === 'completed' && !quiz.passed && (
+                      <span className="bg-rose-100 text-rose-700 text-xs font-bold px-2.5 py-0.5 rounded uppercase tracking-wider">
+                        Failed
+                      </span>
+                    )}
                   </div>
-                  <p className="text-sm text-slate-500">{quiz.course}</p>
-                  <div className="flex items-center gap-4 mt-3 text-xs font-semibold text-slate-400">
-                    <span className="flex items-center gap-1"><AlertTriangle size={14} /> {quiz.questions} Questions</span>
-                  </div>
+                  <p className="text-sm text-slate-500 mb-1">{quiz.course}</p>
+                  <p className="text-xs text-slate-400 font-medium flex items-center gap-1.5">
+                    {quiz.questions} Questions
+                  </p>
                 </div>
                 
-                <div className="w-full md:w-auto">
+                <div className="w-full md:w-auto mt-4 md:mt-0">
                   {quiz.status === 'pending' || !quiz.passed ? (
                     <button 
                       onClick={() => handleStartQuiz(quiz)}
-                      className="w-full md:w-auto px-6 py-2.5 bg-yellow-500 hover:bg-yellow-400 text-blue-950 font-black shadow-[0_4px_20px_-4px_rgba(234,179,8,0.5)] rounded-xl font-bold text-sm shadow-md shadow-blue-950/20 transition-colors flex items-center justify-center gap-2"
+                      className="w-full md:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm transition-colors flex items-center justify-center gap-2 shadow-sm"
                     >
-                      <PlayCircle size={18} /> {quiz.status === 'completed' ? 'Retake Quiz' : 'Start Quiz'}
+                      <PlayCircle size={16} /> {quiz.status === 'completed' ? 'Retake Quiz' : 'Start Quiz'}
                     </button>
                   ) : (
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
-                        <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Best Score</p>
-                        <p className="text-xl font-black text-blue-950">{quiz.scoreRaw}/{quiz.questions}</p>
-                      </div>
+                    <div className="flex flex-col md:items-end">
+                      <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1">Best Score</p>
+                      <p className="text-xl font-bold text-slate-800">{quiz.scoreRaw}/{quiz.questions}</p>
                     </div>
                   )}
                 </div>
               </div>
             ))}
-            {quizzes.filter(q => !searchTerm || q.title.toLowerCase().includes(searchTerm.toLowerCase()) || q.course.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 && (
+            {sortedQuizzes.length === 0 && (
               <div className="p-12 text-center text-slate-500">No quizzes available.</div>
             )}
           </div>

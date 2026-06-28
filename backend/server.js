@@ -140,7 +140,12 @@ const loginUser = async (req, res) => {
     const { email, password } = req.body;
 
     // Find user
-    const userQuery = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    const userQuery = await pool.query(`
+      SELECT u.*, 
+             (SELECT status FROM subscriptions s WHERE s.organization_id = u.organization_id ORDER BY end_date DESC LIMIT 1) as org_sub_status,
+             (SELECT status FROM subscriptions s WHERE s.user_id = u.id ORDER BY end_date DESC LIMIT 1) as user_sub_status
+      FROM users u WHERE email = $1
+    `, [email]);
     if (userQuery.rows.length === 0) {
       return res.status(400).json({ error: 'Invalid credentials' });
     }
@@ -152,8 +157,27 @@ const loginUser = async (req, res) => {
       return res.status(400).json({ error: 'Invalid credentials' });
     }
 
+    // 1. Manual revoke by super admin blocks everyone
+    if (user.org_sub_status === 'revoked' || user.user_sub_status === 'revoked') {
+      return res.status(403).json({ error: 'User access is suspended. Please contact your administrator.' });
+    }
+
+    // 2. Expired subscription blocks members, but allows Org Admin / Independent Learner
+    if (user.org_sub_status === 'expired' || user.user_sub_status === 'expired') {
+      const isOrgAdmin = user.role === 'ORGANIZATION_ADMIN';
+      const isIndependentLearner = user.role === 'LEARNER' && !user.organization_id;
+      
+      if (!isOrgAdmin && !isIndependentLearner) {
+        return res.status(403).json({ error: 'Subscription payment is not done. Access is revoked. Please contact your organization administrator.' });
+      }
+    }
+
+    // 3. Any other deactivation reasons
     if (!user.is_active) {
-      return res.status(403).json({ error: 'Account is deactivated' });
+      if (user.role === 'LEARNER' && user.organization_id) {
+        return res.status(403).json({ error: 'Account is suspended. Please contact your organization administrator.' });
+      }
+      return res.status(403).json({ error: 'Account is suspended. Please contact support.' });
     }
 
     if (!user.is_approved) {
@@ -367,7 +391,18 @@ const getPendingCertificates = async (req, res) => {
   if (req.user.role !== 'ORGANIZATION_ADMIN' && req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Access denied' });
 
   try {
-    const result = await pool.query("SELECT * FROM certificate_requests WHERE status = 'PENDING'");
+    const query = `
+      SELECT cr.*, 
+             u.full_name as student_name, 
+             u.email as student_email, 
+             c.title as course_title
+      FROM certificate_requests cr
+      JOIN enrollments e ON cr.enrollment_id = e.id
+      JOIN users u ON e.student_id = u.id
+      JOIN courses c ON e.course_id = c.id
+      WHERE cr.status = 'PENDING'
+    `;
+    const result = await pool.query(query);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
@@ -418,7 +453,8 @@ const createAssessment = async (req, res) => {
 
 const submitAssessment = async (req, res) => {
   const { assessmentId } = req.params;
-  const { answersText } = req.body;
+  const answersText = req.body.answersText || ''; // Use empty string to avoid NOT NULL constraint errors
+  const submissionFile = req.file ? req.file.path.replace(/\\/g, '/') : null;
   const studentId = req.user.userId;
 
   try {
@@ -428,12 +464,22 @@ const submitAssessment = async (req, res) => {
     const enrollCheck = await pool.query('SELECT id FROM enrollments WHERE student_id = $1 AND course_id = $2', [studentId, assessmentRes.rows[0].course_id]);
     if (enrollCheck.rows.length === 0) return res.status(403).json({ error: 'Not enrolled' });
 
+    // Prevent multiple submissions
+    const existingSubmission = await pool.query(
+      'SELECT id FROM assessment_submissions WHERE enrollment_id = $1 AND assessment_id = $2',
+      [enrollCheck.rows[0].id, assessmentId]
+    );
+    if (existingSubmission.rows.length > 0) {
+      return res.status(400).json({ error: 'You have already submitted this assignment.' });
+    }
+
     const insertResult = await pool.query(
-      'INSERT INTO assessment_submissions (enrollment_id, assessment_id, answers_text) VALUES ($1, $2, $3) RETURNING *',
-      [enrollCheck.rows[0].id, assessmentId, answersText]
+      'INSERT INTO assessment_submissions (enrollment_id, assessment_id, answers_text, submission_file) VALUES ($1, $2, $3, $4) RETURNING *',
+      [enrollCheck.rows[0].id, assessmentId, answersText, submissionFile]
     );
     res.status(201).json(insertResult.rows[0]);
   } catch (err) {
+    console.error("Assessment submit error:", err);
     res.status(500).json({ error: 'Server error' });
   }
 };
@@ -479,7 +525,7 @@ const gradeSubmission = async (req, res) => {
 const getCertificateRequests = async (req, res) => {
   try {
     const query = `
-      SELECT cr.*, c.title as course_title 
+      SELECT cr.*, c.title as course_title, c.id as course_id 
       FROM certificate_requests cr
       JOIN enrollments e ON cr.enrollment_id = e.id
       JOIN courses c ON e.course_id = c.id
@@ -497,8 +543,14 @@ const requestCertificate = async (req, res) => {
   const studentId = req.user.userId;
 
   try {
+    const { canRequestCertificate } = require('./helpers/examValidation');
+    const validation = await canRequestCertificate(courseId, studentId);
+    
+    if (!validation.canRequest) {
+      return res.status(403).json({ error: validation.reason });
+    }
+
     const enrollRes = await pool.query('SELECT id FROM enrollments WHERE student_id = $1 AND course_id = $2', [studentId, courseId]);
-    if (enrollRes.rows.length === 0) return res.status(403).json({ error: 'Not enrolled in this course' });
     const enrollmentId = enrollRes.rows[0].id;
 
     const reqCheck = await pool.query('SELECT * FROM certificate_requests WHERE enrollment_id = $1', [enrollmentId]);
@@ -525,7 +577,19 @@ const getApprovedCourses = async (req, res) => {
           'full_name', u.full_name,
           'email', u.email
         ) AS instructor,
-        (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) AS enrollments_count
+        (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) AS enrollments_count,
+        COALESCE(
+          (SELECT json_agg(json_build_object(
+            'id', p.id, 
+            'title', p.title,
+            'minimum_completion_percentage', cp.minimum_completion_percentage,
+            'minimum_quiz_score', cp.minimum_quiz_score,
+            'certificate_required', cp.certificate_required
+          )) 
+           FROM course_prerequisites cp 
+           JOIN courses p ON cp.prerequisite_course_id = p.id 
+           WHERE cp.course_id = c.id), '[]'::json
+        ) AS prerequisites
       FROM courses c
       LEFT JOIN users u ON c.instructor_id = u.id
       WHERE c.is_approved = $1
@@ -677,13 +741,28 @@ const getInstructorStudents = async (req, res) => {
 const getCourseById = async (req, res) => {
   try {
     const { id } = req.params;
-    const courseResult = await pool.query('SELECT * FROM courses WHERE id = $1', [id]);
+    const courseResult = await pool.query(`
+      SELECT c.*, 
+        json_build_object('id', u.id, 'full_name', u.full_name, 'email', u.email) AS instructor
+      FROM courses c
+      LEFT JOIN users u ON c.instructor_id = u.id
+      WHERE c.id = $1
+    `, [id]);
 
     if (courseResult.rows.length === 0) {
       return res.status(404).json({ error: 'Course not found' });
     }
 
     const course = courseResult.rows[0];
+
+    // Fetch prerequisites
+    const prereqResult = await pool.query(`
+      SELECT cp.prerequisite_course_id as id, c.title, cp.minimum_completion_percentage, cp.minimum_quiz_score, cp.certificate_required
+      FROM course_prerequisites cp
+      JOIN courses c ON cp.prerequisite_course_id = c.id
+      WHERE cp.course_id = $1
+    `, [id]);
+    course.prerequisites = prereqResult.rows || [];
 
     // Fetch modules
     const modulesResult = await pool.query('SELECT * FROM modules WHERE course_id = $1 ORDER BY "order" ASC, id ASC', [id]);
@@ -720,6 +799,63 @@ const getCourseById = async (req, res) => {
   }
 };
 
+const checkCircularDependency = async (pool, currentCourseId, targetPrereqId) => {
+  if (String(currentCourseId) === String(targetPrereqId)) return true;
+  const res = await pool.query('SELECT prerequisite_course_id FROM course_prerequisites WHERE course_id = $1', [targetPrereqId]);
+  for (let row of res.rows) {
+    if (await checkCircularDependency(pool, currentCourseId, row.prerequisite_course_id)) return true;
+  }
+  return false;
+};
+
+const saveCoursePrerequisites = async (req, res) => {
+  if (req.user.role !== 'INSTRUCTOR' && req.user.role !== 'ORGANIZATION_ADMIN') {
+    return res.status(403).json({ error: 'Access denied' });
+  }
+
+  const { courseId } = req.params;
+  // prerequisites should be an array of objects: { id, min_comp, min_quiz, cert_req }
+  // but for backward compatibility we also handle prerequisiteIds array of strings
+  const { prerequisiteIds, prerequisites } = req.body; 
+
+  try {
+    if (req.user.role === 'INSTRUCTOR') {
+      const courseCheck = await pool.query('SELECT * FROM courses WHERE id = $1 AND instructor_id = $2', [courseId, req.user.userId]);
+      if (courseCheck.rows.length === 0) return res.status(403).json({ error: 'Access denied' });
+    }
+
+    let prereqsToSave = [];
+    if (prerequisites && Array.isArray(prerequisites)) {
+       prereqsToSave = prerequisites;
+    } else if (prerequisiteIds && Array.isArray(prerequisiteIds)) {
+       prereqsToSave = prerequisiteIds.map(id => ({ id, minimum_completion_percentage: 0, minimum_quiz_score: 0, certificate_required: false }));
+    }
+
+    // Circular dependency check
+    for (const p of prereqsToSave) {
+       if (await checkCircularDependency(pool, courseId, p.id)) {
+          return res.status(400).json({ error: 'Circular prerequisite dependency detected' });
+       }
+    }
+
+    await pool.query('DELETE FROM course_prerequisites WHERE course_id = $1', [courseId]);
+
+    for (const p of prereqsToSave) {
+      if (String(p.id) !== String(courseId)) { 
+        await pool.query(
+          'INSERT INTO course_prerequisites (course_id, prerequisite_course_id, minimum_completion_percentage, minimum_quiz_score, certificate_required) VALUES ($1, $2, $3, $4, $5)',
+          [courseId, p.id, p.minimum_completion_percentage || 0, p.minimum_quiz_score || 0, p.certificate_required || false]
+        );
+      }
+    }
+    
+    res.json({ message: 'Prerequisites updated successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Server error updating prerequisites' });
+  }
+};
+
 // Enrollment Controller
 const enrollCourse = async (req, res) => {
   const { courseId } = req.params;
@@ -729,6 +865,78 @@ const enrollCourse = async (req, res) => {
     const courseResult = await pool.query('SELECT * FROM courses WHERE id = $1 AND is_approved = true', [courseId]);
     if (courseResult.rows.length === 0) {
       return res.status(400).json({ error: 'Cannot enroll in an unapproved or non-existent course' });
+    }
+
+    const prereqResult = await pool.query('SELECT prerequisite_course_id, minimum_completion_percentage, minimum_quiz_score, certificate_required FROM course_prerequisites WHERE course_id = $1', [courseId]);
+    if (prereqResult.rows.length > 0) {
+      const missingPrereqs = [];
+      const { canRequestCertificate } = require('./helpers/examValidation');
+      
+      for (const row of prereqResult.rows) {
+        const pId = row.prerequisite_course_id;
+        const pCheck = await pool.query('SELECT id, completed_at FROM enrollments WHERE student_id = $1 AND course_id = $2', [studentId, pId]);
+        let isCompleted = false;
+        let reasons = [];
+        
+        if (pCheck.rows.length > 0) {
+           const pEnrollId = pCheck.rows[0].id;
+           
+           // Calculate progress dynamically
+           const totalRes = await pool.query('SELECT count(l.id) as total FROM lessons l JOIN modules m ON l.module_id = m.id WHERE m.course_id = $1', [pId]);
+           const totalLessons = parseInt(totalRes.rows[0].total) || 0;
+           const completedRes = await pool.query('SELECT count(lp.id) as completed FROM lesson_progress lp JOIN lessons l ON lp.lesson_id = l.id JOIN modules m ON l.module_id = m.id WHERE lp.enrollment_id = $1 AND lp.is_completed = true AND m.course_id = $2', [pEnrollId, pId]);
+           const completedLessons = parseInt(completedRes.rows[0].completed) || 0;
+           const progress = totalLessons > 0 ? Math.floor((completedLessons / totalLessons) * 100) : 0;
+           
+           let meetsProgress = progress >= row.minimum_completion_percentage;
+           if (!meetsProgress) reasons.push(`Requires ${row.minimum_completion_percentage}% completion (Current: ${progress}%)`);
+           
+           let meetsQuiz = true;
+           if (row.minimum_quiz_score > 0) {
+              const quizCheck = await pool.query('SELECT MAX(score) as max_score FROM quiz_attempts WHERE enrollment_id = $1', [pEnrollId]);
+              const maxScore = quizCheck.rows[0]?.max_score || 0;
+              if (maxScore < row.minimum_quiz_score) {
+                 meetsQuiz = false;
+                 reasons.push(`Requires quiz score of ${row.minimum_quiz_score}% (Current: ${maxScore}%)`);
+              }
+           }
+           
+           let meetsCert = true;
+           if (row.certificate_required) {
+              const certCheck = await pool.query('SELECT status FROM certificate_requests WHERE enrollment_id = $1 AND status = $2', [pEnrollId, 'APPROVED']);
+              if (certCheck.rows.length === 0) {
+                 meetsCert = false;
+                 reasons.push('Requires an approved certificate');
+              }
+           }
+           
+           // If they have completed_at, they are done by default UNLESS strict rules fail
+           const validation = await canRequestCertificate(pId, studentId);
+           if ((validation.canRequest || pCheck.rows[0].completed_at) && meetsProgress && meetsQuiz && meetsCert) {
+             isCompleted = true;
+           } else if (meetsProgress && meetsQuiz && meetsCert) {
+             // Or if no completion timestamp but they strictly meet all set advanced rules
+             // If all rules were 0/false, they still need to "complete" it normally
+             if (row.minimum_completion_percentage > 0 || row.minimum_quiz_score > 0 || row.certificate_required) {
+                isCompleted = true;
+             }
+           }
+        } else {
+           reasons.push('Not enrolled or started');
+        }
+        
+        if (!isCompleted) {
+          const cNameRes = await pool.query('SELECT title FROM courses WHERE id = $1', [pId]);
+          missingPrereqs.push({ id: pId, title: cNameRes.rows[0]?.title || 'Unknown Course', reasons });
+        }
+      }
+
+      if (missingPrereqs.length > 0) {
+        return res.status(403).json({ 
+          error: 'Prerequisites not met', 
+          missingPrerequisites: missingPrereqs 
+        });
+      }
     }
 
     const enrollCheck = await pool.query('SELECT * FROM enrollments WHERE student_id = $1 AND course_id = $2', [studentId, courseId]);
@@ -933,6 +1141,9 @@ const submitQuiz = async (req, res) => {
     `;
     const attemptResult = await pool.query(attemptQuery, [enrollmentId, quizId, correctCount, totalQuestions, passed]);
 
+    const { checkAndMarkCourseCompletion } = require('./helpers/examValidation');
+    await checkAndMarkCourseCompletion(quiz.course_id, studentId);
+
     res.json(attemptResult.rows[0]);
   } catch (error) {
     console.error(error);
@@ -1080,7 +1291,16 @@ const fs = require('fs');
 if (!fs.existsSync('uploads')) {
   fs.mkdirSync('uploads');
 }
-const upload = multer({ dest: 'uploads/' });
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/');
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+const upload = multer({ storage: storage });
 
 app.use('/uploads', express.static('uploads'));
 
@@ -1145,6 +1365,18 @@ app.get('/api/courses/enrollments', authMiddleware(), async (req, res) => {
       // fetch assessment submissions
       const subRes = await pool.query('SELECT * FROM assessment_submissions WHERE enrollment_id = $1', [e.id]);
       e.assessment_submissions = subRes.rows;
+
+      // fetch course exam attempts
+      const examRes = await pool.query('SELECT id FROM course_exams WHERE course_id = $1 AND status = $2 AND is_deleted = false', [e.course_id, 'PUBLISHED']);
+      e.course.has_course_exam = examRes.rows.length > 0;
+      
+      const examAttRes = await pool.query(`
+        SELECT a.* 
+        FROM course_exam_attempts a
+        JOIN course_exams ce ON a.exam_id = ce.id
+        WHERE a.student_id = $1 AND ce.course_id = $2
+      `, [studentId, e.course_id]);
+      e.course_exam_attempts = examAttRes.rows;
     }
     res.json(enrollments);
   } catch (err) {
@@ -1161,17 +1393,21 @@ app.get('/api/courses/instructor/submissions', authMiddleware(['INSTRUCTOR']), g
 
 // Instructor routes
 app.post('/api/courses/', authMiddleware(['INSTRUCTOR']), upload.single('thumbnail_file'), async (req, res) => {
-  const { title, description, thumbnail_url } = req.body;
+  const { title, description, thumbnail_url, estimated_duration, learning_outcomes, skills_gained, difficulty_level, prerequisites_enabled } = req.body;
   const instructorId = req.user.userId;
   const thumbnailFile = req.file ? req.file.path : null;
 
   try {
     const query = `
-      INSERT INTO courses (title, description, thumbnail_url, thumbnail_file, instructor_id)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO courses (title, description, thumbnail_url, thumbnail_file, instructor_id, estimated_duration, learning_outcomes, skills_gained, difficulty_level, prerequisites_enabled)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *
     `;
-    const result = await pool.query(query, [title, description, thumbnail_url, thumbnailFile, instructorId]);
+    const result = await pool.query(query, [
+      title, description, thumbnail_url, thumbnailFile, instructorId, 
+      estimated_duration, learning_outcomes, skills_gained, difficulty_level, 
+      prerequisites_enabled === 'true' || prerequisites_enabled === true
+    ]);
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error(error);
@@ -1210,6 +1446,10 @@ app.post('/api/courses/lessons/:lessonId/complete', authMiddleware(), async (req
       RETURNING *
     `;
     const result = await pool.query(upsertQuery, [enrollmentId, lessonId]);
+
+    const { checkAndMarkCourseCompletion } = require('./helpers/examValidation');
+    await checkAndMarkCourseCompletion(courseId, studentId);
+
     res.json(result.rows[0]);
   } catch (error) {
     console.error(error);
@@ -1334,7 +1574,7 @@ app.get('/api/courses/:courseId/progress', authMiddleware(), async (req, res) =>
 
 app.put('/api/courses/:id', authMiddleware(['INSTRUCTOR']), upload.single('thumbnail_file'), async (req, res) => {
   const { id } = req.params;
-  const { title, description, thumbnail_url, is_published } = req.body;
+  const { title, description, thumbnail_url, is_published, estimated_duration, learning_outcomes, skills_gained, difficulty_level, prerequisites_enabled } = req.body;
   const instructorId = req.user.userId;
   const thumbnailFile = req.file ? req.file.path : undefined;
 
@@ -1355,6 +1595,14 @@ app.put('/api/courses/:id', authMiddleware(['INSTRUCTOR']), upload.single('thumb
       const pub = (is_published === 'true' || is_published === true);
       updateFields.push(`is_published = $${counter++}`); values.push(pub);
     }
+    if (estimated_duration !== undefined) { updateFields.push(`estimated_duration = $${counter++}`); values.push(estimated_duration); }
+    if (learning_outcomes !== undefined) { updateFields.push(`learning_outcomes = $${counter++}`); values.push(learning_outcomes); }
+    if (skills_gained !== undefined) { updateFields.push(`skills_gained = $${counter++}`); values.push(skills_gained); }
+    if (difficulty_level !== undefined) { updateFields.push(`difficulty_level = $${counter++}`); values.push(difficulty_level); }
+    if (prerequisites_enabled !== undefined) { 
+      const preq = (prerequisites_enabled === 'true' || prerequisites_enabled === true);
+      updateFields.push(`prerequisites_enabled = $${counter++}`); values.push(preq); 
+    }
 
     if (updateFields.length === 0) return res.json(courseCheck.rows[0]);
 
@@ -1374,6 +1622,24 @@ app.put('/api/courses/:id', authMiddleware(['INSTRUCTOR']), upload.single('thumb
   }
 });
 
+app.delete('/api/courses/:id', authMiddleware(['INSTRUCTOR']), async (req, res) => {
+  const { id } = req.params;
+  const instructorId = req.user.userId;
+
+  try {
+    const courseCheck = await pool.query('SELECT * FROM courses WHERE id = $1 AND instructor_id = $2', [id, instructorId]);
+    if (courseCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'Access denied or course not found' });
+    }
+
+    await pool.query('DELETE FROM courses WHERE id = $1', [id]);
+    res.json({ message: 'Course deleted successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error deleting course' });
+  }
+});
+
 // Module routes
 app.post('/api/courses/:courseId/modules', authMiddleware(['INSTRUCTOR']), createModule);
 app.put('/api/courses/:courseId/modules/reorder', authMiddleware(['INSTRUCTOR']), reorderModules);
@@ -1387,6 +1653,7 @@ app.post('/api/courses/modules/:moduleId/lessons', authMiddleware(['INSTRUCTOR']
   let audio_file = null;
   let image_file = null;
   let document_file = null;
+  let vtt_file = null;
 
   if (req.files) {
     req.files.forEach(f => {
@@ -1394,6 +1661,7 @@ app.post('/api/courses/modules/:moduleId/lessons', authMiddleware(['INSTRUCTOR']
       if (f.fieldname === 'audio_file') audio_file = f.path;
       if (f.fieldname === 'image_file') image_file = f.path;
       if (f.fieldname === 'document_file') document_file = f.path;
+      if (f.fieldname === 'vtt_file') vtt_file = f.path;
     });
   }
 
@@ -1410,12 +1678,12 @@ app.post('/api/courses/modules/:moduleId/lessons', authMiddleware(['INSTRUCTOR']
     if (checkResult.rows[0].instructor_id !== req.user.userId) return res.status(403).json({ error: 'Access denied' });
 
     const insertQuery = `
-      INSERT INTO lessons (module_id, title, content_type, text_content, video_url, video_file, audio_url, audio_file, image_url, image_file, document_url, document_file, "order")
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      INSERT INTO lessons (module_id, title, content_type, text_content, video_url, video_file, audio_url, audio_file, image_url, image_file, document_url, document_file, vtt_file, "order")
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *
     `;
     const insertResult = await pool.query(insertQuery, [
-      moduleId, title, (content_type || 'TEXT').toUpperCase(), text_content, video_url, video_file, audio_url, audio_file, image_url, image_file, document_url, document_file, order || 0
+      moduleId, title, (content_type || 'TEXT').toUpperCase(), text_content, video_url, video_file, audio_url, audio_file, image_url, image_file, document_url, document_file, vtt_file, order || 0
     ]);
 
     await pool.query('UPDATE courses SET is_approved = false, is_published = false WHERE id = $1', [checkResult.rows[0].course_id]);
@@ -1451,11 +1719,12 @@ app.post('/api/courses/quizzes/:quizId/questions', authMiddleware(['INSTRUCTOR']
 });
 
 // Enrollment routes
+app.post('/api/courses/:courseId/prerequisites', authMiddleware(), saveCoursePrerequisites);
 app.post('/api/courses/:courseId/enroll', authMiddleware(), enrollCourse);
 
 // Assessment routes
 app.post('/api/courses/:courseId/assessments', authMiddleware(['INSTRUCTOR']), createAssessment);
-app.post('/api/courses/assessments/:assessmentId/submit', authMiddleware(), submitAssessment);
+app.post('/api/courses/assessments/:assessmentId/submit', authMiddleware(), upload.single('submission_file'), submitAssessment);
 app.post('/api/courses/assessments/submissions/:submissionId/grade', authMiddleware(['INSTRUCTOR']), gradeSubmission);
 
 // Certificate routes
@@ -1611,11 +1880,11 @@ app.get('/api/subscriptions/me', authMiddleware(), async (req, res) => {
     let query;
     let params;
     if (req.user.role === 'ORGANIZATION_ADMIN' && req.user.organization_id) {
-       query = 'SELECT s.*, p.name as plan_name, p.plan_type, p.price FROM subscriptions s JOIN subscription_plans p ON s.plan_id = p.id WHERE s.organization_id = $1 AND s.status = $2 ORDER BY s.end_date DESC LIMIT 1';
-       params = [req.user.organization_id, 'active'];
+       query = "SELECT s.*, p.name as plan_name, p.plan_type, p.price FROM subscriptions s JOIN subscription_plans p ON s.plan_id = p.id WHERE s.organization_id = $1 AND s.status IN ('active', 'revoked') ORDER BY s.end_date DESC LIMIT 1";
+       params = [req.user.organization_id];
     } else {
-       query = 'SELECT s.*, p.name as plan_name, p.plan_type, p.price FROM subscriptions s JOIN subscription_plans p ON s.plan_id = p.id WHERE s.user_id = $1 AND s.status = $2 ORDER BY s.end_date DESC LIMIT 1';
-       params = [req.user.userId, 'active'];
+       query = "SELECT s.*, p.name as plan_name, p.plan_type, p.price FROM subscriptions s JOIN subscription_plans p ON s.plan_id = p.id WHERE s.user_id = $1 AND s.status IN ('active', 'revoked') ORDER BY s.end_date DESC LIMIT 1";
+       params = [req.user.userId];
     }
 
     const subRes = await pool.query(query, params);
@@ -1665,15 +1934,22 @@ app.post('/api/subscriptions', authMiddleware(), async (req, res) => {
     if (parseFloat(plan.price) > 0) {
       const transactionId = 'TXN-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
       await pool.query(
-        'INSERT INTO payments (user_id, organization_id, subscription_id, amount, transaction_id, status) VALUES ($1, $2, $3, $4, $5, $6)',
-        [userId, orgId, insertSub.rows[0].id, plan.price, transactionId, 'SUCCESS']
+        'INSERT INTO payments (user_id, amount, transaction_id, status) VALUES ($1, $2, $3, $4)',
+        [userId, plan.price, transactionId, 'SUCCESS']
       );
+    }
+
+    // Reactivate users whose access might have been revoked previously
+    if (isOrg) {
+      await pool.query("UPDATE users SET is_active = true WHERE organization_id = $1 AND role IN ('LEARNER', 'INSTRUCTOR')", [orgId]);
+    } else {
+      await pool.query("UPDATE users SET is_active = true WHERE id = $1 AND role IN ('LEARNER', 'INSTRUCTOR')", [userId]);
     }
 
     res.status(201).json(insertSub.rows[0]);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Server error subscribing' });
+    res.status(500).json({ error: 'Server error subscribing', details: err.message });
   }
 });
 
@@ -1704,6 +1980,53 @@ const getAnnouncements = async (req, res) => {
 
 app.get('/api/learner/announcements', authMiddleware(['LEARNER', 'STUDENT', 'EMPLOYEE']), getAnnouncements);
 app.get('/api/instructor/announcements', authMiddleware(['INSTRUCTOR']), getAnnouncements);
+
+app.post('/api/instructor/announcements', authMiddleware(['INSTRUCTOR']), async (req, res) => {
+  const { title, content } = req.body;
+  try {
+    const orgIdRes = await pool.query("SELECT organization_id FROM users WHERE id = $1", [req.user.userId]);
+    const orgId = orgIdRes.rows[0]?.organization_id || null;
+    const result = await pool.query(
+      "INSERT INTO announcements (organization_id, title, content, author_role, author_id) VALUES ($1, $2, $3, 'INSTRUCTOR', $4) RETURNING *",
+      [orgId, title, content, req.user.userId]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error creating announcement' });
+  }
+});
+
+app.put('/api/instructor/announcements/:id', authMiddleware(['INSTRUCTOR']), async (req, res) => {
+  const { id } = req.params;
+  const { title, content } = req.body;
+  try {
+    const result = await pool.query(
+      "UPDATE announcements SET title = $1, content = $2 WHERE id = $3 AND author_id = $4 RETURNING *",
+      [title, content, id, req.user.userId]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Announcement not found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error updating announcement' });
+  }
+});
+
+app.delete('/api/instructor/announcements/:id', authMiddleware(['INSTRUCTOR']), async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query(
+      "DELETE FROM announcements WHERE id = $1 AND author_id = $2 RETURNING id",
+      [id, req.user.userId]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Announcement not found' });
+    res.json({ message: 'Announcement deleted successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error deleting announcement' });
+  }
+});
 app.get('/api/admin/announcements', authMiddleware(['ADMIN']), async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM announcements WHERE author_role = 'SUPER_ADMIN' ORDER BY created_at DESC");
@@ -1714,13 +2037,76 @@ app.get('/api/admin/announcements', authMiddleware(['ADMIN']), async (req, res) 
   }
 });
 
+app.post('/api/admin/announcements', authMiddleware(['ADMIN']), async (req, res) => {
+  const { title, content } = req.body;
+  try {
+    const result = await pool.query(
+      "INSERT INTO announcements (title, content, author_role, author_id) VALUES ($1, $2, 'SUPER_ADMIN', $3) RETURNING *",
+      [title, content, req.user.userId]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error creating announcement' });
+  }
+});
+
+app.put('/api/admin/announcements/:id', authMiddleware(['ADMIN']), async (req, res) => {
+  const { id } = req.params;
+  const { title, content } = req.body;
+  try {
+    const result = await pool.query(
+      "UPDATE announcements SET title = $1, content = $2 WHERE id = $3 AND author_role = 'SUPER_ADMIN' RETURNING *",
+      [title, content, id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Announcement not found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error updating announcement' });
+  }
+});
+
+app.delete('/api/admin/announcements/:id', authMiddleware(['ADMIN']), async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query(
+      "DELETE FROM announcements WHERE id = $1 AND author_role = 'SUPER_ADMIN' RETURNING id",
+      [id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Announcement not found' });
+    res.json({ message: 'Announcement deleted successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error deleting announcement' });
+  }
+});
+
 const globalPracticeRoutes = require('./globalPracticeRoutes');
 const adminReportsRoutes = require('./adminReportsRoutes');
+const examRoutes = require('./examRoutes');
+const contactRoutes = require('./contactRoutes');
 app.use('/api/chat', authMiddleware(), chatRoutes(upload));
 app.use('/api/org-admin', orgAdmin(authMiddleware));
 app.use('/api/search', authMiddleware(), searchRoutes());
 app.use('/api/practice-arenas', globalPracticeRoutes(authMiddleware));
 app.use('/api/admin/reports', adminReportsRoutes(authMiddleware));
+app.use('/api/exams', examRoutes(authMiddleware));
+app.use('/api/contact', contactRoutes(authMiddleware));
+
+// Auto-create contact_queries table if not exists
+pool.query(`
+  CREATE TABLE IF NOT EXISTS contact_queries (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    status VARCHAR(50) DEFAULT 'PENDING',
+    reply_message TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )
+`).catch(err => console.error('Error creating contact_queries table:', err));
 
 // SERVER LISTEN
 

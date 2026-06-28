@@ -13,6 +13,28 @@ function Landing() {
   const [categories, setCategories] = useState([]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [subscriptionPlans, setSubscriptionPlans] = useState([]);
+  const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [contactSuccess, setContactSuccess] = useState(false);
+
+  const handleContactSubmit = async (e) => {
+    e.preventDefault();
+    if (!contactForm.name || !contactForm.email || !contactForm.message) {
+      alert('Please fill out all fields.');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await api.post('/api/contact', contactForm);
+      setContactSuccess(true);
+      setContactForm({ name: '', email: '', message: '' });
+      setTimeout(() => setContactSuccess(false), 5000);
+    } catch (err) {
+      alert('Failed to send message. Please try again later.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     const approvedUsers = JSON.parse(localStorage.getItem("approvedUsers")) || [];
@@ -40,23 +62,23 @@ function Landing() {
         
         let displayPlans = [];
         
-        // 1. Add the highest-tier Learner Plan (e.g. Premium Learner)
+        // 1. A (e.g. Premium Learner)
         if (learnerPlans.length > 0) displayPlans.push(learnerPlans[0]);
         
-        // 2. Add the middle-tier Org Plan (e.g. Standard Organization)
+        // 2. A (e.g. Standard Organization)
         if (orgPlans.length > 1) {
             displayPlans.push(orgPlans[1]);
         } else if (orgPlans.length === 1) {
             displayPlans.push(orgPlans[0]);
         }
         
-        // 3. Add the highest-tier Org Plan (e.g. Enterprise Organization)
+        
         if (orgPlans.length > 0) displayPlans.push(orgPlans[0]);
         
-        // Remove duplicates (in case there was only 1 org plan)
+        
         displayPlans = Array.from(new Set(displayPlans));
         
-        // Fill remaining slots with highest priced available plans if we have less than 3
+        
         if (displayPlans.length < 3) {
             const others = res.data
                 .filter(p => !displayPlans.includes(p))
@@ -64,7 +86,7 @@ function Landing() {
             displayPlans = [...displayPlans, ...others];
         }
         
-        // Sort ascending by price for a nice left-to-right display (Learner -> Standard -> Enterprise)
+       
         displayPlans = displayPlans.slice(0, 3).sort((a, b) => a.price - b.price);
         
         setSubscriptionPlans(displayPlans);
@@ -95,30 +117,30 @@ function Landing() {
     <div className="min-h-screen bg-slate-50 text-blue-950 font-sans selection:bg-yellow-400 selection:text-blue-950">
 
       {/* NAVBAR */}
-      <nav className="sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm">
+      <nav className="sticky top-0 z-50 bg-blue-950 border-b border-blue-900 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-20 items-center">
             <div className="flex items-center gap-3">
-              <img src={logo} alt="SHNOOR" className="h-10 w-auto" />
-              <span className="text-2xl font-black tracking-tight text-blue-950">SHNOOR LMS</span>
+              <div className="bg-white p-1 rounded-xl"><img src={logo} alt="SHNOOR" className="h-10 w-auto rounded-lg" /></div>
+              <span className="text-2xl font-black tracking-tight text-yellow-500">SHNOOR <span className="text-white">LMS</span></span>
             </div>
 
             <div className="hidden md:flex space-x-8">
-              <a href="#home" className="text-sm font-bold text-slate-600 hover:text-yellow-600 transition-colors">Home</a>
-              <a href="#features" className="text-sm font-bold text-slate-600 hover:text-yellow-600 transition-colors">Features</a>
-              {courses.length > 0 && <a href="#courses" className="text-sm font-bold text-slate-600 hover:text-yellow-600 transition-colors">Courses</a>}
-              <a href="#pricing" className="text-sm font-bold text-slate-600 hover:text-yellow-600 transition-colors">Pricing</a>
-              <a href="#contact" className="text-sm font-bold text-slate-600 hover:text-yellow-600 transition-colors">Contact</a>
+              <a href="#home" className="text-[18px] font-medium text-white hover:text-yellow-400 transition-colors">Home</a>
+              <a href="#features" className="text-[18px] font-medium text-slate-200 hover:text-yellow-400 transition-colors">Features</a>
+              {courses.length > 0 && <a href="#courses" className="text-[18px] font-medium text-slate-200 hover:text-yellow-400 transition-colors">Courses</a>}
+              <a href="#pricing" className="text-[18px] font-medium text-slate-200 hover:text-yellow-400 transition-colors">Pricing</a>
+              <a href="#contact" className="text-[18px] font-medium text-slate-200 hover:text-yellow-400 transition-colors">Contact Us</a>
             </div>
 
-            <div className="hidden md:flex items-center space-x-5">
-              <Link to="/login" className="text-sm font-bold text-blue-950 hover:text-yellow-600 transition-colors">Log in</Link>
-              <Link to="/register" className="inline-flex items-center justify-center rounded-xl text-sm font-bold transition-all bg-blue-950 text-white hover:bg-blue-900 shadow-md px-6 py-2.5 hover:shadow-lg hover:-translate-y-0.5">
+            <div className="hidden md:flex items-center space-x-6">
+              <Link to="/login" className="text-[18px] font-medium text-yellow-500 hover:text-yellow-400 transition-colors">Login</Link>
+              <Link to="/register" className="inline-flex items-center justify-center rounded-[14px] text-[18px] font-semibold transition-all bg-yellow-400 text-blue-950 hover:bg-yellow-500 shadow-md px-6 py-2.5">
                 Get Started
               </Link>
             </div>
 
-            <button className="md:hidden p-2 text-blue-950 hover:text-yellow-600" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+            <button className="md:hidden p-2 text-white hover:text-yellow-400" onClick={() => setIsMenuOpen(!isMenuOpen)}>
               {isMenuOpen ? <X className="w-7 h-7" /> : <Menu className="w-7 h-7" />}
             </button>
           </div>
@@ -127,94 +149,116 @@ function Landing() {
 
       {/* MOBILE MENU */}
       {isMenuOpen && (
-        <div className="md:hidden bg-white border-b border-slate-200 px-4 pt-2 pb-6 space-y-1 shadow-lg absolute w-full z-40">
-          <a href="#home" className="block px-4 py-3 text-base font-bold text-blue-950" onClick={() => setIsMenuOpen(false)}>Home</a>
-          <a href="#features" className="block px-4 py-3 text-base font-bold text-slate-600" onClick={() => setIsMenuOpen(false)}>Features</a>
-          <a href="#courses" className="block px-4 py-3 text-base font-bold text-slate-600" onClick={() => setIsMenuOpen(false)}>Courses</a>
-          <a href="#pricing" className="block px-4 py-3 text-base font-bold text-slate-600" onClick={() => setIsMenuOpen(false)}>Pricing</a>
-          <a href="#contact" className="block px-4 py-3 text-base font-bold text-slate-600" onClick={() => setIsMenuOpen(false)}>Contact</a>
+        <div className="md:hidden bg-blue-950 border-b border-blue-900 px-4 pt-2 pb-6 space-y-1 shadow-lg absolute w-full z-40">
+          <a href="#home" className="block px-4 py-3 text-base font-bold text-white" onClick={() => setIsMenuOpen(false)}>Home</a>
+          <a href="#features" className="block px-4 py-3 text-base font-bold text-slate-200" onClick={() => setIsMenuOpen(false)}>Features</a>
+          <a href="#courses" className="block px-4 py-3 text-base font-bold text-slate-200" onClick={() => setIsMenuOpen(false)}>Courses</a>
+          <a href="#pricing" className="block px-4 py-3 text-base font-bold text-slate-200" onClick={() => setIsMenuOpen(false)}>Pricing</a>
+          <a href="#contact" className="block px-4 py-3 text-base font-bold text-slate-200" onClick={() => setIsMenuOpen(false)}>Contact Us</a>
           <div className="pt-6 px-4 flex flex-col gap-3">
-            <Link to="/login" className="w-full text-center px-4 py-3 border-2 border-slate-200 rounded-xl text-blue-950 font-bold" onClick={() => setIsMenuOpen(false)}>Log in</Link>
-            <Link to="/register" className="w-full text-center px-4 py-3 bg-blue-950 text-white rounded-xl font-bold" onClick={() => setIsMenuOpen(false)}>Get Started</Link>
+            <Link to="/login" className="w-full text-center px-4 py-3 border-2 border-yellow-500/30 text-yellow-400 rounded-[14px] font-bold" onClick={() => setIsMenuOpen(false)}>Login</Link>
+            <Link to="/register" className="w-full text-center px-4 py-3 bg-yellow-400 text-blue-950 rounded-[14px] font-bold" onClick={() => setIsMenuOpen(false)}>Get Started</Link>
           </div>
         </div>
       )}
 
       {/* HERO SECTION */}
-      <section id="home" className="py-24 lg:py-32 bg-blue-950 relative overflow-hidden">
-        {/* Subtle background element */}
-        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#eab308 1px, transparent 1px)', backgroundSize: '32px 32px' }}></div>
-
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <span className="inline-flex items-center rounded-full border border-yellow-500/30 bg-yellow-500/10 px-4 py-1.5 text-sm font-bold text-yellow-400 mb-8 shadow-sm">
-            Professional LMS Platform
-          </span>
-          <h1 className="text-4xl md:text-5xl lg:text-7xl font-black tracking-tight text-white mb-8 leading-tight">
-            Learn smarter with a <span className="text-yellow-400">structured</span> digital LMS.
-          </h1>
-          <p className="text-lg md:text-xl text-blue-100 mb-12 max-w-2xl mx-auto leading-relaxed">
-            A professional platform for institutes, instructors, and students to manage courses, subscriptions, quizzes, assignments, and certificates from one centralized hub.
-          </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-5">
-            <Link to="/register" className="inline-flex justify-center items-center rounded-xl bg-yellow-500 px-8 py-4 text-base font-black text-blue-950 hover:bg-yellow-400 shadow-[0_4px_20px_-4px_rgba(234,179,8,0.5)] transition-all hover:-translate-y-1">
-              Get Started <ArrowRight className="ml-2 w-5 h-5" />
-            </Link>
-            <a href="#features" className="inline-flex justify-center items-center rounded-xl bg-blue-900/50 px-8 py-4 text-base font-bold text-white border-2 border-blue-800 hover:bg-blue-800 transition-colors">
-              Explore Features
-            </a>
-          </div>
-        </div>
-      </section>
-
-      {/* PLATFORM WORKFLOW (Below Hero) */}
-      <section className="py-24 bg-slate-50 border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-black tracking-tight text-blue-950">Platform Workflow</h2>
-            <p className="mt-4 text-lg text-slate-600 font-medium max-w-2xl mx-auto">A seamless 6-step journey from onboarding to certification.</p>
-          </div>
-
-          <div className="relative max-w-6xl mx-auto mt-12">
-            {/* Horizontal Line connecting steps */}
-            <div className="hidden lg:block absolute top-6 left-[8.33%] w-[83.33%] h-1 bg-slate-200 rounded-full"></div>
-
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 relative z-10">
-              {[
-                { title: "Register", desc: "Student/Institute" },
-                { title: "Subscribe", desc: "Free or Premium" },
-                { title: "Publish", desc: "Upload Courses" },
-                { title: "Access", desc: "Learn Anywhere" },
-                { title: "Assess", desc: "Take Quizzes" },
-                { title: "Certify", desc: "Earn Credentials" },
-              ].map((step, index) => (
-                <div key={index} className="flex flex-col items-center text-center group cursor-default">
-                  {/* Dot / Number */}
-                  <div className="w-12 h-12 rounded-full bg-white border-4 border-slate-100 group-hover:border-yellow-400 group-hover:bg-blue-950 text-blue-950 group-hover:text-yellow-400 flex items-center justify-center font-black text-lg transition-all duration-300 shadow-sm relative z-10 mb-5">
-                    {index + 1}
-                  </div>
-                  {/* Content */}
-                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm group-hover:shadow-lg group-hover:border-yellow-400 group-hover:-translate-y-1 transition-all duration-300 w-full h-full flex flex-col justify-center">
-                    <h3 className="font-black text-blue-950 text-base mb-1.5">{step.title}</h3>
-                    <p className="text-xs text-slate-500 font-bold uppercase tracking-wider leading-relaxed">{step.desc}</p>
-                  </div>
+      <section id="home" className="pt-12 pb-12 lg:pt-16 lg:pb-16 bg-slate-50 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 grid lg:grid-cols-12 gap-8 lg:gap-12 items-center lg:items-start">
+           {/* Left Column */}
+           <div className="text-left order-2 lg:order-1 lg:col-span-7 mt-12 lg:mt-0 pr-0 lg:pr-8">
+             <h1 className="text-4xl sm:text-5xl lg:text-[56px] xl:text-[64px] font-bold tracking-tight text-blue-950 mb-6 leading-[1.15]" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                Intelligent Learning<br/>
+                Seamless Management<br/>
+                <span className="text-yellow-600">Stronger Outcomes.</span>
+             </h1>
+             <p className="text-[16px] sm:text-[18px] text-slate-600 mb-8 max-w-xl leading-relaxed">
+                A Professional platform for institutes, instructors, and students to manage courses, subscriptions, quizzes, assignments, and certificates from one centralized hub.
+             </p>
+             <div className="flex flex-col sm:flex-row gap-4 mb-10">
+                <Link to="/register" className="inline-flex justify-center items-center rounded-[14px] bg-blue-950 px-8 py-4 text-[16px] sm:text-[18px] font-semibold text-white shadow-md transition-all hover:bg-blue-900" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                   Register Now <ArrowRight className="ml-2 w-5 h-5" />
+                </Link>
+                <a href="#features" className="inline-flex justify-center items-center rounded-[14px] bg-yellow-400 px-8 py-4 text-[16px] sm:text-[18px] font-semibold text-blue-950 shadow-md transition-all hover:bg-yellow-500" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                   Explore Features
+                </a>
+             </div>
+             <div className="space-y-4">
+                <div className="flex items-center gap-3 text-blue-950 font-medium text-[15px] sm:text-[16px]">
+                    <div className="bg-blue-950 rounded-full text-white p-0.5"><CheckCircle2 className="w-4 h-4" /></div> Better Learner Engagement
                 </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+                <div className="flex items-center gap-3 text-blue-950 font-medium text-[15px] sm:text-[16px]">
+                    <div className="bg-blue-950 rounded-full text-white p-0.5"><CheckCircle2 className="w-4 h-4" /></div> Real-time Progress Tracking
+                </div>
+                <div className="flex items-center gap-3 text-blue-950 font-medium text-[15px] sm:text-[16px]">
+                    <div className="bg-blue-950 rounded-full text-white p-0.5"><CheckCircle2 className="w-4 h-4" /></div> Flexible Learning Experience
+                </div>
+             </div>
+           </div>
 
-      {/* STATS SECTION */}
-      <section className="py-16 bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 divide-x divide-slate-100">
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center px-4">
-                <div className="text-4xl md:text-5xl font-black text-blue-950">{stat.value}</div>
-                <div className="mt-3 text-sm font-bold text-slate-500 uppercase tracking-widest">{stat.label}</div>
+           {/* Right Column (How it works visual) */}
+           <div className="relative order-1 lg:order-2 lg:col-span-5">
+             <div className="bg-white/40 backdrop-blur-sm p-4 sm:p-6 lg:p-6 xl:p-8 rounded-[24px] shadow-sm border border-slate-200 mt-4 lg:mt-4 xl:mt-6">
+               
+               <div className="flex flex-col sm:flex-row justify-between items-center mb-6 sm:mb-8 relative gap-4 sm:gap-2">
+                  <div className="hidden sm:block absolute top-[40%] left-[10%] w-[80%] border-t-[2px] border-dashed border-slate-300 z-0"></div>
+                  
+                  <div className="bg-white p-3 sm:p-4 rounded-[20px] shadow-sm text-center border border-slate-100 flex flex-col items-center w-full sm:w-[30%] relative z-10 hover:-translate-y-1 transition-transform">
+                     <div className="w-12 h-12 sm:w-12 sm:h-12 xl:w-14 xl:h-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2 sm:mb-3"><BookOpen className="w-6 h-6 sm:w-6 sm:h-6 xl:w-7 xl:h-7"/></div>
+                     <div className="text-xs sm:text-sm font-bold text-blue-950">1. Enroll</div>
+                     <div className="text-[10px] sm:text-[11px] text-slate-500 mt-1 sm:mt-1.5 leading-tight">Students enroll in course</div>
+                  </div>
+                  <div className="bg-white p-3 sm:p-4 rounded-[20px] shadow-sm text-center border border-slate-100 flex flex-col items-center w-full sm:w-[30%] relative z-10 hover:-translate-y-1 transition-transform">
+                     <div className="w-12 h-12 sm:w-12 sm:h-12 xl:w-14 xl:h-14 rounded-full bg-yellow-50 text-yellow-600 flex items-center justify-center mb-2 sm:mb-3"><PlayCircle className="w-6 h-6 sm:w-6 sm:h-6 xl:w-7 xl:h-7"/></div>
+                     <div className="text-xs sm:text-sm font-bold text-blue-950">2. Learn</div>
+                     <div className="text-[10px] sm:text-[11px] text-slate-500 mt-1 sm:mt-1.5 leading-tight">Access lessons & videos</div>
+                  </div>
+                  <div className="bg-white p-3 sm:p-4 rounded-[20px] shadow-sm text-center border border-slate-100 flex flex-col items-center w-full sm:w-[30%] relative z-10 hover:-translate-y-1 transition-transform">
+                     <div className="w-12 h-12 sm:w-12 sm:h-12 xl:w-14 xl:h-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2 sm:mb-3"><CheckCircle2 className="w-6 h-6 sm:w-6 sm:h-6 xl:w-7 xl:h-7"/></div>
+                     <div className="text-xs sm:text-sm font-bold text-blue-950">3. Assess</div>
+                     <div className="text-[10px] sm:text-[11px] text-slate-500 mt-1 sm:mt-1.5 leading-tight">Take quizzes & exams</div>
+                  </div>
+               </div>
+               
+               <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 relative">
+                  <div className="hidden sm:block absolute top-[40%] left-[20%] w-[60%] border-t-[2px] border-dashed border-slate-300 z-0"></div>
+                  
+                  <div className="bg-white p-3 sm:p-4 rounded-[20px] shadow-sm text-center border border-slate-100 flex flex-col items-center w-full sm:w-[40%] relative z-10 hover:-translate-y-1 transition-transform">
+                     <div className="w-12 h-12 sm:w-12 sm:h-12 xl:w-14 xl:h-14 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-2 sm:mb-3"><BarChart3 className="w-6 h-6 sm:w-6 sm:h-6 xl:w-7 xl:h-7"/></div>
+                     <div className="text-xs sm:text-sm font-bold text-blue-950">4. Track</div>
+                     <div className="text-[10px] sm:text-[11px] text-slate-500 mt-1 sm:mt-1.5 leading-tight">Monitor performance</div>
+                  </div>
+                  <div className="bg-white p-3 sm:p-4 rounded-[20px] shadow-sm text-center border border-slate-100 flex flex-col items-center w-full sm:w-[40%] relative z-10 hover:-translate-y-1 transition-transform">
+                     <div className="w-12 h-12 sm:w-12 sm:h-12 xl:w-14 xl:h-14 rounded-full bg-yellow-50 text-yellow-600 flex items-center justify-center mb-2 sm:mb-3"><Award className="w-6 h-6 sm:w-6 sm:h-6 xl:w-7 xl:h-7"/></div>
+                     <div className="text-xs sm:text-sm font-bold text-blue-950">5. Certify</div>
+                     <div className="text-[10px] sm:text-[11px] text-slate-500 mt-1 sm:mt-1.5 leading-tight">Earn certificates</div>
+                  </div>
+               </div>
+               
+             </div>
+           </div>
+        </div>
+
+        {/* Stats Section integrated below hero content */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-16 sm:mt-24 relative z-10">
+           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+              <div className="bg-blue-950 p-4 sm:p-5 rounded-[16px] flex flex-col xl:flex-row items-center xl:items-center gap-3 sm:gap-4 shadow-lg border border-blue-900/50">
+                 <div className="w-10 h-10 rounded-full bg-white/10 text-yellow-400 flex items-center justify-center shrink-0"><Users className="w-5 h-5"/></div>
+                 <div className="text-center xl:text-left"><div className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white leading-none mb-1" style={{ fontFamily: "'Poppins', sans-serif" }}>{statsData.activeUsers || 0}</div><div className="text-[12px] sm:text-[14px] font-medium text-slate-300">Active Learners</div></div>
               </div>
-            ))}
-          </div>
+              <div className="bg-blue-950 p-4 sm:p-5 rounded-[16px] flex flex-col xl:flex-row items-center xl:items-center gap-3 sm:gap-4 shadow-lg border border-blue-900/50">
+                 <div className="w-10 h-10 rounded-full bg-white/10 text-emerald-400 flex items-center justify-center shrink-0"><BookOpen className="w-5 h-5"/></div>
+                 <div className="text-center xl:text-left"><div className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white leading-none mb-1" style={{ fontFamily: "'Poppins', sans-serif" }}>{statsData.publishedCourses || 0}</div><div className="text-[12px] sm:text-[14px] font-medium text-slate-300">Courses</div></div>
+              </div>
+              <div className="bg-blue-950 p-4 sm:p-5 rounded-[16px] flex flex-col xl:flex-row items-center xl:items-center gap-3 sm:gap-4 shadow-lg border border-blue-900/50">
+                 <div className="w-10 h-10 rounded-full bg-white/10 text-yellow-400 flex items-center justify-center shrink-0"><Shield className="w-5 h-5"/></div>
+                 <div className="text-center xl:text-left"><div className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white leading-none mb-1" style={{ fontFamily: "'Poppins', sans-serif" }}>{statsData.expertInstructors || 0}</div><div className="text-[12px] sm:text-[14px] font-medium text-slate-300">Instructors</div></div>
+              </div>
+              <div className="bg-blue-950 p-4 sm:p-5 rounded-[16px] flex flex-col xl:flex-row items-center xl:items-center gap-3 sm:gap-4 shadow-lg border border-blue-900/50">
+                 <div className="w-10 h-10 rounded-full bg-white/10 text-emerald-400 flex items-center justify-center shrink-0"><Award className="w-5 h-5"/></div>
+                 <div className="text-center xl:text-left"><div className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white leading-none mb-1" style={{ fontFamily: "'Poppins', sans-serif" }}>{statsData.certificatesIssued || 0}</div><div className="text-[12px] sm:text-[14px] font-medium text-slate-300">Certificates</div></div>
+              </div>
+           </div>
         </div>
       </section>
 
@@ -373,22 +417,58 @@ function Landing() {
             </div>
           </div>
 
-          <form className="bg-white rounded-2xl border border-slate-200 p-10 shadow-sm">
+          <form onSubmit={handleContactSubmit} className="bg-white rounded-2xl border border-slate-200 p-10 shadow-sm">
+            {contactSuccess && (
+              <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-3">
+                <svg className="w-5 h-5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <p className="text-sm font-semibold text-emerald-700">Message sent! We'll get back to you soon.</p>
+              </div>
+            )}
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-bold text-blue-950 mb-2">Full Name</label>
-                <input type="text" className="block w-full rounded-xl border-slate-300 py-3 px-4 text-slate-900 bg-slate-50 border focus:bg-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600 font-medium transition-colors" placeholder="Jane Smith" />
+                <input
+                  type="text"
+                  value={contactForm.name}
+                  onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                  className="block w-full rounded-xl border-slate-300 py-3 px-4 text-slate-900 bg-slate-50 border focus:bg-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600 font-medium transition-colors"
+                  placeholder="Jane Smith"
+                  required
+                />
               </div>
               <div>
                 <label className="block text-sm font-bold text-blue-950 mb-2">Email Address</label>
-                <input type="email" className="block w-full rounded-xl border-slate-300 py-3 px-4 text-slate-900 bg-slate-50 border focus:bg-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600 font-medium transition-colors" placeholder="jane@example.com" />
+                <input
+                  type="email"
+                  value={contactForm.email}
+                  onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                  className="block w-full rounded-xl border-slate-300 py-3 px-4 text-slate-900 bg-slate-50 border focus:bg-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600 font-medium transition-colors"
+                  placeholder="jane@example.com"
+                  required
+                />
               </div>
               <div>
                 <label className="block text-sm font-bold text-blue-950 mb-2">Message</label>
-                <textarea rows={4} className="block w-full rounded-xl border-slate-300 py-3 px-4 text-slate-900 bg-slate-50 border focus:bg-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600 font-medium transition-colors resize-none" placeholder="How can we help?"></textarea>
+                <textarea
+                  rows={4}
+                  value={contactForm.message}
+                  onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
+                  className="block w-full rounded-xl border-slate-300 py-3 px-4 text-slate-900 bg-slate-50 border focus:bg-white focus:ring-2 focus:ring-blue-600 focus:border-blue-600 font-medium transition-colors resize-none"
+                  placeholder="How can we help?"
+                  required
+                />
               </div>
-              <button type="button" onClick={(e) => e.preventDefault()} className="w-full rounded-xl bg-blue-950 px-4 py-4 text-base font-bold text-white shadow-md hover:bg-blue-900 transition-colors mt-4">
-                Send Message
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full rounded-xl bg-blue-950 px-4 py-4 text-base font-bold text-white shadow-md hover:bg-blue-900 transition-colors mt-4 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isSubmitting ? (
+                  <>
+                    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                    Sending...
+                  </>
+                ) : 'Send Message'}
               </button>
             </div>
           </form>

@@ -56,85 +56,123 @@ function ResetPassword() {
   }
 
   return (
-    <div className="h-screen grid lg:grid-cols-2 bg-white overflow-hidden font-sans">
+    <div className="min-h-screen flex flex-col lg:flex-row font-sans bg-[#EFEAE2]">
       {/* LEFT PANEL */}
-      <div className="hidden lg:flex h-screen sticky top-0 bg-blue-950 text-white flex-col justify-between p-16 relative">
-        <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#eab308 1px, transparent 1px)', backgroundSize: '32px 32px' }}></div>
-        <div className="flex items-center gap-4 relative z-10">
-          <div className="bg-white p-1.5 rounded-xl shadow-sm">
-            <img src={logo} alt="SHNOOR" className="h-12 w-auto" />
+      <div className="hidden lg:flex lg:w-[45%] bg-[#0F2F2B] text-white flex-col p-12 lg:p-16 xl:p-20 justify-between h-screen sticky top-0 shadow-2xl z-10">
+        <div className="flex items-center gap-4 mb-12 lg:mb-16">
+          <div className="bg-white p-1 rounded shadow-sm">
+            <img src={logo} alt="SHNOOR" className="h-10 w-auto" />
           </div>
           <div>
-            <h1 className="text-3xl font-black tracking-tight">SHNOOR LMS</h1>
-            <p className="text-yellow-400 font-bold mt-1 text-sm tracking-wide uppercase">Professional LMS Platform</p>
+            <h1 className="text-2xl font-bold tracking-tight text-yellow-500">SHNOOR <span className="text-white">LMS</span></h1>
+            <p className="text-slate-300 text-xs mt-0.5">Smart Learning, Better Future</p>
           </div>
         </div>
-        <div className="max-w-xl relative z-10">
-          <h2 className="text-6xl font-black leading-tight">Reset Your <span className="text-yellow-400">Security Credentials.</span></h2>
-          <p className="mt-8 text-xl text-blue-100 leading-relaxed font-medium">Security is our priority. Please set a strong new password to regain access to your Shnoor AI dashboard.</p>
+        
+        <div className="mb-10">
+          <h2 className="text-3xl lg:text-4xl font-bold mb-4">Reset Password</h2>
+          <p className="text-slate-300 text-sm lg:text-base">Create a strong new password.</p>
         </div>
-        <div className="text-blue-200 text-sm font-medium relative z-10">© 2026 SHNOOR International LLC</div>
-      </div>
-
-      {/* RIGHT PANEL (FORM) */}
-      <div className="h-screen overflow-y-auto flex items-center justify-center px-8 lg:px-20 py-16 bg-slate-50 relative">
-        <div className="w-full max-w-md relative z-10">
-          <div className="lg:hidden flex items-center gap-3 mb-12">
-            <div className="bg-white p-1.5 rounded-lg shadow-sm border border-slate-100">
-              <img src={logo} alt="SHNOOR" className="h-10 w-auto" />
+        
+        <div className="space-y-6 lg:space-y-8 mb-12 flex-1 flex flex-col justify-center">
+          <div className="flex items-center gap-4 lg:gap-6">
+            <div className="w-12 h-12 rounded-lg bg-[#163935] border border-emerald-900/50 flex items-center justify-center shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-500"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
             </div>
-            <h1 className="text-2xl font-black tracking-tight text-blue-950">SHNOOR LMS</h1>
+            <p className="text-sm lg:text-base text-slate-200 leading-snug">Access your courses<br/>anytime, anywhere</p>
           </div>
-
-          <Link to="/login" className="inline-flex items-center text-sm font-bold text-slate-500 hover:text-blue-950 transition-colors mb-8">
-            ← Back to Login
+          <div className="flex items-center gap-4 lg:gap-6">
+            <div className="w-12 h-12 rounded-lg bg-[#163935] border border-emerald-900/50 flex items-center justify-center shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-500"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+            </div>
+            <p className="text-sm lg:text-base text-slate-200 leading-snug">Track your progress<br/>and performance</p>
+          </div>
+          <div className="flex items-center gap-4 lg:gap-6">
+            <div className="w-12 h-12 rounded-lg bg-[#163935] border border-emerald-900/50 flex items-center justify-center shrink-0">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-500"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+            </div>
+            <p className="text-sm lg:text-base text-slate-200 leading-snug">Earn Certificates<br/>and achieve goals</p>
+          </div>
+        </div>
+        
+        <div className="mt-auto pt-8">
+          <div className="w-10 h-1 bg-yellow-600 mb-6"></div>
+          <p className="text-xs lg:text-sm text-slate-300 leading-relaxed pr-8 max-w-sm">
+            shnoor LMS is a powerful platform designed for institutes, instructors and students
+          </p>
+        </div>
+      </div>
+      
+      {/* RIGHT PANEL (FORM) */}
+      <div className="w-full lg:w-[55%] flex flex-col justify-center p-8 sm:p-12 lg:p-16">
+        <div className="max-w-md w-full mx-auto">
+          <Link to="/login" className="text-xs flex items-center gap-1.5 text-slate-600 hover:text-[#0F2F2B] mb-12 inline-flex font-medium transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+            Back to Login
           </Link>
 
-          <h2 className="text-4xl lg:text-5xl font-black text-blue-950 leading-tight">Set New Password</h2>
-          <p className="text-slate-600 mt-4 text-lg font-medium">Create a strong new password for your account.</p>
+          <div className="lg:hidden flex items-center gap-4 mb-8">
+            <div className="bg-white p-1 rounded shadow-sm">
+              <img src={logo} alt="SHNOOR" className="h-8 w-auto" />
+            </div>
+            <h1 className="text-xl font-bold tracking-tight text-[#0F2F2B]">SHNOOR LMS</h1>
+          </div>
+
+          <h2 className="text-3xl lg:text-4xl font-bold text-[#0F2F2B] mb-3">Set New Password</h2>
+          <p className="text-sm lg:text-base text-slate-600 mb-12">Create a strong new password for your account.</p>
 
           {!validToken ? (
-            <div className="mt-12 text-center">
-              <div className="bg-rose-50 border border-rose-200 text-rose-600 px-4 py-3 rounded-xl font-medium">{error}</div>
-              <Link to="/forgot-password" className="inline-block mt-6 text-blue-950 hover:text-blue-700 transition-colors font-black">
+            <div className="mt-4 text-center">
+              <div className="bg-rose-50 border border-rose-200 text-rose-600 px-4 py-3 rounded-lg font-medium text-sm">{error}</div>
+              <Link to="/forgot-password" className="inline-block mt-6 text-[#0F2F2B] hover:opacity-80 transition-opacity font-bold text-sm">
                 Request New Link
               </Link>
             </div>
           ) : message ? (
-            <div className="mt-12 bg-emerald-50 border border-emerald-200 text-emerald-800 p-6 rounded-xl text-center">
-              <p className="font-bold text-lg mb-2">{message}</p>
-              <p className="text-emerald-600 font-medium">Redirecting to login page...</p>
+            <div className="mt-4 bg-emerald-50 border border-emerald-200 text-emerald-800 p-6 rounded-lg text-center">
+              <p className="font-bold text-sm mb-2">{message}</p>
+              <p className="text-emerald-600 font-medium text-sm">Redirecting to login page...</p>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="mt-12 grid gap-6">
-              {error && <div className="bg-rose-50 border border-rose-200 text-rose-600 px-4 py-3 rounded-xl font-medium">{error}</div>}
+            <form onSubmit={handleSubmit} className="flex flex-col gap-7">
+              {error && <div className="bg-rose-50 border border-rose-200 text-rose-600 px-4 py-3 rounded-lg font-medium text-sm">{error}</div>}
 
               <div>
-                <label className="font-bold text-sm text-blue-950 mb-2 block">New Password</label>
-                <input 
-                  type="password" 
-                  placeholder="Enter new password" 
-                  value={newPassword} 
-                  onChange={(e) => setNewPassword(e.target.value)} 
-                  required
-                  className="w-full border-2 border-slate-200 rounded-xl px-5 py-4 bg-white outline-none focus:border-blue-950 focus:ring-2 focus:ring-blue-900/10 transition-all font-medium text-blue-950" 
-                />
+                <label className="text-sm font-bold text-[#0F2F2B] mb-3 block">New Password</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#0F2F2B]"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  </div>
+                  <input 
+                    type="password" 
+                    placeholder="Enter new password" 
+                    value={newPassword} 
+                    onChange={(e) => setNewPassword(e.target.value)} 
+                    required
+                    className="w-full bg-[#FCFBF8] border border-[#DDD7CF] placeholder-slate-400 text-[#0F2F2B] rounded-lg py-3.5 pl-12 pr-4 outline-none focus:border-[#0F2F2B] focus:ring-1 focus:ring-[#0F2F2B] transition-all font-medium text-base" 
+                  />
+                </div>
               </div>
 
               <div>
-                <label className="font-bold text-sm text-blue-950 mb-2 block">Confirm New Password</label>
-                <input 
-                  type="password" 
-                  placeholder="Repeat new password" 
-                  value={confirmPassword} 
-                  onChange={(e) => setConfirmPassword(e.target.value)} 
-                  required
-                  className="w-full border-2 border-slate-200 rounded-xl px-5 py-4 bg-white outline-none focus:border-blue-950 focus:ring-2 focus:ring-blue-900/10 transition-all font-medium text-blue-950" 
-                />
+                <label className="text-sm font-bold text-[#0F2F2B] mb-3 block">Confirm New Password</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#0F2F2B]"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  </div>
+                  <input 
+                    type="password" 
+                    placeholder="Repeat new password" 
+                    value={confirmPassword} 
+                    onChange={(e) => setConfirmPassword(e.target.value)} 
+                    required
+                    className="w-full bg-[#FCFBF8] border border-[#DDD7CF] placeholder-slate-400 text-[#0F2F2B] rounded-lg py-3.5 pl-12 pr-4 outline-none focus:border-[#0F2F2B] focus:ring-1 focus:ring-[#0F2F2B] transition-all font-medium text-base" 
+                  />
+                </div>
               </div>
               
-              <button type="submit" className="bg-yellow-500 hover:bg-yellow-400 transition-colors text-blue-950 py-4 rounded-xl font-black text-lg shadow-[0_4px_20px_-4px_rgba(234,179,8,0.5)] hover:-translate-y-0.5 mt-2">
-                Update Password
+              <button type="submit" className="w-full bg-[#0F2F2B] hover:bg-[#123A38] text-white py-4 rounded-lg font-bold flex items-center justify-center gap-2 mt-4 shadow-lg transition-transform hover:-translate-y-0.5 text-base">
+                Update Password <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
               </button>
             </form>
           )}
