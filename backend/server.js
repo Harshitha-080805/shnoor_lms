@@ -1260,7 +1260,15 @@ const getAllUsers = async (req, res) => {
 const approveUser = async (req, res) => {
   const { userId } = req.params;
   try {
-    await pool.query('UPDATE users SET is_approved = true WHERE id = $1', [userId]);
+    const userRes = await pool.query('UPDATE users SET is_approved = true WHERE id = $1 RETURNING organization_id', [userId]);
+    if (userRes.rows.length > 0) {
+      const orgId = userRes.rows[0].organization_id;
+      const chatEvents = require('./chatEvents');
+      await chatEvents.addUserToSystemGroup(userId);
+      if (orgId) {
+        await chatEvents.addUserToOrgGroup(userId, orgId);
+      }
+    }
     res.json({ message: 'User approved' });
   } catch (error) {
     console.error(error);

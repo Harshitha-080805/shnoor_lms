@@ -153,9 +153,45 @@ async function addUserToCourseGroup(userId, courseId) {
     console.error('Error in addUserToCourseGroup:', err);
   }
 }
+
+// Ensure System Announcements conversation exists, then add the user to it
+async function addUserToSystemGroup(userId) {
+  try {
+    let annCheck = await db.query(`SELECT id FROM conversations WHERE type = 'ANNOUNCEMENT'`);
+    let conversationId;
+    
+    if (annCheck.rows.length === 0) {
+      const insertAnn = await db.query(`INSERT INTO conversations (type, name) VALUES ('ANNOUNCEMENT', 'System Announcements') RETURNING id`);
+      conversationId = insertAnn.rows[0].id;
+    } else {
+      conversationId = annCheck.rows[0].id;
+    }
+
+    let memCheck = await db.query(`SELECT 1 FROM conversation_members WHERE conversation_id = $1 AND user_id = $2`, [conversationId, userId]);
+    if (memCheck.rows.length === 0) {
+      // Determine user role for chat (default to MEMBER, unless ADMIN)
+      const uRes = await db.query('SELECT role, full_name, email FROM users WHERE id = $1', [userId]);
+      if (uRes.rows.length > 0) {
+        const uInfo = uRes.rows[0];
+        const chatRole = (uInfo.role && uInfo.role.toUpperCase() === 'ADMIN') ? 'ADMIN' : 'MEMBER';
+        
+        await db.query(`INSERT INTO conversation_members (conversation_id, user_id, role) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`, [conversationId, userId, chatRole]);
+        
+        const userName = uInfo.full_name || uInfo.email;
+        await db.query(
+          `INSERT INTO messages (conversation_id, sender_id, message, message_type) VALUES ($1, $2, $3, 'SYSTEM')`,
+          [conversationId, userId, `${userName} added to this group`]
+        );
+      }
+    }
+  } catch (err) {
+    console.error('Error in addUserToSystemGroup:', err);
+  }
+}
   
 
 module.exports = {
   addUserToOrgGroup,
-  addUserToCourseGroup
+  addUserToCourseGroup,
+  addUserToSystemGroup
 };

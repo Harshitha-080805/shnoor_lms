@@ -68,6 +68,7 @@ module.exports = (authMiddleware) => {
       );
 
       const chatEvents = require('./chatEvents');
+      await chatEvents.addUserToSystemGroup(id);
       await chatEvents.addUserToOrgGroup(id, orgId);
 
       res.json({ message: 'User approved successfully', user: result.rows[0] });

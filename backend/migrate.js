@@ -14,6 +14,15 @@ const runMigration = async () => {
     `;
     await pool.query(query);
     console.log("Migration successful: course_prerequisites table created.");
+
+    // Add ANNOUNCEMENT to conversation_type enum if it doesn't exist
+    try {
+      await pool.query("ALTER TYPE conversation_type ADD VALUE IF NOT EXISTS 'ANNOUNCEMENT'");
+      console.log("Migration successful: ANNOUNCEMENT added to conversation_type enum.");
+    } catch (e) {
+      console.log("Notice with enum:", e.message);
+    }
+
     process.exit(0);
   } catch (err) {
     console.error("Migration failed:", err);
