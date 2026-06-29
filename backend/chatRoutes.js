@@ -292,9 +292,9 @@ module.exports = (upload) => {
       // Auto-add super admin and organization admin if learner created the group
       if (req.user.role && req.user.role.toUpperCase() === 'LEARNER') {
         const orgId = req.user.organization_id;
-        // Fetch super admins
-        const superAdmins = await db.query("SELECT id FROM users WHERE UPPER(role) = 'ADMIN'");
-        superAdmins.rows.forEach(r => uniqueMembers.add(r.id));
+        // Add super admins
+        const superAdmins = await db.query("SELECT id FROM users WHERE role = 'admin'");
+        for (const admin of superAdmins.rows) uniqueMembers.add(admin.id);
         
         // Fetch organization admins if orgId is available
         if (orgId) {

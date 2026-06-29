@@ -26,7 +26,7 @@ async function addUserToOrgGroup(userId, orgId) {
       conversationId = insertConv.rows[0].id;
 
       // Automatically add all Super Admins
-      const superAdmins = await db.query("SELECT id FROM users WHERE role = 'ADMIN'");
+      const superAdmins = await db.query("SELECT id FROM users WHERE role = 'admin'");
       for (const admin of superAdmins.rows) {
         await db.query(
           `INSERT INTO conversation_members (conversation_id, user_id, role) VALUES ($1, $2, 'ADMIN') ON CONFLICT DO NOTHING`,
@@ -111,7 +111,7 @@ async function addUserToCourseGroup(userId, courseId) {
       }
 
       // Automatically add all Super Admins
-      const superAdmins = await db.query("SELECT id FROM users WHERE role = 'ADMIN'");
+      const superAdmins = await db.query("SELECT id FROM users WHERE role = 'admin'");
       for (const admin of superAdmins.rows) {
         await db.query(
           `INSERT INTO conversation_members (conversation_id, user_id, role) VALUES ($1, $2, 'ADMIN') ON CONFLICT DO NOTHING`,

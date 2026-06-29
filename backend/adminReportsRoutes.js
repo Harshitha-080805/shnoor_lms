@@ -201,7 +201,7 @@ router.get('/users', async (req, res) => {
         (SELECT status FROM subscriptions s WHERE s.user_id = u.id AND s.status = 'revoked' LIMIT 1) as user_sub_status
       FROM users u
       LEFT JOIN organizations o ON u.organization_id = o.id
-      WHERE u.role != 'ADMIN'
+      WHERE u.role != 'admin'
       ORDER BY u.created_at DESC
     `;
     const result = await pool.query(query);
@@ -268,7 +268,7 @@ router.get('/users/:id', async (req, res) => {
         `, [id]);
         if (subRes.rows.length > 0) subscriptionData = subRes.rows[0];
     }
-    if (user.role === 'INSTRUCTOR' || user.role === 'ADMIN') {
+    if (user.role === 'INSTRUCTOR' || user.role === 'admin') {
         const publishedCoursesQuery = `
             SELECT c.id, c.title, c.is_approved, c.is_published, c.created_at,
                    (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) as total_enrollments
@@ -422,6 +422,6 @@ router.put('/users/:userId/restore-access', async (req, res) => {
 
 module.exports = (authMiddleware) => {
   const adminRouter = express.Router();
-  adminRouter.use('/', authMiddleware(['ADMIN']), router);
+  adminRouter.use('/', authMiddleware(['admin']), router);
   return adminRouter;
 };
