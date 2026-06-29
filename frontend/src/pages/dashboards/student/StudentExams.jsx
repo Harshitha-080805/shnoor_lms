@@ -57,7 +57,7 @@ function StudentExams() {
   };
 
   const totalExams = exams.length;
-  const passedExams = exams.filter(e => e.attempts?.best_score >= e.pass_percentage).length;
+  const passedExams = exams.filter(e => e.attempts?.latest_status === 'PASSED').length;
   const pendingExams = totalExams - passedExams;
 
   if (activeExamToTake) {
@@ -161,15 +161,15 @@ function StudentExams() {
                     <div className="flex items-center gap-4">
                       {exam.attempts && (
                         <>
-                          <div className="text-right">
+                          <div className="text-center">
                             <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Status</p>
                             <p className={`text-sm font-black ${exam.attempts.latest_status === 'PASSED' ? 'text-green-600' : exam.attempts.latest_status === 'FAILED' ? 'text-rose-600' : 'text-amber-500'}`}>
                               {exam.attempts.latest_status || 'COMPLETED'}
                             </p>
                           </div>
-                          <div className="text-right">
+                          <div className="text-center">
                             <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Best Score</p>
-                            <p className="text-xl font-black text-blue-950">{parseFloat(exam.attempts.best_score || 0).toFixed(1)}%</p>
+                            <p className="text-xl font-black text-blue-950">{Math.round(exam.attempts.best_score || 0)}</p>
                           </div>
                           {exam.attempts.latest_attempt_id && (
                             <button 
@@ -230,11 +230,11 @@ function StudentExams() {
                 </div>
                 <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                   <p className="text-sm font-semibold text-slate-500 uppercase">Total Score</p>
-                  <p className="text-2xl font-black mt-1 text-blue-950">{parseFloat(detailedReviewData.attempt.total_score || 0).toFixed(1)}</p>
+                  <p className="text-2xl font-black mt-1 text-blue-950">{Math.round(detailedReviewData.attempt.total_score || 0)}</p>
                 </div>
                 <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                   <p className="text-sm font-semibold text-slate-500 uppercase">Auto Score</p>
-                  <p className="text-2xl font-black mt-1 text-slate-800">{parseFloat(detailedReviewData.attempt.auto_score || 0).toFixed(1)}</p>
+                  <p className="text-2xl font-black mt-1 text-slate-800">{Math.round(detailedReviewData.attempt.auto_score || 0)}</p>
                 </div>
               </div>
 
@@ -266,7 +266,7 @@ function StudentExams() {
                           <div className="text-right shrink-0">
                             <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Score</p>
                             <p className={`text-xl font-black ${parseFloat(q.student_answer?.score || 0) > 0 ? 'text-green-600' : 'text-rose-600'}`}>
-                              {parseFloat(q.student_answer?.score || 0).toFixed(1)} <span className="text-sm text-slate-400 font-bold">/ {q.marks}</span>
+                              {Math.round(q.student_answer?.score || 0)} <span className="text-sm text-slate-400 font-bold">/ {q.marks}</span>
                             </p>
                           </div>
                         </div>
