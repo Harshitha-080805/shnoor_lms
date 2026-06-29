@@ -25,6 +25,9 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 const rateLimit = require('express-rate-limit');
 
+// Trust the reverse proxy (Render) so rate limiting uses the correct IP
+app.set('trust proxy', 1);
+
 // Rate limiting
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
