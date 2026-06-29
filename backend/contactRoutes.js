@@ -106,7 +106,7 @@ const sendReply = async (req, res) => {
 module.exports = (authMiddleware) => {
   const router = express.Router();
   router.post('/', submitQuery);                               // public
-  router.get('/', authMiddleware(['ADMIN']), getAllQueries);    // admin only
-  router.post('/:id/reply', authMiddleware(['ADMIN']), sendReply); // admin only
+  router.get('/', authMiddleware(['admin']), getAllQueries);    // admin only
+  router.post('/:id/reply', authMiddleware(['admin']), sendReply); // admin only
   return router;
 };

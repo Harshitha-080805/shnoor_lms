@@ -349,7 +349,7 @@ const resetPasswordWithToken = async (req, res) => {
 
 // Admin Controller 
 const getPendingCourses = async (req, res) => {
-  if (req.user.role !== 'ORGANIZATION_ADMIN' && req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Access denied' });
+  if (req.user.role !== 'ORGANIZATION_ADMIN' && req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
 
   try {
     const query = `
@@ -372,7 +372,7 @@ const getPendingCourses = async (req, res) => {
 };
 
 const reviewCourse = async (req, res) => {
-  if (req.user.role !== 'ORGANIZATION_ADMIN' && req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Access denied' });
+  if (req.user.role !== 'ORGANIZATION_ADMIN' && req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
 
   const { courseId } = req.params;
   const { action } = req.body;
@@ -393,7 +393,7 @@ const reviewCourse = async (req, res) => {
 };
 
 const getPendingCertificates = async (req, res) => {
-  if (req.user.role !== 'ORGANIZATION_ADMIN' && req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Access denied' });
+  if (req.user.role !== 'ORGANIZATION_ADMIN' && req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
 
   try {
     const query = `
@@ -415,7 +415,7 @@ const getPendingCertificates = async (req, res) => {
 };
 
 const reviewCertificate = async (req, res) => {
-  if (req.user.role !== 'ORGANIZATION_ADMIN' && req.user.role !== 'ADMIN') return res.status(403).json({ error: 'Access denied' });
+  if (req.user.role !== 'ORGANIZATION_ADMIN' && req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
 
   const { requestId } = req.params;
   const { action } = req.body;
@@ -1301,10 +1301,10 @@ app.post('/api/auth/admin/users/:userId/approve', authMiddleware(), approveUser)
 app.delete('/api/auth/admin/users/:userId/delete', authMiddleware(), deleteUser);
 
 // Admin Routes (/api/admin)
-app.get('/api/admin/pending-courses', authMiddleware(['ORGANIZATION_ADMIN', 'ADMIN']), getPendingCourses);
-app.post('/api/admin/courses/:courseId/review', authMiddleware(['ORGANIZATION_ADMIN', 'ADMIN']), reviewCourse);
-app.get('/api/admin/pending-certificates', authMiddleware(['ORGANIZATION_ADMIN', 'ADMIN']), getPendingCertificates);
-app.post('/api/admin/certificates/:requestId/review', authMiddleware(['ORGANIZATION_ADMIN', 'ADMIN']), reviewCertificate);
+app.get('/api/admin/pending-courses', authMiddleware(['ORGANIZATION_ADMIN', 'admin']), getPendingCourses);
+app.post('/api/admin/courses/:courseId/review', authMiddleware(['ORGANIZATION_ADMIN', 'admin']), reviewCourse);
+app.get('/api/admin/pending-certificates', authMiddleware(['ORGANIZATION_ADMIN', 'admin']), getPendingCertificates);
+app.post('/api/admin/certificates/:requestId/review', authMiddleware(['ORGANIZATION_ADMIN', 'admin']), reviewCertificate);
 
 // Course Routes (/api/courses)
 const multer = require('multer');
@@ -1830,7 +1830,7 @@ app.get('/api/plans', async (req, res) => {
   }
 });
 
-app.post('/api/plans', authMiddleware(['ADMIN', 'SUPER_ADMIN']), async (req, res) => {
+app.post('/api/plans', authMiddleware(['admin', 'super_admin']), async (req, res) => {
   try {
     const { name, description, plan_type, price, billing_cycle, duration_months, features } = req.body;
     
@@ -1855,7 +1855,7 @@ app.post('/api/plans', authMiddleware(['ADMIN', 'SUPER_ADMIN']), async (req, res
   }
 });
 
-app.put('/api/plans/:id', authMiddleware(['ADMIN', 'SUPER_ADMIN']), async (req, res) => {
+app.put('/api/plans/:id', authMiddleware(['admin', 'super_admin']), async (req, res) => {
   try {
     const { id } = req.params;
     const { name, description, plan_type, price, billing_cycle, duration_months, features } = req.body;
@@ -1885,7 +1885,7 @@ app.put('/api/plans/:id', authMiddleware(['ADMIN', 'SUPER_ADMIN']), async (req, 
   }
 });
 
-app.delete('/api/plans/:id', authMiddleware(['ADMIN', 'SUPER_ADMIN']), async (req, res) => {
+app.delete('/api/plans/:id', authMiddleware(['admin', 'super_admin']), async (req, res) => {
   try {
     const { id } = req.params;
     await pool.query('DELETE FROM subscription_plans WHERE id = $1', [id]);
@@ -2048,9 +2048,9 @@ app.delete('/api/instructor/announcements/:id', authMiddleware(['INSTRUCTOR']), 
     res.status(500).json({ error: 'Server error deleting announcement' });
   }
 });
-app.get('/api/admin/announcements', authMiddleware(['ADMIN']), async (req, res) => {
+app.get('/api/admin/announcements', authMiddleware(['admin']), async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM announcements WHERE author_role = 'SUPER_ADMIN' ORDER BY created_at DESC");
+    const result = await pool.query("SELECT * FROM announcements WHERE author_role = 'super_admin' ORDER BY created_at DESC");
     res.json(result.rows);
   } catch (err) {
     console.error(err);
@@ -2058,11 +2058,11 @@ app.get('/api/admin/announcements', authMiddleware(['ADMIN']), async (req, res) 
   }
 });
 
-app.post('/api/admin/announcements', authMiddleware(['ADMIN']), async (req, res) => {
+app.post('/api/admin/announcements', authMiddleware(['admin']), async (req, res) => {
   const { title, content } = req.body;
   try {
     const result = await pool.query(
-      "INSERT INTO announcements (title, content, author_role, author_id) VALUES ($1, $2, 'SUPER_ADMIN', $3) RETURNING *",
+      "INSERT INTO announcements (title, content, author_role, author_id) VALUES ($1, $2, 'super_admin', $3) RETURNING *",
       [title, content, req.user.userId]
     );
     res.json(result.rows[0]);
@@ -2072,12 +2072,12 @@ app.post('/api/admin/announcements', authMiddleware(['ADMIN']), async (req, res)
   }
 });
 
-app.put('/api/admin/announcements/:id', authMiddleware(['ADMIN']), async (req, res) => {
+app.put('/api/admin/announcements/:id', authMiddleware(['admin']), async (req, res) => {
   const { id } = req.params;
   const { title, content } = req.body;
   try {
     const result = await pool.query(
-      "UPDATE announcements SET title = $1, content = $2 WHERE id = $3 AND author_role = 'SUPER_ADMIN' RETURNING *",
+      "UPDATE announcements SET title = $1, content = $2 WHERE id = $3 AND author_role = 'super_admin' RETURNING *",
       [title, content, id]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Announcement not found' });
@@ -2088,11 +2088,11 @@ app.put('/api/admin/announcements/:id', authMiddleware(['ADMIN']), async (req, r
   }
 });
 
-app.delete('/api/admin/announcements/:id', authMiddleware(['ADMIN']), async (req, res) => {
+app.delete('/api/admin/announcements/:id', authMiddleware(['admin']), async (req, res) => {
   const { id } = req.params;
   try {
     const result = await pool.query(
-      "DELETE FROM announcements WHERE id = $1 AND author_role = 'SUPER_ADMIN' RETURNING id",
+      "DELETE FROM announcements WHERE id = $1 AND author_role = 'super_admin' RETURNING id",
       [id]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Announcement not found' });
