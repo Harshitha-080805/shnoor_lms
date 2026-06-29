@@ -933,7 +933,9 @@ function StudentCourses() {
   return (
     <div className="space-y-8">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/60 backdrop-blur-md p-4 rounded-2xl border border-slate-100 shadow-sm">
+      {!previewCourseId && (
+        <>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/60 backdrop-blur-md p-4 rounded-2xl border border-slate-100 shadow-sm">
         
         {/* Segmented Control Tabs */}
         <div className="flex bg-slate-100/80 p-1 rounded-xl shadow-inner border border-slate-200/50">
@@ -1092,13 +1094,16 @@ function StudentCourses() {
           )}
         </div>
       )}
+      </>
+      )}
 
       {previewCourseId && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto" onClick={closePreview}>
-          <div className="bg-white rounded-3xl w-full max-w-4xl shadow-2xl relative flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
-            <button onClick={closePreview} className="absolute top-4 right-4 bg-black/10 hover:bg-black/20 text-slate-800 p-2 rounded-full transition-colors z-10">
-              <X size={20} />
+        <div className="bg-white rounded-3xl w-full shadow-sm relative flex flex-col border border-slate-200 animate-in fade-in zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
+          <div className="absolute top-4 left-4 z-20">
+            <button onClick={closePreview} className="flex items-center gap-2 bg-white/90 backdrop-blur-sm text-slate-800 hover:text-slate-900 shadow-md font-bold px-4 py-2 rounded-xl hover:bg-white transition-colors border border-slate-200">
+              <X size={20} /> Back to Courses
             </button>
+          </div>
             
             {/* Header Banner */}
             <div className="h-48 relative bg-slate-100 shrink-0 rounded-t-3xl overflow-hidden">
@@ -1110,7 +1115,7 @@ function StudentCourses() {
             </div>
 
             {/* Body */}
-            <div className="p-6 md:p-8 overflow-y-auto flex-1 bg-white">
+            <div className="p-6 md:p-8 bg-white">
               {previewLoading ? (
                 <div className="flex justify-center items-center h-32">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-800"></div>
@@ -1274,7 +1279,6 @@ function StudentCourses() {
                 })()}
               </div>
             )}
-          </div>
         </div>
       )}
     </div>
