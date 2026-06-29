@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS course_exams (
     instructions TEXT,
     created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
     status VARCHAR(50) DEFAULT 'PUBLISHED',
+    version_number INTEGER DEFAULT 1,
     is_deleted BOOLEAN DEFAULT false,
     deleted_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -69,6 +70,8 @@ CREATE TABLE IF NOT EXISTS course_exam_attempts (
     id SERIAL PRIMARY KEY,
     exam_id INTEGER REFERENCES course_exams(id) ON DELETE CASCADE,
     student_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    exam_version INTEGER DEFAULT 1,
+    attempt_number INTEGER DEFAULT 1,
     status VARCHAR(50) DEFAULT 'IN_PROGRESS',
     started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMP,
