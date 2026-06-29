@@ -39,7 +39,9 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     chat_pin VARCHAR(255),
-    profile_pic TEXT
+    profile_pic TEXT,
+    reset_password_token VARCHAR(255),
+    reset_password_expires TIMESTAMP
 );
 
 -- Courses Table

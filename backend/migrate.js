@@ -73,6 +73,14 @@ const runMigration = async () => {
     `);
     console.log("Migration successful: added author columns to announcements.");
 
+    // Add password reset columns to users
+    await pool.query(`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS reset_password_token VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS reset_password_expires TIMESTAMP;
+    `);
+    console.log("Migration successful: added password reset columns to users.");
+
     // Create user_hidden_announcements table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS user_hidden_announcements (
