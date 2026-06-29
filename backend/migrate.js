@@ -31,6 +31,13 @@ const runMigration = async () => {
     `);
     console.log("Migration successful: added new columns to courses table.");
 
+    // Add missing vtt_file column to lessons table
+    await pool.query(`
+      ALTER TABLE lessons 
+      ADD COLUMN IF NOT EXISTS vtt_file VARCHAR(255);
+    `);
+    console.log("Migration successful: added vtt_file to lessons table.");
+
     // Create course exams tables
     const fs = require('fs');
     const path = require('path');
