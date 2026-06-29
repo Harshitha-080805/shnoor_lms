@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS course_exam_sections (
     exam_id INTEGER REFERENCES course_exams(id) ON DELETE CASCADE,
     title VARCHAR(255),
     description TEXT,
-    order_index INTEGER DEFAULT 0
+    order_index INTEGER DEFAULT 0,
+    is_deleted BOOLEAN DEFAULT false
 );
 
 CREATE TABLE IF NOT EXISTS course_exam_questions (
@@ -36,7 +37,8 @@ CREATE TABLE IF NOT EXISTS course_exam_questions (
     question_text TEXT NOT NULL,
     question_type VARCHAR(50) NOT NULL,
     marks INTEGER DEFAULT 1,
-    order_index INTEGER DEFAULT 0
+    order_index INTEGER DEFAULT 0,
+    is_deleted BOOLEAN DEFAULT false
 );
 
 CREATE TABLE IF NOT EXISTS course_exam_options (

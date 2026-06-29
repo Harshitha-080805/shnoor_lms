@@ -45,6 +45,13 @@ const runMigration = async () => {
     await pool.query(courseExamsSql);
     console.log("Migration successful: course_exams tables created.");
 
+    // Add missing is_deleted columns to course exam tables
+    await pool.query(`
+      ALTER TABLE course_exam_sections ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT false;
+      ALTER TABLE course_exam_questions ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT false;
+    `);
+    console.log("Migration successful: added is_deleted columns to exam tables.");
+
 
     // Add missing columns to announcements
     await pool.query(`
