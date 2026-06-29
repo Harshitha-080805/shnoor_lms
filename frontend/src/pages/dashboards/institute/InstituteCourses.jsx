@@ -160,7 +160,7 @@ function InstituteCourses() {
             <div className="h-40 bg-slate-100 relative p-4 overflow-hidden">
               {(course.thumbnail_file || course.thumbnail_url) && (
                 <img 
-                  src={(course.thumbnail_file || course.thumbnail_url).startsWith('http') ? (course.thumbnail_file || course.thumbnail_url) : `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/${(course.thumbnail_file || course.thumbnail_url).replace(/\\/g, '/')}`} 
+                  src={(course.thumbnail_file || course.thumbnail_url).startsWith('http') ? (course.thumbnail_file || course.thumbnail_url) : `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/${(course.thumbnail_file || course.thumbnail_url).replace(/\\/g, '/')}`} 
                   alt={course.title} 
                   className="absolute inset-0 w-full h-full object-cover" 
                 />

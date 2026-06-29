@@ -16,7 +16,7 @@ function ResetPassword() {
   useEffect(() => {
     const verifyToken = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/verify-reset-token/${token}`);
+        const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}/api/verify-reset-token/${token}`);
         if (res.data.valid) {
           setValidToken(true);
         } else {
@@ -39,7 +39,7 @@ function ResetPassword() {
       return;
     }
     try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/reset-password-with-token`, { token, newPassword });
+      const res = await axios.post(`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"}/api/reset-password-with-token`, { token, newPassword });
       setMessage(res.data.message);
       setTimeout(() => navigate("/login"), 3000);
     } catch (err) {

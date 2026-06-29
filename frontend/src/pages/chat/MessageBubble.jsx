@@ -102,7 +102,7 @@ function MessageBubble({ message, repliedMessage, isOwnMessage, currentUserId, o
         
         {message.message_type === "IMAGE" && message.file_url && (
           <img 
-            src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/${message.file_url.replace(/\\/g, '/')}`} 
+            src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/${message.file_url.replace(/\\/g, '/')}`} 
             alt="attachment" 
             className="mt-2 max-w-full rounded-lg border border-slate-200" 
           />
@@ -110,13 +110,13 @@ function MessageBubble({ message, repliedMessage, isOwnMessage, currentUserId, o
         
         {message.message_type === "AUDIO" && message.file_url && (
           <audio controls className="mt-2 h-10 w-[240px]">
-            <source src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/${message.file_url.replace(/\\/g, '/')}`} type="audio/webm" />
+            <source src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/${message.file_url.replace(/\\/g, '/')}`} type="audio/webm" />
           </audio>
         )}
 
         {message.message_type === "FILE" && message.file_url && (
           <a 
-            href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/${message.file_url.replace(/\\/g, '/')}`} 
+            href={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/${message.file_url.replace(/\\/g, '/')}`} 
             target="_blank" 
             rel="noopener noreferrer"
             className={`flex items-center gap-2 mt-2 p-3 rounded-xl border ${
