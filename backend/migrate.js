@@ -31,21 +31,12 @@ const runMigration = async () => {
     `);
     console.log("Migration successful: added new columns to courses table.");
 
-    // Create course_exam_answers table
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS course_exam_answers (
-          id SERIAL PRIMARY KEY,
-          attempt_id INTEGER NOT NULL REFERENCES course_exam_attempts(id) ON DELETE CASCADE,
-          question_id INTEGER NOT NULL REFERENCES course_exam_questions(id) ON DELETE CASCADE,
-          answer_text TEXT,
-          score INTEGER DEFAULT 0,
-          is_correct BOOLEAN DEFAULT false,
-          review_status VARCHAR(50) DEFAULT 'PENDING',
-          feedback TEXT,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-    console.log("Migration successful: course_exam_answers table created.");
+    // Create course exams tables
+    const fs = require('fs');
+    const path = require('path');
+    const courseExamsSql = fs.readFileSync(path.join(__dirname, 'database', 'course_exams.sql'), 'utf8');
+    await pool.query(courseExamsSql);
+    console.log("Migration successful: course_exams tables created.");
 
 
     // Add ANNOUNCEMENT to conversation_type enum if it doesn't exist
