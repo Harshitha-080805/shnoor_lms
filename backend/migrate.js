@@ -46,6 +46,26 @@ const runMigration = async () => {
     console.log("Migration successful: course_exams tables created.");
 
 
+    // Add missing columns to announcements
+    await pool.query(`
+      ALTER TABLE announcements 
+      ADD COLUMN IF NOT EXISTS author_role VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS author_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+    `);
+    console.log("Migration successful: added author columns to announcements.");
+
+    // Create user_hidden_announcements table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS user_hidden_announcements (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          announcement_id INTEGER NOT NULL REFERENCES announcements(id) ON DELETE CASCADE,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(user_id, announcement_id)
+      );
+    `);
+    console.log("Migration successful: created user_hidden_announcements table.");
+
     // Add ANNOUNCEMENT to conversation_type enum if it doesn't exist
     try {
       await pool.query("ALTER TYPE conversation_type ADD VALUE IF NOT EXISTS 'ANNOUNCEMENT'");
