@@ -58,6 +58,8 @@ const runMigration = async () => {
       ALTER TABLE course_exams ADD COLUMN IF NOT EXISTS version_number INTEGER DEFAULT 1;
       ALTER TABLE course_exam_attempts ADD COLUMN IF NOT EXISTS exam_version INTEGER DEFAULT 1;
       ALTER TABLE course_exam_attempts ADD COLUMN IF NOT EXISTS attempt_number INTEGER DEFAULT 1;
+      ALTER TABLE course_exam_attempts ADD COLUMN IF NOT EXISTS auto_score INTEGER DEFAULT 0;
+      ALTER TABLE course_exam_attempts ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMP;
     `);
     console.log("Migration successful: added version columns to exam tables.");
     console.log("Migration successful: added is_deleted columns to exam tables.");

@@ -75,6 +75,8 @@ CREATE TABLE IF NOT EXISTS course_exam_attempts (
     status VARCHAR(50) DEFAULT 'IN_PROGRESS',
     started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMP,
+    submitted_at TIMESTAMP,
+    auto_score INTEGER DEFAULT 0,
     evaluated_at TIMESTAMP,
     total_score INTEGER DEFAULT 0,
     manual_score INTEGER DEFAULT 0
