@@ -417,7 +417,8 @@ module.exports = (upload) => {
         JOIN users u ON cm.user_id = u.id
         WHERE cm.conversation_id = $1
         ORDER BY 
-          CASE u.role 
+          CASE u.role::VARCHAR
+            WHEN 'admin' THEN 1
             WHEN 'ADMIN' THEN 1 
             WHEN 'ORGANIZATION_ADMIN' THEN 2 
             WHEN 'INSTRUCTOR' THEN 3 

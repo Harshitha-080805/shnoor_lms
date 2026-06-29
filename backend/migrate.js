@@ -2,14 +2,19 @@ const pool = require('./db');
 
 const runMigration = async () => {
   try {
+    // Drop the old incorrectly structured table if it exists
+    await pool.query('DROP TABLE IF EXISTS course_prerequisites CASCADE');
+
     const query = `
-      CREATE TABLE IF NOT EXISTS course_prerequisites (
+      CREATE TABLE course_prerequisites (
           id SERIAL PRIMARY KEY,
           course_id INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
-          prerequisite_id INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
-          is_required_completion BOOLEAN DEFAULT TRUE,
+          prerequisite_course_id INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+          minimum_completion_percentage INTEGER DEFAULT 0,
+          minimum_quiz_score INTEGER DEFAULT 0,
+          certificate_required BOOLEAN DEFAULT FALSE,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          UNIQUE(course_id, prerequisite_id)
+          UNIQUE(course_id, prerequisite_course_id)
       );
     `;
     await pool.query(query);
