@@ -954,6 +954,14 @@ const enrollCourse = async (req, res) => {
       [studentId, courseId]
     );
 
+    // Auto-add to course group
+    try {
+      const chatEvents = require('./chatEvents');
+      await chatEvents.addUserToCourseGroup(studentId, courseId);
+    } catch (e) {
+      console.log('Notice: Could not add user to course chat group', e);
+    }
+
     res.status(201).json(insertResult.rows[0]);
   } catch (error) {
     console.error(error);
