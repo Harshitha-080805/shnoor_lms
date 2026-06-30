@@ -1378,7 +1378,10 @@ app.post('/api/courses/', authMiddleware(['INSTRUCTOR']), upload.single('thumbna
 
   try {
     let pmat = '[]';
-    try { pmat = typeof prerequisite_materials === 'string' ? JSON.parse(prerequisite_materials) : (prerequisite_materials || '[]'); } catch(e){}
+    try { 
+      const parsed = typeof prerequisite_materials === 'string' ? JSON.parse(prerequisite_materials) : (prerequisite_materials || []);
+      pmat = JSON.stringify(parsed);
+    } catch(e){}
 
     const query = `
       INSERT INTO courses (title, description, thumbnail_url, thumbnail_file, instructor_id, estimated_duration, learning_outcomes, skills_gained, difficulty_level, prerequisites_enabled, prerequisite_materials)
@@ -1588,7 +1591,10 @@ app.put('/api/courses/:id', authMiddleware(['INSTRUCTOR']), upload.single('thumb
     }
     if (prerequisite_materials !== undefined) {
       let pmat = '[]';
-      try { pmat = typeof prerequisite_materials === 'string' ? JSON.parse(prerequisite_materials) : prerequisite_materials; } catch(e){}
+      try { 
+        const parsed = typeof prerequisite_materials === 'string' ? JSON.parse(prerequisite_materials) : (prerequisite_materials || []);
+        pmat = JSON.stringify(parsed);
+      } catch(e){}
       updateFields.push(`prerequisite_materials = $${counter++}`); values.push(pmat);
     }
 
