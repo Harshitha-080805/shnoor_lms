@@ -10,8 +10,7 @@ import InstituteDashboard from "./pages/dashboards/institute/InstituteDashboard"
 import InstituteOverview from "./pages/dashboards/institute/InstituteOverview";
 import InstituteCourses from "./pages/dashboards/institute/InstituteCourses";
 import StudentReports from "./pages/dashboards/institute/StudentReports";
-import InstituteInstructors from "./pages/dashboards/institute/InstituteInstructors";
-import InstituteLearners from "./pages/dashboards/institute/InstituteLearners";
+import InstituteUsers from "./pages/dashboards/institute/InstituteUsers";
 import InstituteProgress from "./pages/dashboards/institute/InstituteProgress";
 import InstituteSubscriptions from "./pages/dashboards/institute/InstituteSubscriptions";
 import InstituteCertificates from "./pages/dashboards/institute/InstituteCertificates";
@@ -60,8 +59,7 @@ function App() {
           <Route index element={<InstituteOverview />} />
           <Route path="courses" element={<InstituteCourses />} />
           <Route path="reports" element={<StudentReports />} />
-          <Route path="instructors" element={<InstituteInstructors />} />
-          <Route path="learners" element={<InstituteLearners />} />
+          <Route path="users" element={<InstituteUsers />} />
           <Route path="progress" element={<InstituteProgress />} />
           <Route path="subscriptions" element={<InstituteSubscriptions />} />
           <Route path="certificates" element={<InstituteCertificates />} />
