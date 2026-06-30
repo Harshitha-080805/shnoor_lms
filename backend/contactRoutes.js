@@ -2,15 +2,21 @@ const express = require('express');
 const pool = require('./db');
 const nodemailer = require('nodemailer');
 
-const createTransporter = () =>
-  nodemailer.createTransport({
+const createTransporter = () => {
+  const port = parseInt(process.env.EMAIL_PORT || '587', 10);
+  return nodemailer.createTransport({
     host: process.env.EMAIL_HOST || 'smtp.ethereal.email',
-    port: parseInt(process.env.EMAIL_PORT || '587'),
+    port: port,
+    secure: port === 465,
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
   });
+};
 
 // POST /api/contact — public, no auth required
 const submitQuery = async (req, res) => {

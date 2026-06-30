@@ -236,13 +236,18 @@ const forgotPassword = async (req, res) => {
       [hashedToken, expiresAt, email]
     );
 
+    const emailPort = parseInt(process.env.EMAIL_PORT || '587', 10);
     const transporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST || 'smtp.ethereal.email',
-      port: process.env.EMAIL_PORT || 587,
+      port: emailPort,
+      secure: emailPort === 465,
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
-      }
+      },
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 10000,
     });
 
     const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password/${token}`;
@@ -906,18 +911,18 @@ const enrollCourse = async (req, res) => {
               }
            }
            
+           const certCheck = await pool.query('SELECT status FROM certificate_requests WHERE enrollment_id = $1 AND status = $2', [pEnrollId, 'APPROVED']);
+           const hasCert = certCheck.rows.length > 0;
+
            let meetsCert = true;
-           if (row.certificate_required) {
-              const certCheck = await pool.query('SELECT status FROM certificate_requests WHERE enrollment_id = $1 AND status = $2', [pEnrollId, 'APPROVED']);
-              if (certCheck.rows.length === 0) {
-                 meetsCert = false;
-                 reasons.push('Requires an approved certificate');
-              }
+           if (row.certificate_required && !hasCert) {
+              meetsCert = false;
+              reasons.push('Requires an approved certificate');
            }
            
-           // If they have completed_at, they are done by default UNLESS strict rules fail
+           // If they have completed_at or an approved certificate, they are done by default UNLESS strict rules fail
            const validation = await canRequestCertificate(pId, studentId);
-           if ((validation.canRequest || pCheck.rows[0].completed_at) && meetsProgress && meetsQuiz && meetsCert) {
+           if ((validation.canRequest || pCheck.rows[0].completed_at || hasCert) && meetsProgress && meetsQuiz && meetsCert) {
              isCompleted = true;
            } else if (meetsProgress && meetsQuiz && meetsCert) {
              // Or if no completion timestamp but they strictly meet all set advanced rules
