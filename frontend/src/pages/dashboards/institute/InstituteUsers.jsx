@@ -101,15 +101,27 @@ function InstituteUsers() {
       
       let allActive = [];
       if (instructorsRes.status >= 200 && instructorsRes.status < 300) {
-        allActive = [...allActive, ...instructorsRes.data];
+        allActive = [...allActive, ...instructorsRes.data.map(u => ({...u, role: 'Instructor'}))];
       }
       if (learnersRes.status >= 200 && learnersRes.status < 300) {
-        allActive = [...allActive, ...learnersRes.data];
+        const learnerText = orgType === 'company' ? 'Employee' : 'Student';
+        allActive = [...allActive, ...learnersRes.data.map(u => ({...u, role: learnerText}))];
       }
       setActiveUsers(allActive);
       
       if (pendingRes.status >= 200 && pendingRes.status < 300) {
-        const relevantPending = pendingRes.data.filter(u => u.role === 'LEARNER' || u.role === 'INSTRUCTOR');
+        const relevantPending = pendingRes.data
+          .filter(u => u.role === 'LEARNER' || u.role === 'INSTRUCTOR')
+          .map(u => {
+            if (u.role === 'LEARNER') {
+              const learnerText = orgType === 'company' ? 'Employee' : 'Student';
+              return { ...u, role: learnerText };
+            }
+            if (u.role === 'INSTRUCTOR') {
+              return { ...u, role: 'Instructor' };
+            }
+            return u;
+          });
         setPendingUsers(relevantPending);
       }
     } catch (err) {
