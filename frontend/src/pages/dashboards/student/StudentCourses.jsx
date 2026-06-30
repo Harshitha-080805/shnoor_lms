@@ -210,9 +210,8 @@ function StudentCourses() {
         alert(err.error || "Enrollment failed");
       }
     } catch (e) {
-      if (e.response && e.response.data && e.response.data.missingPrerequisites) {
-        const missing = e.response.data.missingPrerequisites.map(m => m.title).join(', ');
-        alert(`Prerequisites not met. You must complete: ${missing}`);
+      if (e.response && e.response.data && e.response.data.error) {
+        alert(e.response.data.error);
       } else {
         alert(e.response?.data?.error || "Failed to enroll");
       }
@@ -1216,29 +1215,19 @@ function StudentCourses() {
                         )}
                       </div>
 
-                      {previewCourseData.prerequisites?.length > 0 && (
+                      {previewCourseData.prerequisite_materials?.length > 0 && (
                         <div className="bg-amber-50 p-5 rounded-2xl border border-amber-200">
-                          <h4 className="font-bold text-amber-900 text-sm mb-3 flex items-center gap-2"><Lock size={16}/> Enrollment Prerequisites</h4>
+                          <h4 className="font-bold text-amber-900 text-sm mb-3 flex items-center gap-2"><FileText size={16}/> Prerequisite Materials (Informational)</h4>
                           <div className="space-y-3">
-                            {previewCourseData.prerequisites.map(p => {
-                              const pEnrolled = enrollments.find(e => String(e.course?.id) === String(p.id));
-                              let isCompleted = false;
-                              if (pEnrolled) {
-                                 const hasCert = certificates?.some(c => String(c.enrollment_id) === String(pEnrolled.id) && c.status === 'APPROVED');
-                                 if (pEnrolled.completed_at || hasCert) isCompleted = true;
-                              }
-                              return (
-                                <div key={p.id} className="flex items-start gap-2 text-xs">
-                                  {isCompleted ? <CheckCircle size={16} className="text-emerald-600 shrink-0 mt-0.5"/> : <div className="w-4 h-4 rounded-full border-2 border-amber-400 shrink-0 mt-0.5"></div>}
-                                  <div>
-                                    <span className={isCompleted ? 'text-emerald-800 font-bold' : 'text-amber-900 font-bold'}>{p.title}</span>
-                                    {(!isCompleted && p.minimum_completion_percentage > 0) && <p className="text-amber-700 text-[10px] font-medium mt-0.5">Requires {p.minimum_completion_percentage}% completion</p>}
-                                    {(!isCompleted && p.minimum_quiz_score > 0) && <p className="text-amber-700 text-[10px] font-medium mt-0.5">Requires {p.minimum_quiz_score}% average quiz score</p>}
-                                    {(!isCompleted && p.certificate_required) && <p className="text-amber-700 text-[10px] font-medium mt-0.5">Requires course certificate</p>}
-                                  </div>
+                            {previewCourseData.prerequisite_materials.map((p, idx) => (
+                              <div key={idx} className="flex items-start gap-2 text-xs">
+                                <div className="w-4 h-4 rounded-full border-2 border-amber-400 shrink-0 mt-0.5"></div>
+                                <div>
+                                  <a href={p.url || '#'} target="_blank" rel="noopener noreferrer" className="text-amber-900 font-bold hover:underline hover:text-amber-700">{p.title || `Material ${idx + 1}`}</a>
+                                  <p className="text-amber-700 text-[10px] font-medium mt-0.5 capitalize">{p.type} Material</p>
                                 </div>
-                              );
-                            })}
+                              </div>
+                            ))}
                           </div>
                         </div>
                       )}
@@ -1251,32 +1240,15 @@ function StudentCourses() {
             {/* Footer / Action Bar */}
             {!previewLoading && previewCourseData && (
               <div className="p-4 md:p-6 bg-slate-50 border-t border-slate-200 flex justify-end shrink-0 rounded-b-3xl">
-                {(() => {
-                  const hasUnmet = previewCourseData.prerequisites?.some(p => {
-                     const pEnrolled = enrollments.find(e => String(e.course?.id) === String(p.id));
-                     if (!pEnrolled) return true;
-                     const hasCert = certificates?.some(c => String(c.enrollment_id) === String(pEnrolled.id) && c.status === 'APPROVED');
-                     return !(pEnrolled.completed_at || hasCert);
-                  });
-                  return (
-                    <button 
-                      onClick={() => {
-                          if (hasUnmet) {
-                             alert("Please complete all prerequisites before enrolling.");
-                             return;
-                          }
-                          handleEnroll(previewCourseData.id);
-                          closePreview();
-                      }} 
-                      disabled={hasUnmet}
-                      className={`px-8 py-3 rounded-lg font-bold text-sm transition-all duration-300 ${
-                        hasUnmet ? 'bg-slate-200 text-slate-500 cursor-not-allowed' : 'bg-slate-900 text-white hover:bg-black'
-                      }`}
-                    >
-                      {hasUnmet ? 'Prerequisites Pending' : 'Request Enrollment'}
-                    </button>
-                  );
-                })()}
+                <button 
+                  onClick={() => {
+                      handleEnroll(previewCourseData.id);
+                      closePreview();
+                  }} 
+                  className="px-8 py-3 rounded-lg font-bold text-sm transition-all duration-300 bg-slate-900 text-white hover:bg-black"
+                >
+                  Request Enrollment
+                </button>
               </div>
             )}
         </div>

@@ -788,14 +788,7 @@ const getCourseById = async (req, res) => {
 
     const course = courseResult.rows[0];
 
-    // Fetch prerequisites
-    const prereqResult = await pool.query(`
-      SELECT cp.prerequisite_course_id as id, c.title, cp.minimum_completion_percentage, cp.minimum_quiz_score, cp.certificate_required
-      FROM course_prerequisites cp
-      JOIN courses c ON cp.prerequisite_course_id = c.id
-      WHERE cp.course_id = $1
-    `, [id]);
-    course.prerequisites = prereqResult.rows || [];
+    course.prerequisite_materials = course.prerequisite_materials || [];
 
     // Fetch modules
     const modulesResult = await pool.query('SELECT * FROM modules WHERE course_id = $1 ORDER BY "order" ASC, id ASC', [id]);
@@ -900,77 +893,6 @@ const enrollCourse = async (req, res) => {
       return res.status(400).json({ error: 'Cannot enroll in an unapproved or non-existent course' });
     }
 
-    const prereqResult = await pool.query('SELECT prerequisite_course_id, minimum_completion_percentage, minimum_quiz_score, certificate_required FROM course_prerequisites WHERE course_id = $1', [courseId]);
-    if (prereqResult.rows.length > 0) {
-      const missingPrereqs = [];
-      const { canRequestCertificate } = require('./helpers/examValidation');
-      
-      for (const row of prereqResult.rows) {
-        const pId = row.prerequisite_course_id;
-        const pCheck = await pool.query('SELECT id, completed_at FROM enrollments WHERE student_id = $1 AND course_id = $2', [studentId, pId]);
-        let isCompleted = false;
-        let reasons = [];
-        
-        if (pCheck.rows.length > 0) {
-           const pEnrollId = pCheck.rows[0].id;
-           
-           // Calculate progress dynamically
-           const totalRes = await pool.query('SELECT count(l.id) as total FROM lessons l JOIN modules m ON l.module_id = m.id WHERE m.course_id = $1', [pId]);
-           const totalLessons = parseInt(totalRes.rows[0].total) || 0;
-           const completedRes = await pool.query('SELECT count(lp.id) as completed FROM lesson_progress lp JOIN lessons l ON lp.lesson_id = l.id JOIN modules m ON l.module_id = m.id WHERE lp.enrollment_id = $1 AND lp.is_completed = true AND m.course_id = $2', [pEnrollId, pId]);
-           const completedLessons = parseInt(completedRes.rows[0].completed) || 0;
-           const progress = totalLessons > 0 ? Math.floor((completedLessons / totalLessons) * 100) : 0;
-           
-           let meetsProgress = progress >= row.minimum_completion_percentage;
-           if (!meetsProgress) reasons.push(`Requires ${row.minimum_completion_percentage}% completion (Current: ${progress}%)`);
-           
-           let meetsQuiz = true;
-           if (row.minimum_quiz_score > 0) {
-              const quizCheck = await pool.query('SELECT MAX(score) as max_score FROM quiz_attempts WHERE enrollment_id = $1', [pEnrollId]);
-              const maxScore = quizCheck.rows[0]?.max_score || 0;
-              if (maxScore < row.minimum_quiz_score) {
-                 meetsQuiz = false;
-                 reasons.push(`Requires quiz score of ${row.minimum_quiz_score}% (Current: ${maxScore}%)`);
-              }
-           }
-           
-           const certCheck = await pool.query('SELECT status FROM certificate_requests WHERE enrollment_id = $1 AND status = $2', [pEnrollId, 'APPROVED']);
-           const hasCert = certCheck.rows.length > 0;
-
-           let meetsCert = true;
-           if (row.certificate_required && !hasCert) {
-              meetsCert = false;
-              reasons.push('Requires an approved certificate');
-           }
-           
-           // If they have completed_at or an approved certificate, they are done by default UNLESS strict rules fail
-           const validation = await canRequestCertificate(pId, studentId);
-           if ((validation.canRequest || pCheck.rows[0].completed_at || hasCert) && meetsProgress && meetsQuiz && meetsCert) {
-             isCompleted = true;
-           } else if (meetsProgress && meetsQuiz && meetsCert) {
-             // Or if no completion timestamp but they strictly meet all set advanced rules
-             // If all rules were 0/false, they still need to "complete" it normally
-             if (row.minimum_completion_percentage > 0 || row.minimum_quiz_score > 0 || row.certificate_required) {
-                isCompleted = true;
-             }
-           }
-        } else {
-           reasons.push('Not enrolled or started');
-        }
-        
-        if (!isCompleted) {
-          const cNameRes = await pool.query('SELECT title FROM courses WHERE id = $1', [pId]);
-          missingPrereqs.push({ id: pId, title: cNameRes.rows[0]?.title || 'Unknown Course', reasons });
-        }
-      }
-
-      if (missingPrereqs.length > 0) {
-        return res.status(403).json({ 
-          error: 'Prerequisites not met', 
-          missingPrerequisites: missingPrereqs 
-        });
-      }
-    }
 
     const enrollCheck = await pool.query('SELECT * FROM enrollments WHERE student_id = $1 AND course_id = $2', [studentId, courseId]);
     if (enrollCheck.rows.length > 0) {
@@ -1440,22 +1362,34 @@ app.get('/api/courses/instructor/my-courses', authMiddleware(['INSTRUCTOR']), ge
 app.get('/api/courses/instructor/students', authMiddleware(['INSTRUCTOR']), getInstructorStudents);
 app.get('/api/courses/instructor/submissions', authMiddleware(['INSTRUCTOR']), getInstructorSubmissions);
 
+// Generic Upload Route
+app.post('/api/upload', authMiddleware(), upload.single('file'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+  res.status(201).json({ fileUrl: req.file.path, originalName: req.file.originalname });
+});
+
 // Instructor routes
 app.post('/api/courses/', authMiddleware(['INSTRUCTOR']), upload.single('thumbnail_file'), async (req, res) => {
-  const { title, description, thumbnail_url, estimated_duration, learning_outcomes, skills_gained, difficulty_level, prerequisites_enabled } = req.body;
+  const { title, description, thumbnail_url, estimated_duration, learning_outcomes, skills_gained, difficulty_level, prerequisites_enabled, prerequisite_materials } = req.body;
   const instructorId = req.user.userId;
   const thumbnailFile = req.file ? req.file.path : null;
 
   try {
+    let pmat = '[]';
+    try { pmat = typeof prerequisite_materials === 'string' ? JSON.parse(prerequisite_materials) : (prerequisite_materials || '[]'); } catch(e){}
+
     const query = `
-      INSERT INTO courses (title, description, thumbnail_url, thumbnail_file, instructor_id, estimated_duration, learning_outcomes, skills_gained, difficulty_level, prerequisites_enabled)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      INSERT INTO courses (title, description, thumbnail_url, thumbnail_file, instructor_id, estimated_duration, learning_outcomes, skills_gained, difficulty_level, prerequisites_enabled, prerequisite_materials)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *
     `;
     const result = await pool.query(query, [
       title, description, thumbnail_url, thumbnailFile, instructorId, 
       estimated_duration, learning_outcomes, skills_gained, difficulty_level, 
-      prerequisites_enabled === 'true' || prerequisites_enabled === true
+      prerequisites_enabled === 'true' || prerequisites_enabled === true,
+      pmat
     ]);
     res.status(201).json(result.rows[0]);
   } catch (error) {
@@ -1623,7 +1557,7 @@ app.get('/api/courses/:courseId/progress', authMiddleware(), async (req, res) =>
 
 app.put('/api/courses/:id', authMiddleware(['INSTRUCTOR']), upload.single('thumbnail_file'), async (req, res) => {
   const { id } = req.params;
-  const { title, description, thumbnail_url, is_published, estimated_duration, learning_outcomes, skills_gained, difficulty_level, prerequisites_enabled } = req.body;
+  const { title, description, thumbnail_url, is_published, estimated_duration, learning_outcomes, skills_gained, difficulty_level, prerequisites_enabled, prerequisite_materials } = req.body;
   const instructorId = req.user.userId;
   const thumbnailFile = req.file ? req.file.path : undefined;
 
@@ -1651,6 +1585,11 @@ app.put('/api/courses/:id', authMiddleware(['INSTRUCTOR']), upload.single('thumb
     if (prerequisites_enabled !== undefined) { 
       const preq = (prerequisites_enabled === 'true' || prerequisites_enabled === true);
       updateFields.push(`prerequisites_enabled = $${counter++}`); values.push(preq); 
+    }
+    if (prerequisite_materials !== undefined) {
+      let pmat = '[]';
+      try { pmat = typeof prerequisite_materials === 'string' ? JSON.parse(prerequisite_materials) : prerequisite_materials; } catch(e){}
+      updateFields.push(`prerequisite_materials = $${counter++}`); values.push(pmat);
     }
 
     if (updateFields.length === 0) return res.json(courseCheck.rows[0]);
@@ -2156,6 +2095,11 @@ pool.query(`
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   )
 `).catch(err => console.error('Error creating contact_queries table:', err));
+
+// Add prerequisite_materials JSONB column to courses
+pool.query(`
+  ALTER TABLE courses ADD COLUMN IF NOT EXISTS prerequisite_materials JSONB DEFAULT '[]'::jsonb;
+`).catch(err => console.error('Error adding prerequisite_materials column:', err));
 
 // SERVER LISTEN
 

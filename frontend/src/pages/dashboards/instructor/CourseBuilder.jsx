@@ -12,7 +12,7 @@ function CourseBuilder(){
   const[desc,setDesc]=useState('');
   const[thumbUrl,setThumbUrl]=useState('');
   const[thumbFile,setThumbFile]=useState(null);
-  const[prerequisites,setPrerequisites]=useState([]);
+  const[prerequisiteMaterials,setPrerequisiteMaterials]=useState([]);
   const[estimatedDuration,setEstimatedDuration]=useState('');
   const[learningOutcomes,setLearningOutcomes]=useState('');
   const[skillsGained,setSkillsGained]=useState('');
@@ -93,13 +93,8 @@ function CourseBuilder(){
         setSkillsGained(data.skills_gained || '');
         setDifficultyLevel(data.difficulty_level || 'Beginner');
         setPrerequisitesEnabled(data.prerequisites_enabled || false);
-        if(data.prerequisites) {
-          setPrerequisites(data.prerequisites.map(p => ({
-            id: String(p.id),
-            minimum_completion_percentage: p.minimum_completion_percentage || 0,
-            minimum_quiz_score: p.minimum_quiz_score || 0,
-            certificate_required: p.certificate_required || false
-          })));
+        if(data.prerequisite_materials) {
+          setPrerequisiteMaterials(data.prerequisite_materials);
         }
       }
       
@@ -133,6 +128,7 @@ function CourseBuilder(){
     formData.append("skills_gained", skillsGained);
     formData.append("difficulty_level", difficultyLevel);
     formData.append("prerequisites_enabled", prerequisitesEnabled);
+    formData.append("prerequisite_materials", JSON.stringify(prerequisiteMaterials));
     try{
       let savedCourseId = courseId;
       if(courseId==='new'){
@@ -153,7 +149,6 @@ function CourseBuilder(){
         }
       }
 
-      await api.post(`/api/courses/${savedCourseId}/prerequisites`, { prerequisites: prerequisites });
 
       if(courseId==='new'){
         navigate(`/instructor-dashboard/courses/${savedCourseId}/build`);
@@ -507,62 +502,90 @@ function CourseBuilder(){
               <div className="border border-slate-200 rounded-xl p-4 bg-slate-50">
                 <div className="flex items-center justify-between mb-2">
                   <div>
-                    <label className="block text-slate-800 font-bold">Enable Prerequisites</label>
-                    <p className="text-xs text-slate-500">Require students to complete specific courses before enrolling.</p>
+                    <label className="block text-slate-800 font-bold">Enable Prerequisites (Informational)</label>
+                    <p className="text-xs text-slate-500">Provide videos, PDFs, or links for students to view before starting this course.</p>
                   </div>
                   <input type="checkbox" checked={prerequisitesEnabled} onChange={(e)=>setPrerequisitesEnabled(e.target.checked)} className="w-5 h-5 cursor-pointer rounded text-blue-600 focus:ring-blue-500 border-slate-300"/>
                 </div>
                 
                 {prerequisitesEnabled && (
                   <div className="mt-4 pt-4 border-t border-slate-200">
-                    <p className="text-xs font-semibold text-slate-700 mb-3">Select and Configure Prerequisite Courses:</p>
-                    <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
-                      {allCourses.filter(c => String(c.id) !== String(courseId)).length === 0 && (
-                        <span className="text-slate-400 text-xs italic">No other published courses available.</span>
-                      )}
-                      {allCourses.filter(c => String(c.id) !== String(courseId)).map(c => {
-                        const existingPrereq = prerequisites.find(p => String(p.id) === String(c.id));
-                        const isSelected = !!existingPrereq;
-                        
-                        return (
-                          <div key={c.id} className={`p-3 rounded-xl border ${isSelected ? 'bg-blue-50/50 border-blue-200 shadow-sm' : 'bg-white border-slate-200'}`}>
-                            <label className="flex items-center gap-2 cursor-pointer font-bold text-sm text-slate-800">
-                              <input type="checkbox" checked={isSelected} onChange={(e) => {
-                                if (e.target.checked) {
-                                  setPrerequisites([...prerequisites, { id: String(c.id), minimum_completion_percentage: 0, minimum_quiz_score: 0, certificate_required: false }]);
-                                } else {
-                                  setPrerequisites(prerequisites.filter(p => String(p.id) !== String(c.id)));
-                                }
-                              }} className="rounded cursor-pointer w-4 h-4 text-blue-600 focus:ring-blue-500"/>
-                              {c.title}
-                            </label>
+                    <div className="space-y-4 max-h-80 overflow-y-auto pr-2">
+                      {prerequisiteMaterials.map((mat, index) => (
+                        <div key={index} className="p-4 rounded-xl border bg-white border-slate-200 relative">
+                          <button type="button" onClick={() => {
+                            const newMat = [...prerequisiteMaterials];
+                            newMat.splice(index, 1);
+                            setPrerequisiteMaterials(newMat);
+                          }} className="absolute top-2 right-2 text-red-500 hover:text-red-700 bg-red-50 p-1 rounded-md">
+                            <Trash2 size={16} />
+                          </button>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-xs font-bold text-slate-500 mb-1">Title</label>
+                              <input type="text" value={mat.title || ''} onChange={(e) => {
+                                const newMat = [...prerequisiteMaterials];
+                                newMat[index].title = e.target.value;
+                                setPrerequisiteMaterials(newMat);
+                              }} placeholder="e.g., Basic JavaScript Concepts" className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500"/>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-bold text-slate-500 mb-1">Type</label>
+                              <select value={mat.type || 'link'} onChange={(e) => {
+                                const newMat = [...prerequisiteMaterials];
+                                newMat[index].type = e.target.value;
+                                newMat[index].url = ''; // reset on type change
+                                setPrerequisiteMaterials(newMat);
+                              }} className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="link">External Link / URL</option>
+                                <option value="video">Video Upload</option>
+                                <option value="pdf">PDF / Document Upload</option>
+                              </select>
+                            </div>
                             
-                            {isSelected && (
-                              <div className="mt-4 ml-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                  <label className="block text-[11px] uppercase tracking-wider font-bold text-slate-500 mb-1">Min Completion %</label>
-                                  <input type="number" min="0" max="100" value={existingPrereq.minimum_completion_percentage || 0} onChange={(e) => {
-                                    setPrerequisites(prerequisites.map(p => String(p.id) === String(c.id) ? {...p, minimum_completion_percentage: parseInt(e.target.value)} : p));
-                                  }} className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"/>
-                                </div>
-                                <div>
-                                  <label className="block text-[11px] uppercase tracking-wider font-bold text-slate-500 mb-1">Min Quiz Score %</label>
-                                  <input type="number" min="0" max="100" value={existingPrereq.minimum_quiz_score || 0} onChange={(e) => {
-                                    setPrerequisites(prerequisites.map(p => String(p.id) === String(c.id) ? {...p, minimum_quiz_score: parseInt(e.target.value)} : p));
-                                  }} className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"/>
-                                </div>
-                                <div className="flex items-center gap-2 mt-5">
-                                  <input type="checkbox" checked={existingPrereq.certificate_required || false} onChange={(e) => {
-                                    setPrerequisites(prerequisites.map(p => String(p.id) === String(c.id) ? {...p, certificate_required: e.target.checked} : p));
-                                  }} className="cursor-pointer w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-slate-300"/>
-                                  <label className="text-xs font-bold text-slate-700 cursor-pointer">Require Certificate</label>
-                                </div>
-                              </div>
-                            )}
+                            <div className="md:col-span-2">
+                              {mat.type === 'link' ? (
+                                <>
+                                  <label className="block text-xs font-bold text-slate-500 mb-1">URL</label>
+                                  <input type="text" value={mat.url || ''} onChange={(e) => {
+                                    const newMat = [...prerequisiteMaterials];
+                                    newMat[index].url = e.target.value;
+                                    setPrerequisiteMaterials(newMat);
+                                  }} placeholder="https://..." className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500"/>
+                                </>
+                              ) : (
+                                <>
+                                  <label className="block text-xs font-bold text-slate-500 mb-1">File Upload ({mat.type === 'video' ? 'Video' : 'Document'})</label>
+                                  <div className="flex items-center gap-2">
+                                    <input type="file" accept={mat.type === 'video' ? 'video/*' : '.pdf,.doc,.docx'} onChange={async (e) => {
+                                      const file = e.target.files[0];
+                                      if(!file) return;
+                                      const fd = new FormData();
+                                      fd.append('file', file);
+                                      try {
+                                        const res = await api.post('/api/upload', fd);
+                                        const newMat = [...prerequisiteMaterials];
+                                        newMat[index].url = res.data.fileUrl;
+                                        setPrerequisiteMaterials(newMat);
+                                      } catch(err) {
+                                        alert('Upload failed');
+                                      }
+                                    }} className="w-full p-2 border border-slate-200 rounded-lg text-xs bg-slate-50"/>
+                                    {mat.url && <span className="text-xs text-green-600 font-bold bg-green-50 px-2 py-1 rounded">Uploaded</span>}
+                                  </div>
+                                </>
+                              )}
+                            </div>
                           </div>
-                        )
-                      })}
+                        </div>
+                      ))}
                     </div>
+                    <button type="button" onClick={() => {
+                      setPrerequisiteMaterials([...prerequisiteMaterials, { title: '', type: 'link', url: '' }]);
+                    }} className="mt-4 px-4 py-2 bg-slate-200 text-slate-700 hover:bg-slate-300 font-bold text-sm rounded-lg flex items-center gap-2">
+                      <Plus size={16} /> Add Prerequisite Material
+                    </button>
                   </div>
                 )}
               </div>

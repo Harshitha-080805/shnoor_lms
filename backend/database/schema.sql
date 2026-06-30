@@ -56,6 +56,7 @@ CREATE TABLE courses (
     organization_id INTEGER REFERENCES organizations(id) ON DELETE CASCADE,
     is_approved BOOLEAN DEFAULT FALSE,
     is_published BOOLEAN DEFAULT FALSE,
+    prerequisite_materials JSONB DEFAULT '[]'::jsonb,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
