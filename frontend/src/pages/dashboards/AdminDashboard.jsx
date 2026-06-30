@@ -479,7 +479,6 @@ function AdminDashboard() {
   const menuItems = [
     "Overview",
     "User Approvals",
-    "Approved Accounts",
     "Manage Courses",
     "Certificate Approvals",
     "Subscription Plans",
@@ -684,7 +683,7 @@ function AdminDashboard() {
                   <div className="lg:col-span-3 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col">
                     <div className="flex justify-between items-center mb-6">
                       <h3 className="text-lg font-extrabold text-slate-800">Recent Approvals</h3>
-                      <button onClick={() => setActivePage("Approved Accounts")} className="text-sm font-bold text-blue-950 hover:text-blue-700 transition">View All</button>
+                      <button onClick={() => setActivePage("User Approvals")} className="text-sm font-bold text-blue-950 hover:text-blue-700 transition">View All</button>
                     </div>
                     <div className="space-y-4 flex-1">
                       {allApprovedAccounts.length === 0 ? (
@@ -837,29 +836,7 @@ function AdminDashboard() {
               )}
             />
           )}
-          {activePage === "Approved Accounts" && (
-            <div className="space-y-4 animate-fade-in-up">
-              <UserTable
-                title="Approved Accounts"
-                headerAction={
-                  <select
-                    value={approvedAccountsSort}
-                    onChange={(e) => setApprovedAccountsSort(e.target.value)}
-                    className="px-3 py-2 bg-slate-50 border border-slate-200 text-slate-700 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
-                  >
-                    <option value="Newest">Sort by: Newest</option>
-                    <option value="Oldest">Sort by: Oldest</option>
-                    <option value="Title A-Z">Name A-Z</option>
-                    <option value="Title Z-A">Name Z-A</option>
-                  </select>
-                }
-                users={sortedApprovedAccounts}
-                type="all"
-                pendingCertificates={pendingCertificates}
-                handleCertificateAction={handleCertificateAction}
-              />
-            </div>
-          )}
+
           {activePage === "Manage Courses" && renderCoursesView()}
           {activePage === "Certificate Approvals" && renderCertificatesView()}
           {activePage === "Subscription Plans" && (
