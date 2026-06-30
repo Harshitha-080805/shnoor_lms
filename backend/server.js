@@ -241,11 +241,14 @@ const forgotPassword = async (req, res) => {
       sendMail: async (mailOptions) => {
         const apiKey = process.env.BREVO_API_KEY || process.env.EMAIL_PASS;
         const fromStr = mailOptions.from || process.env.EMAIL_FROM || 'noreply@shnoorlms.com';
-        const match = fromStr.match(/(?:"?([^"]*)"?\s*)?<?([^>]+)>?/);
-        const sender = {
-          name: match && match[1] ? match[1].trim() : 'Shnoor LMS',
-          email: match && match[2] ? match[2].trim() : fromStr.trim()
-        };
+        let senderName = 'Shnoor LMS';
+        let senderEmail = fromStr;
+        if (fromStr.includes('<') && fromStr.includes('>')) {
+          const parts = fromStr.split('<');
+          senderName = parts[0].replace(/"/g, '').trim() || 'Shnoor LMS';
+          senderEmail = parts[1].replace('>', '').trim();
+        }
+        const sender = { name: senderName, email: senderEmail };
 
         const data = {
           sender,
