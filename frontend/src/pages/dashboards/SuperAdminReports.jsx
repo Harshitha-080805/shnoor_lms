@@ -803,9 +803,10 @@ export default function SuperAdminReports() {
             </table>
           </div>
         </div>
-        </div>
-      ) : (
-        <div className="bg-white rounded-3xl w-full min-h-[80vh] overflow-hidden flex flex-col shadow-sm border border-slate-200 animate-fade-in-up">
+      </div>
+    </div>
+  ) : (
+    <div className="bg-white rounded-3xl w-full min-h-[80vh] overflow-hidden flex flex-col shadow-sm border border-slate-200 animate-fade-in-up">
           {loadingProfile ? (
               <div className="p-12 text-center text-slate-500 font-bold">Loading profile...</div>
             ) : userProfileData && (
