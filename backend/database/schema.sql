@@ -258,6 +258,7 @@ CREATE TABLE messages (
     message TEXT,
     message_type VARCHAR(50) DEFAULT 'TEXT', -- 'TEXT', 'FILE', 'IMAGE', 'AUDIO'
     reply_to_id INTEGER REFERENCES messages(id),
+    is_forwarded BOOLEAN DEFAULT FALSE,
     is_deleted_for_everyone BOOLEAN DEFAULT FALSE,
     is_edited BOOLEAN DEFAULT FALSE,
     reactions JSONB DEFAULT '{}',

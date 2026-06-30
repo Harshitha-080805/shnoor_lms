@@ -64,6 +64,12 @@ const runMigration = async () => {
     console.log("Migration successful: added version columns to exam tables.");
     console.log("Migration successful: added is_deleted columns to exam tables.");
 
+    // Add missing is_forwarded column to messages
+    await pool.query(`
+      ALTER TABLE messages 
+      ADD COLUMN IF NOT EXISTS is_forwarded BOOLEAN DEFAULT FALSE;
+    `);
+    console.log("Migration successful: added is_forwarded to messages.");
 
     // Add missing columns to announcements
     await pool.query(`
