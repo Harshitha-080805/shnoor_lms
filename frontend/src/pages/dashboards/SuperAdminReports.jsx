@@ -341,7 +341,9 @@ export default function SuperAdminReports() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in-up">
+    <>
+      {!selectedUser ? (
+        <div className="space-y-6 animate-fade-in-up">
       {/* Top Header Actions */}
       <div className="flex items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
         <div className="flex gap-4">
@@ -801,13 +803,10 @@ export default function SuperAdminReports() {
             </table>
           </div>
         </div>
-      </div>
-
-      {/* User Profile Modal */}
-      {selectedUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-fade-in-up">
-            {loadingProfile ? (
+        </div>
+      ) : (
+        <div className="bg-white rounded-3xl w-full min-h-[80vh] overflow-hidden flex flex-col shadow-sm border border-slate-200 animate-fade-in-up">
+          {loadingProfile ? (
               <div className="p-12 text-center text-slate-500 font-bold">Loading profile...</div>
             ) : userProfileData && (
               <>
@@ -1006,9 +1005,8 @@ export default function SuperAdminReports() {
                 </div>
               </>
             )}
-          </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
