@@ -73,6 +73,12 @@ function initSocket(server) {
 
         const newMessage = result.rows[0];
 
+        // Fetch sender name
+        const userRes = await db.query('SELECT full_name, email FROM users WHERE id = $1', [socket.user.userId]);
+        if (userRes.rows.length > 0) {
+          newMessage.sender_name = userRes.rows[0].full_name || userRes.rows[0].email;
+        }
+
         if (fileUrl) {
           await db.query(
             'INSERT INTO message_attachments (message_id, file_url, file_type, file_name) VALUES ($1, $2, $3, $4)',

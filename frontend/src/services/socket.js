@@ -9,8 +9,7 @@ export const socketService = {
       const url = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
       
       socket = io(url, {
-        auth: { token },
-        transports: ['websocket']
+        auth: { token }
       });
 
       socket.on('connect', () => {

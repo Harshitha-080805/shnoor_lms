@@ -89,10 +89,21 @@ function ChatLayout() {
     loadConversations();
 
     // Socket listeners
+    socket.on("connect", () => {
+      // Re-join rooms on reconnect
+      if (activeConvIdRef.current) {
+        socket.emit("join_rooms", [activeConvIdRef.current]);
+      }
+      chatService.getConversations().then(data => {
+        const roomIds = data.map(c => c.id);
+        if (roomIds.length > 0) socket.emit("join_rooms", roomIds);
+      });
+    });
+
     socket.on("receive_message", (msg) => {
       setMessages(prev => {
         // If message belongs to active conversation, append it
-        if (activeConvIdRef.current && msg.conversation_id === activeConvIdRef.current) {
+        if (activeConvIdRef.current && String(msg.conversation_id) === String(activeConvIdRef.current)) {
           return [...prev, msg];
         }
         return prev;
