@@ -1,21 +1,41 @@
 const express = require('express');
 const pool = require('./db');
-const nodemailer = require('nodemailer');
+const axios = require('axios');
 
 const createTransporter = () => {
-  const port = parseInt(process.env.EMAIL_PORT || '587', 10);
-  return nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || 'smtp.ethereal.email',
-    port: port,
-    secure: port === 465,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 10000,
-  });
+  return {
+    sendMail: async (mailOptions) => {
+      const apiKey = process.env.BREVO_API_KEY || process.env.EMAIL_PASS;
+      
+      const fromStr = mailOptions.from || process.env.EMAIL_FROM || 'noreply@shnoorlms.com';
+      const match = fromStr.match(/(?:"?([^"]*)"?\s*)?<?([^>]+)>?/);
+      const sender = {
+        name: match && match[1] ? match[1].trim() : 'Shnoor LMS',
+        email: match && match[2] ? match[2].trim() : fromStr.trim()
+      };
+
+      const data = {
+        sender,
+        to: [{ email: mailOptions.to }],
+        subject: mailOptions.subject,
+      };
+      if (mailOptions.html) data.htmlContent = mailOptions.html;
+      if (mailOptions.text) data.textContent = mailOptions.text;
+
+      try {
+        await axios.post('https://api.brevo.com/v3/smtp/email', data, {
+          headers: {
+            'api-key': apiKey,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        });
+      } catch (error) {
+        console.error("Brevo API error:", error.response?.data || error.message);
+        throw error;
+      }
+    }
+  };
 };
 
 // POST /api/contact — public, no auth required

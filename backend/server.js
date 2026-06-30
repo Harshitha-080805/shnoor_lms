@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
+const axios = require('axios');
 const pool = require('./db');
 const http = require('http');
 const socketManager = require('./socketManager');
@@ -236,19 +237,38 @@ const forgotPassword = async (req, res) => {
       [hashedToken, expiresAt, email]
     );
 
-    const emailPort = parseInt(process.env.EMAIL_PORT || '587', 10);
-    const transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST || 'smtp.ethereal.email',
-      port: emailPort,
-      secure: emailPort === 465,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      },
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 10000,
-    });
+    const transporter = {
+      sendMail: async (mailOptions) => {
+        const apiKey = process.env.BREVO_API_KEY || process.env.EMAIL_PASS;
+        const fromStr = mailOptions.from || process.env.EMAIL_FROM || 'noreply@shnoorlms.com';
+        const match = fromStr.match(/(?:"?([^"]*)"?\s*)?<?([^>]+)>?/);
+        const sender = {
+          name: match && match[1] ? match[1].trim() : 'Shnoor LMS',
+          email: match && match[2] ? match[2].trim() : fromStr.trim()
+        };
+
+        const data = {
+          sender,
+          to: [{ email: mailOptions.to }],
+          subject: mailOptions.subject,
+        };
+        if (mailOptions.html) data.htmlContent = mailOptions.html;
+        if (mailOptions.text) data.textContent = mailOptions.text;
+
+        try {
+          await axios.post('https://api.brevo.com/v3/smtp/email', data, {
+            headers: {
+              'api-key': apiKey,
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            }
+          });
+        } catch (error) {
+          console.error("Brevo API error:", error.response?.data || error.message);
+          throw error;
+        }
+      }
+    };
 
     const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password/${token}`;
     const mailOptions = {
