@@ -861,6 +861,9 @@ export default function SuperAdminReports() {
                           {userProfileData.user.learner_type && (
                             <div className="flex justify-between"><span className="text-slate-500">Learner Type</span><span className="font-bold text-slate-800 capitalize">{userProfileData.user.learner_type}</span></div>
                           )}
+                          {userProfileData.user.department && (
+                            <div className="flex justify-between"><span className="text-slate-500">Department</span><span className="font-bold text-slate-800 capitalize">{userProfileData.user.department}</span></div>
+                          )}
                         </div>
                       </div>
                     )}
