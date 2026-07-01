@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node migrate.js && node migrate-courses-fields.js && node migrate-groups.js && node migrate-dept.js && node sync-chat.js && node server.js",
+    "start": "node migrate.js && node migrate-courses-fields.js && node migrate-groups.js && node migrate-dept.js && node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
