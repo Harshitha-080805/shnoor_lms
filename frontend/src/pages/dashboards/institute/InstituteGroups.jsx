@@ -8,7 +8,6 @@ export default function InstituteGroups() {
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
-  const [newGroupDesc, setNewGroupDesc] = useState("");
   const [createGroupMembers, setCreateGroupMembers] = useState([]);
   const [searchCreateUsers, setSearchCreateUsers] = useState("");
 
@@ -51,13 +50,12 @@ export default function InstituteGroups() {
   const handleCreateGroup = async (e) => {
     e.preventDefault();
     try {
-      const res = await api.post('/api/groups', { name: newGroupName, description: newGroupDesc });
+      const res = await api.post('/api/groups', { name: newGroupName, description: "" });
       const newGroup = res.data;
       if (createGroupMembers.length > 0) {
         await api.put(`/api/groups/${newGroup.id}/members`, { userIds: createGroupMembers });
       }
       setNewGroupName("");
-      setNewGroupDesc("");
       setCreateGroupMembers([]);
       setSearchCreateUsers("");
       setShowCreateModal(false);
@@ -140,13 +138,13 @@ export default function InstituteGroups() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {groups.map(group => (
             <div key={group.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
-              <div className="p-5 flex-1">
-                <div className="flex justify-between items-start mb-2">
+              <div className="p-6 flex-1 flex flex-col justify-center">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-lg">
+                    {group.name.charAt(0).toUpperCase()}
+                  </div>
                   <h3 className="font-bold text-lg text-slate-800 line-clamp-1">{group.name}</h3>
                 </div>
-                <p className="text-slate-500 text-sm mb-4 line-clamp-2 min-h-[40px]">
-                  {group.description || "No description provided."}
-                </p>
               </div>
               <div className="bg-slate-50 px-5 py-3 border-t border-slate-100 flex justify-between items-center">
                 <button 
@@ -190,15 +188,6 @@ export default function InstituteGroups() {
                       className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500 bg-slate-50 transition-all text-sm font-medium"
                       placeholder="e.g. Batch 2024 - Section A"
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1">Description</label>
-                    <textarea 
-                      value={newGroupDesc}
-                      onChange={(e) => setNewGroupDesc(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500 resize-none h-20 bg-slate-50 transition-all text-sm"
-                      placeholder="Brief description of this group..."
-                    ></textarea>
                   </div>
                 </div>
 
