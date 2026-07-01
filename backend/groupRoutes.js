@@ -110,7 +110,7 @@ router.delete('/:id', async (req, res) => {
 router.get('/:id/members', async (req, res) => {
   try {
     const { id } = req.params;
-    const { organizationId } = req.user;
+    const { organization_id: organizationId } = req.user;
     
     // Check if group belongs to org
     const groupCheck = await db.query('SELECT * FROM groups WHERE id = $1 AND organization_id = $2', [id, organizationId]);
