@@ -603,7 +603,7 @@ const requestCertificate = async (req, res) => {
 // Course Controller
 const getApprovedCourses = async (req, res) => {
   try {
-    const { role, organizationId, userId } = req.user;
+    const { role, organization_id: organizationId, userId } = req.user;
     
     let query = `
       SELECT DISTINCT
@@ -652,7 +652,7 @@ const createCourse = async (req, res) => {
 
   const { title, description, thumbnailUrl, thumbnailFile, assign_all_in_org, assign_groups } = req.body;
   const instructorId = req.user.userId;
-  const organizationId = req.user.organizationId;
+  const organizationId = req.user.organization_id;
 
   const client = await pool.connect();
   try {
