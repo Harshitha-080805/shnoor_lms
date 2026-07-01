@@ -235,7 +235,7 @@ export default function InstituteGroups() {
                         <p className="text-sm font-medium text-slate-900">{user.full_name}</p>
                         <p className="text-xs text-slate-500">{user.email}</p>
                       </div>
-                      <span className={\`text-xs px-2 py-1 rounded-full font-medium \${user.role === 'INSTRUCTOR' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}\`}>
+                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${user.role === 'INSTRUCTOR' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
                         {user.role}
                       </span>
                     </div>
