@@ -38,8 +38,10 @@ export default function InstituteGroups() {
         api.get('/api/org-admin/instructors'),
         api.get('/api/org-admin/learners')
       ]);
-      const combined = [...(instructorsRes.data || []), ...(learnersRes.data || [])];
-      setUsers(combined.filter(u => u.is_approved));
+      const instructors = (instructorsRes.data || []).map(u => ({ ...u, role: 'INSTRUCTOR' }));
+      const learners = (learnersRes.data || []).map(u => ({ ...u, role: 'LEARNER' }));
+      const combined = [...instructors, ...learners];
+      setUsers(combined);
     } catch (error) {
       console.error("Error fetching users:", error);
     }
