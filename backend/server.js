@@ -70,12 +70,12 @@ const authMiddleware = (roles = []) => {
 // Auth Controller
 const registerUser = async (req, res) => {
   try {
-    const { 
-      email, password, full_name, fullName, role, 
-      organization_code, learner_type, roll_number, employee_id, 
-      organization_type, organization_name, location, website 
+    const {
+      email, password, full_name, fullName, role,
+      organization_code, learner_type, roll_number, employee_id,
+      organization_type, organization_name, location, website
     } = req.body;
-    
+
     const name = fullName || full_name;
     const userRole = (role || 'LEARNER').toUpperCase();
 
@@ -100,7 +100,7 @@ const registerUser = async (req, res) => {
       if (orgCheck.rows.length > 0) {
         return res.status(400).json({ error: 'Organization code already exists. Please choose a unique code.' });
       }
-      
+
       // Create organization
       const newOrg = await pool.query(
         'INSERT INTO organizations (name, code, type, location, website) VALUES ($1, $2, $3, $4, $5) RETURNING id',
@@ -124,13 +124,13 @@ const registerUser = async (req, res) => {
       RETURNING id, email, full_name, role
     `;
     const newUserQuery = await pool.query(insertQuery, [
-      email, 
-      hashedPassword, 
-      name, 
-      userRole, 
-      orgId, 
-      learner_type || null, 
-      roll_number || null, 
+      email,
+      hashedPassword,
+      name,
+      userRole,
+      orgId,
+      learner_type || null,
+      roll_number || null,
       employee_id || null
     ]);
     const user = newUserQuery.rows[0];
@@ -173,7 +173,7 @@ const loginUser = async (req, res) => {
     if (user.org_sub_status === 'expired' || user.user_sub_status === 'expired') {
       const isOrgAdmin = user.role === 'ORGANIZATION_ADMIN';
       const isIndependentLearner = user.role === 'LEARNER' && !user.organization_id;
-      
+
       if (!isOrgAdmin && !isIndependentLearner) {
         return res.status(403).json({ error: 'Subscription payment is not done. Access is revoked. Please contact your organization administrator.' });
       }
@@ -579,7 +579,7 @@ const requestCertificate = async (req, res) => {
   try {
     const { canRequestCertificate } = require('./helpers/examValidation');
     const validation = await canRequestCertificate(courseId, studentId);
-    
+
     if (!validation.canRequest) {
       return res.status(403).json({ error: validation.reason });
     }
@@ -604,7 +604,7 @@ const requestCertificate = async (req, res) => {
 const getApprovedCourses = async (req, res) => {
   try {
     const { role, organization_id: organizationId, userId } = req.user;
-    
+
     let query = `
       SELECT 
         c.*,
@@ -653,48 +653,6 @@ const getApprovedCourses = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error fetching courses' });
-  }
-};
-
-const createCourse = async (req, res) => {
-  if (req.user.role !== 'INSTRUCTOR') {
-    return res.status(403).json({ error: 'Only instructors can create courses' });
-  }
-
-  const { title, description, thumbnailUrl, thumbnailFile, assign_all_in_org, assign_groups } = req.body;
-  const instructorId = req.user.userId;
-  const organizationId = req.user.organization_id;
-
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    const isAssignAll = (assign_all_in_org === 'true' || assign_all_in_org === true);
-
-    const query = `
-      INSERT INTO courses (title, description, thumbnail_url, thumbnail_file, instructor_id, organization_id, assign_all_in_org)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING *
-    `;
-    const result = await client.query(query, [title, description, thumbnailUrl, thumbnailFile, instructorId, organizationId, isAssignAll]);
-    const newCourse = result.rows[0];
-
-    if (!isAssignAll && assign_groups) {
-      const groups = typeof assign_groups === 'string' ? JSON.parse(assign_groups) : assign_groups;
-      if (Array.isArray(groups)) {
-        for (const groupId of groups) {
-          await client.query('INSERT INTO course_groups (course_id, group_id) VALUES ($1, $2)', [newCourse.id, groupId]);
-        }
-      }
-    }
-
-    await client.query('COMMIT');
-    res.status(201).json(newCourse);
-  } catch (error) {
-    await client.query('ROLLBACK');
-    console.error(error);
-    res.status(500).json({ error: 'Server error creating course' });
-  } finally {
-    client.release();
   }
 };
 
@@ -830,7 +788,7 @@ const getCourseById = async (req, res) => {
     const course = courseResult.rows[0];
 
     course.prerequisite_materials = course.prerequisite_materials || [];
-    
+
     const courseGroupsResult = await pool.query('SELECT group_id FROM course_groups WHERE course_id = $1', [id]);
     course.assigned_groups = courseGroupsResult.rows.map(r => r.group_id);
 
@@ -886,7 +844,7 @@ const saveCoursePrerequisites = async (req, res) => {
   const { courseId } = req.params;
   // prerequisites should be an array of objects: { id, min_comp, min_quiz, cert_req }
   // but for backward compatibility we also handle prerequisiteIds array of strings
-  const { prerequisiteIds, prerequisites } = req.body; 
+  const { prerequisiteIds, prerequisites } = req.body;
 
   try {
     if (req.user.role === 'INSTRUCTOR') {
@@ -896,29 +854,29 @@ const saveCoursePrerequisites = async (req, res) => {
 
     let prereqsToSave = [];
     if (prerequisites && Array.isArray(prerequisites)) {
-       prereqsToSave = prerequisites;
+      prereqsToSave = prerequisites;
     } else if (prerequisiteIds && Array.isArray(prerequisiteIds)) {
-       prereqsToSave = prerequisiteIds.map(id => ({ id, minimum_completion_percentage: 0, minimum_quiz_score: 0, certificate_required: false }));
+      prereqsToSave = prerequisiteIds.map(id => ({ id, minimum_completion_percentage: 0, minimum_quiz_score: 0, certificate_required: false }));
     }
 
     // Circular dependency check
     for (const p of prereqsToSave) {
-       if (await checkCircularDependency(pool, courseId, p.id)) {
-          return res.status(400).json({ error: 'Circular prerequisite dependency detected' });
-       }
+      if (await checkCircularDependency(pool, courseId, p.id)) {
+        return res.status(400).json({ error: 'Circular prerequisite dependency detected' });
+      }
     }
 
     await pool.query('DELETE FROM course_prerequisites WHERE course_id = $1', [courseId]);
 
     for (const p of prereqsToSave) {
-      if (String(p.id) !== String(courseId)) { 
+      if (String(p.id) !== String(courseId)) {
         await pool.query(
           'INSERT INTO course_prerequisites (course_id, prerequisite_course_id, minimum_completion_percentage, minimum_quiz_score, certificate_required) VALUES ($1, $2, $3, $4, $5)',
           [courseId, p.id, p.minimum_completion_percentage || 0, p.minimum_quiz_score || 0, p.certificate_required || false]
         );
       }
     }
-    
+
     res.json({ message: 'Prerequisites updated successfully' });
   } catch (error) {
     console.error(error);
@@ -1384,7 +1342,7 @@ app.get('/api/courses/enrollments', authMiddleware(), async (req, res) => {
       // fetch course exam attempts
       const examRes = await pool.query('SELECT id FROM course_exams WHERE course_id = $1 AND status = $2 AND is_deleted = false', [e.course_id, 'PUBLISHED']);
       e.course.has_course_exam = examRes.rows.length > 0;
-      
+
       const examAttRes = await pool.query(`
         SELECT a.* 
         FROM course_exam_attempts a
@@ -1416,29 +1374,51 @@ app.post('/api/upload', authMiddleware(), upload.single('file'), (req, res) => {
 
 // Instructor routes
 app.post('/api/courses/', authMiddleware(['INSTRUCTOR']), upload.single('thumbnail_file'), async (req, res) => {
-  const { title, description, thumbnail_url, estimated_duration, learning_outcomes, skills_gained, difficulty_level, prerequisites_enabled, prerequisite_materials } = req.body;
+  const { title, description, thumbnail_url, estimated_duration, learning_outcomes, skills_gained, difficulty_level, prerequisites_enabled, prerequisite_materials, assign_all_in_org, assign_groups } = req.body;
   const instructorId = req.user.userId;
+  const organizationId = req.user.organization_id;
   const thumbnailFile = req.file ? req.file.path : null;
 
   try {
     let pmat = '[]';
-    try { 
+    try {
       const parsed = typeof prerequisite_materials === 'string' ? JSON.parse(prerequisite_materials) : (prerequisite_materials || []);
       pmat = JSON.stringify(parsed);
-    } catch(e){}
+    } catch (e) { }
+
+    const isAssignAll = (assign_all_in_org === 'true' || assign_all_in_org === true);
 
     const query = `
-      INSERT INTO courses (title, description, thumbnail_url, thumbnail_file, instructor_id, estimated_duration, learning_outcomes, skills_gained, difficulty_level, prerequisites_enabled, prerequisite_materials)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      INSERT INTO courses (title, description, thumbnail_url, thumbnail_file, instructor_id, organization_id, estimated_duration, learning_outcomes, skills_gained, difficulty_level, prerequisites_enabled, prerequisite_materials, assign_all_in_org)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       RETURNING *
     `;
     const result = await pool.query(query, [
-      title, description, thumbnail_url, thumbnailFile, instructorId, 
-      estimated_duration, learning_outcomes, skills_gained, difficulty_level, 
+      title, description, thumbnail_url, thumbnailFile, instructorId, organizationId,
+      estimated_duration, learning_outcomes, skills_gained, difficulty_level,
       prerequisites_enabled === 'true' || prerequisites_enabled === true,
-      pmat
+      pmat, isAssignAll
     ]);
-    res.status(201).json(result.rows[0]);
+    const newCourse = result.rows[0];
+
+    if (!isAssignAll && assign_groups) {
+      const groups = typeof assign_groups === 'string' ? JSON.parse(assign_groups) : assign_groups;
+      if (Array.isArray(groups)) {
+        for (const groupId of groups) {
+          await pool.query('INSERT INTO course_groups (course_id, group_id) VALUES ($1, $2)', [newCourse.id, groupId]);
+        }
+      }
+    }
+
+    // Auto-create course chat group for the instructor immediately
+    try {
+      const chatEvents = require('./chatEvents');
+      await chatEvents.addUserToCourseGroup(instructorId, newCourse.id);
+    } catch (e) {
+      console.log('Notice: Could not auto-create course chat group on course creation', e);
+    }
+
+    res.status(201).json(newCourse);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Server error creating course' });
@@ -1493,10 +1473,10 @@ app.get('/api/lessons/:lessonId/document', async (req, res) => {
   try {
     const result = await pool.query('SELECT document_file, title FROM lessons WHERE id = $1', [lessonId]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Lesson not found' });
-    
+
     const lesson = result.rows[0];
     if (!lesson.document_file) return res.status(404).json({ error: 'Document not found' });
-    
+
     // Check if the document_file contains the full URL or just the path
     const docPath = lesson.document_file.replace(/\\/g, '/');
     let filePath;
@@ -1514,13 +1494,13 @@ app.get('/api/lessons/:lessonId/document', async (req, res) => {
       const fd = require('fs').openSync(filePath, 'r');
       require('fs').readSync(fd, buffer, 0, 4, 0);
       require('fs').closeSync(fd);
-      
+
       const magic = buffer.toString('hex');
       if (buffer.toString('utf8', 0, 4) === '%PDF') ext = '.pdf';
       else if (magic === '504b0304') ext = '.zip'; // Used for docx, xlsx, pptx, zip
       else if (magic.startsWith('89504e47')) ext = '.png';
       else if (magic.startsWith('ffd8ff')) ext = '.jpg';
-    } catch(e) {}
+    } catch (e) { }
 
     const filename = `${lesson.title.replace(/[^a-zA-Z0-9 ]/g, '')}${ext}`;
 
@@ -1634,16 +1614,16 @@ app.put('/api/courses/:id', authMiddleware(['INSTRUCTOR']), upload.single('thumb
     if (learning_outcomes !== undefined) { updateFields.push(`learning_outcomes = $${counter++}`); values.push(learning_outcomes); }
     if (skills_gained !== undefined) { updateFields.push(`skills_gained = $${counter++}`); values.push(skills_gained); }
     if (difficulty_level !== undefined) { updateFields.push(`difficulty_level = $${counter++}`); values.push(difficulty_level); }
-    if (prerequisites_enabled !== undefined) { 
+    if (prerequisites_enabled !== undefined) {
       const preq = (prerequisites_enabled === 'true' || prerequisites_enabled === true);
-      updateFields.push(`prerequisites_enabled = $${counter++}`); values.push(preq); 
+      updateFields.push(`prerequisites_enabled = $${counter++}`); values.push(preq);
     }
     if (prerequisite_materials !== undefined) {
       let pmat = '[]';
-      try { 
+      try {
         const parsed = typeof prerequisite_materials === 'string' ? JSON.parse(prerequisite_materials) : (prerequisite_materials || []);
         pmat = JSON.stringify(parsed);
-      } catch(e){}
+      } catch (e) { }
       updateFields.push(`prerequisite_materials = $${counter++}`); values.push(pmat);
     }
     if (assign_all_in_org !== undefined) {
@@ -1664,10 +1644,10 @@ app.put('/api/courses/:id', authMiddleware(['INSTRUCTOR']), upload.single('thumb
     if (assign_groups !== undefined) {
       await client.query('DELETE FROM course_groups WHERE course_id = $1', [id]);
       const isAssignAll = (assign_all_in_org === 'true' || assign_all_in_org === true);
-      
+
       if (!isAssignAll) {
         let groups = [];
-        try { groups = typeof assign_groups === 'string' ? JSON.parse(assign_groups) : assign_groups; } catch(e){}
+        try { groups = typeof assign_groups === 'string' ? JSON.parse(assign_groups) : assign_groups; } catch (e) { }
         if (Array.isArray(groups)) {
           for (const groupId of groups) {
             await client.query('INSERT INTO course_groups (course_id, group_id) VALUES ($1, $2)', [id, groupId]);
@@ -1861,7 +1841,7 @@ app.get('/api/plans', async (req, res) => {
     }
     query += ' ORDER BY price ASC';
     const result = await pool.query(query, params);
-    
+
     // Fetch features for each plan
     const plans = result.rows;
     for (let plan of plans) {
@@ -1878,7 +1858,7 @@ app.get('/api/plans', async (req, res) => {
 app.post('/api/plans', authMiddleware(['admin', 'super_admin']), async (req, res) => {
   try {
     const { name, description, plan_type, price, billing_cycle, duration_months, features } = req.body;
-    
+
     const insertPlan = await pool.query(
       'INSERT INTO subscription_plans (name, description, plan_type, price, billing_cycle, duration_months) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
       [name, description, plan_type || 'learner', price, billing_cycle || 'monthly', duration_months || 1]
@@ -1904,7 +1884,7 @@ app.put('/api/plans/:id', authMiddleware(['admin', 'super_admin']), async (req, 
   try {
     const { id } = req.params;
     const { name, description, plan_type, price, billing_cycle, duration_months, features } = req.body;
-    
+
     const updatePlan = await pool.query(
       'UPDATE subscription_plans SET name = $1, description = $2, plan_type = $3, price = $4, billing_cycle = $5, duration_months = $6 WHERE id = $7 RETURNING *',
       [name, description, plan_type || 'learner', price, billing_cycle || 'monthly', duration_months || 1, id]
@@ -1946,16 +1926,16 @@ app.get('/api/subscriptions/me', authMiddleware(), async (req, res) => {
     let query;
     let params;
     if (req.user.role === 'ORGANIZATION_ADMIN' && req.user.organization_id) {
-       query = "SELECT s.*, p.name as plan_name, p.plan_type, p.price FROM subscriptions s JOIN subscription_plans p ON s.plan_id = p.id WHERE s.organization_id = $1 AND s.status IN ('active', 'revoked') ORDER BY s.end_date DESC LIMIT 1";
-       params = [req.user.organization_id];
+      query = "SELECT s.*, p.name as plan_name, p.plan_type, p.price FROM subscriptions s JOIN subscription_plans p ON s.plan_id = p.id WHERE s.organization_id = $1 AND s.status IN ('active', 'revoked') ORDER BY s.end_date DESC LIMIT 1";
+      params = [req.user.organization_id];
     } else {
-       query = "SELECT s.*, p.name as plan_name, p.plan_type, p.price FROM subscriptions s JOIN subscription_plans p ON s.plan_id = p.id WHERE s.user_id = $1 AND s.status IN ('active', 'revoked') ORDER BY s.end_date DESC LIMIT 1";
-       params = [req.user.userId];
+      query = "SELECT s.*, p.name as plan_name, p.plan_type, p.price FROM subscriptions s JOIN subscription_plans p ON s.plan_id = p.id WHERE s.user_id = $1 AND s.status IN ('active', 'revoked') ORDER BY s.end_date DESC LIMIT 1";
+      params = [req.user.userId];
     }
 
     const subRes = await pool.query(query, params);
     if (subRes.rows.length === 0) return res.json(null);
-    
+
     const subscription = subRes.rows[0];
     const featuresRes = await pool.query('SELECT feature_name, feature_value FROM plan_features WHERE plan_id = $1', [subscription.plan_id]);
     subscription.features = featuresRes.rows;
@@ -1971,7 +1951,7 @@ app.post('/api/subscriptions', authMiddleware(), async (req, res) => {
   try {
     const { plan_id } = req.body;
     // Mock Payment: Accept the plan_id and automatically subscribe the user
-    
+
     const planRes = await pool.query('SELECT * FROM subscription_plans WHERE id = $1', [plan_id]);
     if (planRes.rows.length === 0) return res.status(404).json({ error: 'Plan not found' });
     const plan = planRes.rows[0];
