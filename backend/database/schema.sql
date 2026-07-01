@@ -29,6 +29,7 @@ CREATE TABLE users (
     role user_role DEFAULT 'LEARNER',
     is_approved BOOLEAN DEFAULT FALSE,
     is_active BOOLEAN DEFAULT TRUE,
+    department VARCHAR(255),
     organization_id INTEGER REFERENCES organizations(id) ON DELETE SET NULL,
     learner_type VARCHAR(50) DEFAULT 'independent', -- 'independent', 'student', 'employee'
     roll_number VARCHAR(100),

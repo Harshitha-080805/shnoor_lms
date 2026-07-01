@@ -333,7 +333,7 @@ module.exports = (authMiddleware) => {
   // 13. Get Profile
   router.get('/profile', async (req, res) => {
     try {
-      const result = await pool.query("SELECT full_name, email, phone_number, role, profile_pic FROM users WHERE id = $1", [req.user.userId]);
+      const result = await pool.query("SELECT full_name, email, phone_number, role, profile_pic, department FROM users WHERE id = $1", [req.user.userId]);
       res.json(result.rows[0]);
     } catch (err) {
       console.error(err);
@@ -343,11 +343,11 @@ module.exports = (authMiddleware) => {
 
   // 14. Update Profile
   router.put('/profile', async (req, res) => {
-    const { full_name, phone_number, profile_pic } = req.body;
+    const { full_name, phone_number, profile_pic, department } = req.body;
     try {
       const result = await pool.query(
-        "UPDATE users SET full_name=$1, phone_number=$2, profile_pic=$3 WHERE id=$4 RETURNING full_name, email, phone_number, profile_pic",
-        [full_name, phone_number, profile_pic, req.user.userId]
+        "UPDATE users SET full_name=$1, phone_number=$2, profile_pic=$3, department=$4 WHERE id=$5 RETURNING full_name, email, phone_number, profile_pic, department",
+        [full_name, phone_number, profile_pic, department, req.user.userId]
       );
       res.json(result.rows[0]);
     } catch (err) {

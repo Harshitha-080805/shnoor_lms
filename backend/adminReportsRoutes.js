@@ -192,7 +192,7 @@ router.get('/users', async (req, res) => {
   try {
     const query = `
       SELECT 
-        u.id, u.full_name, u.email, u.role, u.learner_type, u.is_active, u.created_at,
+        u.id, u.full_name, u.email, u.role, u.learner_type, u.department, u.is_active, u.created_at,
         o.name as organization_name,
         (SELECT COUNT(*) FROM enrollments e WHERE e.student_id = u.id) as courses_enrolled,
         (SELECT COUNT(*) FROM courses c WHERE c.instructor_id = u.id) as courses_published,

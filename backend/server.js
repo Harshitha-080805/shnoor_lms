@@ -1159,7 +1159,7 @@ app.get('/api/verify-reset-token/:token', verifyResetToken);
 app.post('/api/reset-password-with-token', resetPasswordWithToken);
 app.get('/api/accounts/profile', authMiddleware(), async (req, res) => {
   try {
-    const result = await pool.query('SELECT full_name, email, phone_number, role, is_active, profile_pic FROM users WHERE id = $1', [req.user.userId]);
+    const result = await pool.query('SELECT full_name, email, phone_number, role, is_active, profile_pic, department FROM users WHERE id = $1', [req.user.userId]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'User not found' });
     res.json(result.rows[0]);
   } catch (err) {
@@ -1170,10 +1170,10 @@ app.get('/api/accounts/profile', authMiddleware(), async (req, res) => {
 
 app.put('/api/accounts/profile', authMiddleware(), async (req, res) => {
   try {
-    const { full_name, phone_number, profile_pic } = req.body;
+    const { full_name, phone_number, profile_pic, department } = req.body;
     const result = await pool.query(
-      'UPDATE users SET full_name = $1, phone_number = $2, profile_pic = $3 WHERE id = $4 RETURNING full_name, email, phone_number, role, profile_pic',
-      [full_name, phone_number, profile_pic, req.user.userId]
+      'UPDATE users SET full_name = $1, phone_number = $2, profile_pic = $3, department = $4 WHERE id = $5 RETURNING full_name, email, phone_number, role, profile_pic, department',
+      [full_name, phone_number, profile_pic, department, req.user.userId]
     );
     res.json(result.rows[0]);
   } catch (err) {

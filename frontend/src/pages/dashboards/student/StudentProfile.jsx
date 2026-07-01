@@ -26,7 +26,7 @@ function StudentProfile() {
         email: res.data.email || '',
         phone_number: res.data.phone_number || '',
         role: displayRole,
-        department: displayRole
+        department: res.data.department || displayRole
       });
       if (res.data.profile_pic) {
         setProfilePic(res.data.profile_pic);
@@ -46,6 +46,7 @@ function StudentProfile() {
       await api.put('/api/accounts/profile', {
         full_name: profile.full_name,
         phone_number: profile.phone_number,
+        department: profile.department,
         profile_pic: profilePic
       });
       sessionStorage.setItem("username", profile.full_name);
@@ -99,6 +100,7 @@ function StudentProfile() {
           await api.put('/api/accounts/profile', {
             full_name: profile.full_name,
             phone_number: profile.phone_number,
+            department: profile.department,
             profile_pic: base64String
           });
         } catch (err) {
@@ -110,10 +112,10 @@ function StudentProfile() {
   };
 
   const getInitials = (name) => {
-    if (!name) return "LR";
-    const parts = name.split(" ");
+    if (!name || name.trim() === '') return "LR";
+    const parts = name.trim().split(" ");
     if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-    return name[0].toUpperCase() + (name[1] || "").toUpperCase();
+    return (name[0] + (name[1] || "")).toUpperCase();
   };
 
   return (

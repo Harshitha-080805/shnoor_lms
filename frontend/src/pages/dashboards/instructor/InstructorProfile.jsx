@@ -22,8 +22,8 @@ function InstructorProfile() {
         full_name: res.data.full_name || '',
         email: res.data.email || '',
         phone_number: res.data.phone_number || '',
-        role: res.data.role || 'Instructor',
-        department: 'Instructor'
+        role: 'Instructor',
+        department: res.data.department || 'Instructor'
       });
       if (res.data.profile_pic) {
         setProfilePic(res.data.profile_pic);
@@ -43,6 +43,7 @@ function InstructorProfile() {
       await api.put('/api/accounts/profile', {
         full_name: profile.full_name,
         phone_number: profile.phone_number,
+        department: profile.department,
         profile_pic: profilePic
       });
       sessionStorage.setItem("username", profile.full_name);
@@ -96,6 +97,7 @@ function InstructorProfile() {
           await api.put('/api/accounts/profile', {
             full_name: profile.full_name,
             phone_number: profile.phone_number,
+            department: profile.department,
             profile_pic: base64String
           });
         } catch (err) {
@@ -107,10 +109,10 @@ function InstructorProfile() {
   };
 
   const getInitials = (name) => {
-    if (!name) return "IN";
-    const parts = name.split(" ");
+    if (!name || name.trim() === '') return "IN";
+    const parts = name.trim().split(" ");
     if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-    return name[0].toUpperCase() + (name[1] || "").toUpperCase();
+    return (name[0] + (name[1] || "")).toUpperCase();
   };
 
   return (
