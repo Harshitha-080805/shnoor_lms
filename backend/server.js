@@ -628,10 +628,11 @@ const getApprovedCourses = async (req, res) => {
         ) AS prerequisites
       FROM courses c
       LEFT JOIN users u ON c.instructor_id = u.id
-      WHERE c.is_approved = true AND c.organization_id = $1
+      WHERE c.is_approved = true AND c.is_published = true 
+        AND (c.organization_id = $1 OR ($1::integer IS NULL AND c.organization_id IS NULL))
     `;
 
-    const queryParams = [organizationId];
+    const queryParams = [organizationId || null];
 
     if (role === 'LEARNER') {
       query += ` 
