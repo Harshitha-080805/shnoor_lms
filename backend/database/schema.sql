@@ -44,6 +44,25 @@ CREATE TABLE users (
     reset_password_expires TIMESTAMP
 );
 
+-- Groups Table
+CREATE TABLE groups (
+    id SERIAL PRIMARY KEY,
+    organization_id INTEGER REFERENCES organizations(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Group Members Table
+CREATE TABLE group_members (
+    id SERIAL PRIMARY KEY,
+    group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(group_id, user_id)
+);
+
 -- Courses Table
 CREATE TABLE courses (
     id SERIAL PRIMARY KEY,
@@ -57,8 +76,18 @@ CREATE TABLE courses (
     is_approved BOOLEAN DEFAULT FALSE,
     is_published BOOLEAN DEFAULT FALSE,
     prerequisite_materials JSONB DEFAULT '[]'::jsonb,
+    assign_all_in_org BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Course Groups Table
+CREATE TABLE course_groups (
+    id SERIAL PRIMARY KEY,
+    course_id INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(course_id, group_id)
 );
 
 -- Modules Table

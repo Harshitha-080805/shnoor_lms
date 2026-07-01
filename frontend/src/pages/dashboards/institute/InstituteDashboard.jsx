@@ -38,6 +38,7 @@ function InstituteDashboard() {
   const menuItems = [
     { name: "Overview", path: "/institute-dashboard", icon: <LayoutDashboard size={20} /> },
     { name: "Manage Users", path: "/institute-dashboard/users", icon: <Users size={20} /> },
+    { name: "Groups & Batches", path: "/institute-dashboard/groups", icon: <Users size={20} /> },
     { name: "Course Catalog", path: "/institute-dashboard/courses", icon: <BookOpen size={20} /> },
     { name: "Learning Progress", path: "/institute-dashboard/progress", icon: <TrendingUp size={20} /> },
     { name: "Reports and Analytics", path: "/institute-dashboard/reports", icon: <BarChart3 size={20} /> },

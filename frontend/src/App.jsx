@@ -18,6 +18,7 @@ import InstituteExams from "./pages/dashboards/institute/InstituteExams";
 
 import InstituteProfile from "./pages/dashboards/institute/InstituteProfile";
 import InstituteAnnouncements from "./pages/dashboards/institute/InstituteAnnouncements";
+import InstituteGroups from "./pages/dashboards/institute/InstituteGroups";
 import InstructorDashboard from "./pages/dashboards/instructor/InstructorDashboard";
 import InstructorOverview from "./pages/dashboards/instructor/InstructorOverview";
 import InstructorCourses from "./pages/dashboards/instructor/InstructorCourses";
@@ -60,6 +61,7 @@ function App() {
           <Route path="courses" element={<InstituteCourses />} />
           <Route path="reports" element={<StudentReports />} />
           <Route path="users" element={<InstituteUsers />} />
+          <Route path="groups" element={<InstituteGroups />} />
           <Route path="progress" element={<InstituteProgress />} />
           <Route path="subscriptions" element={<InstituteSubscriptions />} />
           <Route path="certificates" element={<InstituteCertificates />} />

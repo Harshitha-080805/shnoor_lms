@@ -18,6 +18,9 @@ function CourseBuilder(){
   const[skillsGained,setSkillsGained]=useState('');
   const[difficultyLevel,setDifficultyLevel]=useState('Beginner');
   const[prerequisitesEnabled,setPrerequisitesEnabled]=useState(false);
+  const[assignAllInOrg,setAssignAllInOrg]=useState(true);
+  const[assignGroups,setAssignGroups]=useState([]);
+  const[availableGroups,setAvailableGroups]=useState([]);
   const[allCourses,setAllCourses]=useState([]);
   const[loading,setLoading]=useState(true);
   const[showModModal,setShowModModal]=useState(false);
@@ -73,6 +76,10 @@ function CourseBuilder(){
       if (allRes.status >= 200 && allRes.status < 300) {
         setAllCourses(allRes.data);
       }
+      const groupRes = await api.get('/api/groups');
+      if (groupRes.status >= 200 && groupRes.status < 300) {
+        setAvailableGroups(groupRes.data);
+      }
     } catch(e) {}
 
     if(courseId==='new'){
@@ -93,6 +100,8 @@ function CourseBuilder(){
         setSkillsGained(data.skills_gained || '');
         setDifficultyLevel(data.difficulty_level || 'Beginner');
         setPrerequisitesEnabled(data.prerequisites_enabled || false);
+        setAssignAllInOrg(data.assign_all_in_org !== false);
+        if (data.assigned_groups) setAssignGroups(data.assigned_groups);
         if(data.prerequisite_materials) {
           setPrerequisiteMaterials(data.prerequisite_materials);
         }
@@ -129,6 +138,8 @@ function CourseBuilder(){
     formData.append("difficulty_level", difficultyLevel);
     formData.append("prerequisites_enabled", prerequisitesEnabled);
     formData.append("prerequisite_materials", JSON.stringify(prerequisiteMaterials));
+    formData.append("assign_all_in_org", assignAllInOrg);
+    formData.append("assign_groups", JSON.stringify(assignGroups));
     try{
       let savedCourseId = courseId;
       if(courseId==='new'){
@@ -599,7 +610,46 @@ function CourseBuilder(){
                   <input type="text" value={thumbUrl} onChange={(e)=>setThumbUrl(e.target.value)} className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm font-medium bg-white" placeholder="https://..."/>
                 </div>
               </div>
-              <div className="pt-4 border-t border-slate-100 flex justify-end">
+
+              <div className="border border-slate-200 rounded-xl p-4 bg-slate-50">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <label className="block text-slate-800 font-bold">Assign to All Students</label>
+                    <p className="text-xs text-slate-500">If checked, all students in your organization can access this course.</p>
+                  </div>
+                  <input type="checkbox" checked={assignAllInOrg} onChange={(e)=>setAssignAllInOrg(e.target.checked)} className="w-5 h-5 cursor-pointer rounded text-blue-600 focus:ring-blue-500 border-slate-300"/>
+                </div>
+
+                {!assignAllInOrg && (
+                  <div className="mt-4 pt-4 border-t border-slate-200">
+                    <label className="block text-slate-800 font-bold mb-3">Select Groups / Batches</label>
+                    {availableGroups.length === 0 ? (
+                      <p className="text-sm text-slate-500 italic">No groups available. Contact your administrator.</p>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-48 overflow-y-auto pr-2">
+                        {availableGroups.map(group => (
+                          <label key={group.id} className="flex items-center p-3 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer">
+                            <input 
+                              type="checkbox" 
+                              checked={assignGroups.includes(group.id)} 
+                              onChange={(e) => {
+                                if (e.target.checked) setAssignGroups([...assignGroups, group.id]);
+                                else setAssignGroups(assignGroups.filter(id => id !== group.id));
+                              }}
+                              className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 mr-3"
+                            />
+                            <div>
+                              <p className="text-sm font-semibold text-slate-800">{group.name}</p>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end pt-2">
                 <button type="submit" className="px-6 py-2.5 bg-yellow-500 text-blue-950 font-black font-bold rounded-xl text-sm hover:bg-blue-700 transition flex items-center gap-1.5 shadow">Save & Continue to Step 2</button>
               </div>
             </form>

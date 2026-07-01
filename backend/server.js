@@ -12,6 +12,7 @@ const socketManager = require('./socketManager');
 const chatRoutes = require('./chatRoutes');
 const orgAdmin = require('./orgAdmin');
 const searchRoutes = require('./searchRoutes');
+const groupRoutes = require('./groupRoutes');
 const path = require('path');
 
 dotenv.config();
@@ -602,8 +603,10 @@ const requestCertificate = async (req, res) => {
 // Course Controller
 const getApprovedCourses = async (req, res) => {
   try {
-    const query = `
-      SELECT 
+    const { role, organizationId, userId } = req.user;
+    
+    let query = `
+      SELECT DISTINCT
         c.*,
         json_build_object(
           'id', u.id,
@@ -625,9 +628,16 @@ const getApprovedCourses = async (req, res) => {
         ) AS prerequisites
       FROM courses c
       LEFT JOIN users u ON c.instructor_id = u.id
-      WHERE c.is_approved = $1
+      LEFT JOIN course_groups cg ON c.id = cg.course_id
+      LEFT JOIN group_members gm ON cg.group_id = gm.group_id AND gm.user_id = $2
+      WHERE c.is_approved = true AND c.organization_id = $1
     `;
-    const result = await pool.query(query, [true]);
+
+    if (role === 'LEARNER') {
+      query += ` AND (c.assign_all_in_org = true OR gm.user_id IS NOT NULL) `;
+    }
+
+    const result = await pool.query(query, [organizationId, userId]);
     res.json(result.rows);
   } catch (error) {
     console.error(error);
@@ -640,20 +650,40 @@ const createCourse = async (req, res) => {
     return res.status(403).json({ error: 'Only instructors can create courses' });
   }
 
-  const { title, description, thumbnailUrl, thumbnailFile } = req.body;
+  const { title, description, thumbnailUrl, thumbnailFile, assign_all_in_org, assign_groups } = req.body;
   const instructorId = req.user.userId;
+  const organizationId = req.user.organizationId;
 
+  const client = await pool.connect();
   try {
+    await client.query('BEGIN');
+    const isAssignAll = (assign_all_in_org === 'true' || assign_all_in_org === true);
+
     const query = `
-      INSERT INTO courses (title, description, thumbnail_url, thumbnail_file, instructor_id)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO courses (title, description, thumbnail_url, thumbnail_file, instructor_id, organization_id, assign_all_in_org)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *
     `;
-    const result = await pool.query(query, [title, description, thumbnailUrl, thumbnailFile, instructorId]);
-    res.status(201).json(result.rows[0]);
+    const result = await client.query(query, [title, description, thumbnailUrl, thumbnailFile, instructorId, organizationId, isAssignAll]);
+    const newCourse = result.rows[0];
+
+    if (!isAssignAll && assign_groups) {
+      const groups = typeof assign_groups === 'string' ? JSON.parse(assign_groups) : assign_groups;
+      if (Array.isArray(groups)) {
+        for (const groupId of groups) {
+          await client.query('INSERT INTO course_groups (course_id, group_id) VALUES ($1, $2)', [newCourse.id, groupId]);
+        }
+      }
+    }
+
+    await client.query('COMMIT');
+    res.status(201).json(newCourse);
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error(error);
     res.status(500).json({ error: 'Server error creating course' });
+  } finally {
+    client.release();
   }
 };
 
@@ -789,6 +819,9 @@ const getCourseById = async (req, res) => {
     const course = courseResult.rows[0];
 
     course.prerequisite_materials = course.prerequisite_materials || [];
+    
+    const courseGroupsResult = await pool.query('SELECT group_id FROM course_groups WHERE course_id = $1', [id]);
+    course.assigned_groups = courseGroupsResult.rows.map(r => r.group_id);
 
     // Fetch modules
     const modulesResult = await pool.query('SELECT * FROM modules WHERE course_id = $1 ORDER BY "order" ASC, id ASC', [id]);
@@ -1560,13 +1593,19 @@ app.get('/api/courses/:courseId/progress', authMiddleware(), async (req, res) =>
 
 app.put('/api/courses/:id', authMiddleware(['INSTRUCTOR']), upload.single('thumbnail_file'), async (req, res) => {
   const { id } = req.params;
-  const { title, description, thumbnail_url, is_published, estimated_duration, learning_outcomes, skills_gained, difficulty_level, prerequisites_enabled, prerequisite_materials } = req.body;
+  const { title, description, thumbnail_url, is_published, estimated_duration, learning_outcomes, skills_gained, difficulty_level, prerequisites_enabled, prerequisite_materials, assign_all_in_org, assign_groups } = req.body;
   const instructorId = req.user.userId;
   const thumbnailFile = req.file ? req.file.path : undefined;
 
+  const client = await pool.connect();
   try {
-    const courseCheck = await pool.query('SELECT * FROM courses WHERE id = $1 AND instructor_id = $2', [id, instructorId]);
-    if (courseCheck.rows.length === 0) return res.status(403).json({ error: 'Access denied' });
+    await client.query('BEGIN');
+    const courseCheck = await client.query('SELECT * FROM courses WHERE id = $1 AND instructor_id = $2', [id, instructorId]);
+    if (courseCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      client.release();
+      return res.status(403).json({ error: 'Access denied' });
+    }
 
     let updateFields = [];
     let values = [];
@@ -1577,7 +1616,6 @@ app.put('/api/courses/:id', authMiddleware(['INSTRUCTOR']), upload.single('thumb
     if (thumbnail_url !== undefined) { updateFields.push(`thumbnail_url = $${counter++}`); values.push(thumbnail_url); }
     if (thumbnailFile !== undefined) { updateFields.push(`thumbnail_file = $${counter++}`); values.push(thumbnailFile); }
     if (is_published !== undefined) {
-      // If we are passing string "true" / "false" in FormData or json bool
       const pub = (is_published === 'true' || is_published === true);
       updateFields.push(`is_published = $${counter++}`); values.push(pub);
     }
@@ -1597,22 +1635,45 @@ app.put('/api/courses/:id', authMiddleware(['INSTRUCTOR']), upload.single('thumb
       } catch(e){}
       updateFields.push(`prerequisite_materials = $${counter++}`); values.push(pmat);
     }
+    if (assign_all_in_org !== undefined) {
+      const isAssignAll = (assign_all_in_org === 'true' || assign_all_in_org === true);
+      updateFields.push(`assign_all_in_org = $${counter++}`); values.push(isAssignAll);
+    }
 
-    if (updateFields.length === 0) return res.json(courseCheck.rows[0]);
+    if (updateFields.length > 0) {
+      const query = `
+        UPDATE courses 
+        SET ${updateFields.join(', ')}
+        WHERE id = $${counter}
+      `;
+      values.push(id);
+      await client.query(query, values);
+    }
 
-    const query = `
-      UPDATE courses 
-      SET ${updateFields.join(', ')}
-      WHERE id = $${counter}
-      RETURNING *
-    `;
-    values.push(id);
+    if (assign_groups !== undefined) {
+      await client.query('DELETE FROM course_groups WHERE course_id = $1', [id]);
+      const isAssignAll = (assign_all_in_org === 'true' || assign_all_in_org === true);
+      
+      if (!isAssignAll) {
+        let groups = [];
+        try { groups = typeof assign_groups === 'string' ? JSON.parse(assign_groups) : assign_groups; } catch(e){}
+        if (Array.isArray(groups)) {
+          for (const groupId of groups) {
+            await client.query('INSERT INTO course_groups (course_id, group_id) VALUES ($1, $2)', [id, groupId]);
+          }
+        }
+      }
+    }
 
-    const result = await pool.query(query, values);
-    res.json(result.rows[0]);
+    await client.query('COMMIT');
+    const updated = await client.query('SELECT * FROM courses WHERE id = $1', [id]);
+    res.json(updated.rows[0]);
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error(error);
     res.status(500).json({ error: 'Server error updating course' });
+  } finally {
+    client.release();
   }
 });
 
@@ -2081,6 +2142,7 @@ const adminReportsRoutes = require('./adminReportsRoutes');
 const examRoutes = require('./examRoutes');
 const contactRoutes = require('./contactRoutes');
 app.use('/api/chat', authMiddleware(), chatRoutes(upload));
+app.use('/api/groups', authMiddleware(), groupRoutes);
 app.use('/api/org-admin', orgAdmin(authMiddleware));
 app.use('/api/search', authMiddleware(), searchRoutes());
 app.use('/api/practice-arenas', globalPracticeRoutes(authMiddleware));
