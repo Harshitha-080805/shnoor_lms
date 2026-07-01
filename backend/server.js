@@ -606,7 +606,7 @@ const getApprovedCourses = async (req, res) => {
     const { role, organization_id: organizationId, userId } = req.user;
     
     let query = `
-      SELECT DISTINCT
+      SELECT 
         c.*,
         json_build_object(
           'id', u.id,
@@ -628,16 +628,26 @@ const getApprovedCourses = async (req, res) => {
         ) AS prerequisites
       FROM courses c
       LEFT JOIN users u ON c.instructor_id = u.id
-      LEFT JOIN course_groups cg ON c.id = cg.course_id
-      LEFT JOIN group_members gm ON cg.group_id = gm.group_id AND gm.user_id = $2
       WHERE c.is_approved = true AND c.organization_id = $1
     `;
 
+    const queryParams = [organizationId];
+
     if (role === 'LEARNER') {
-      query += ` AND (c.assign_all_in_org = true OR gm.user_id IS NOT NULL) `;
+      query += ` 
+        AND (
+          c.assign_all_in_org = true 
+          OR EXISTS (
+            SELECT 1 FROM course_groups cg 
+            JOIN group_members gm ON cg.group_id = gm.group_id 
+            WHERE cg.course_id = c.id AND gm.user_id = $2
+          )
+        ) 
+      `;
+      queryParams.push(userId);
     }
 
-    const result = await pool.query(query, [organizationId, userId]);
+    const result = await pool.query(query, queryParams);
     res.json(result.rows);
   } catch (error) {
     console.error(error);
