@@ -9,20 +9,11 @@ router.get('/', async (req, res) => {
     const { role, organization_id: organizationId, userId } = req.user;
     let groups = [];
     
-    if (role === 'ORGANIZATION_ADMIN') {
+    if (role === 'ORGANIZATION_ADMIN' || role === 'INSTRUCTOR') {
       const result = await db.query(
         'SELECT * FROM groups WHERE organization_id = $1 ORDER BY created_at DESC',
         [organizationId]
       );
-      groups = result.rows;
-    } else if (role === 'INSTRUCTOR') {
-      const result = await db.query(`
-        SELECT g.* 
-        FROM groups g
-        JOIN group_members gm ON g.id = gm.group_id
-        WHERE g.organization_id = $1 AND gm.user_id = $2
-        ORDER BY g.name ASC
-      `, [organizationId, userId]);
       groups = result.rows;
     } else {
         // Learner - Maybe they need to see their groups? Not strictly needed for this feature.
