@@ -10,11 +10,15 @@ export default function InstituteGroups() {
   const [newGroupName, setNewGroupName] = useState("");
   const [createGroupMembers, setCreateGroupMembers] = useState([]);
   const [searchCreateUsers, setSearchCreateUsers] = useState("");
+  const [departmentFilterCreate, setDepartmentFilterCreate] = useState("ALL");
 
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [groupMembers, setGroupMembers] = useState([]);
   const [searchManageUsers, setSearchManageUsers] = useState("");
+  const [departmentFilterManage, setDepartmentFilterManage] = useState("ALL");
+
+  const departments = [...new Set(users.map(u => u.department).filter(Boolean))];
 
   useEffect(() => {
     fetchGroups();
@@ -58,6 +62,7 @@ export default function InstituteGroups() {
       setNewGroupName("");
       setCreateGroupMembers([]);
       setSearchCreateUsers("");
+      setDepartmentFilterCreate("ALL");
       setShowCreateModal(false);
       fetchGroups();
     } catch (error) {
@@ -81,6 +86,8 @@ export default function InstituteGroups() {
     try {
       const res = await api.get(`/api/groups/${group.id}/members`);
       setGroupMembers(res.data.map(m => m.id));
+      setSearchManageUsers("");
+      setDepartmentFilterManage("ALL");
       setShowMembersModal(true);
     } catch (error) {
       console.error("Error fetching members:", error);
@@ -193,8 +200,8 @@ export default function InstituteGroups() {
 
                 <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col min-h-[300px]">
                   <h4 className="font-bold text-slate-800 mb-3">Assign Members</h4>
-                  <div className="mb-4">
-                     <div className="relative">
+                  <div className="mb-4 flex flex-col sm:flex-row gap-3">
+                     <div className="relative flex-1">
                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                          <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                        </div>
@@ -206,9 +213,51 @@ export default function InstituteGroups() {
                          className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500 text-sm bg-slate-50 transition-all" 
                        />
                      </div>
+                     <select 
+                       value={departmentFilterCreate} 
+                       onChange={(e) => setDepartmentFilterCreate(e.target.value)}
+                       className="px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500 text-sm bg-slate-50 sm:w-48"
+                     >
+                       <option value="ALL">All Departments</option>
+                       {departments.map((dept, i) => (
+                         <option key={i} value={dept}>{dept}</option>
+                       ))}
+                     </select>
                   </div>
-                <div className="space-y-2">
-                  {users.filter(u => u.full_name.toLowerCase().includes(searchCreateUsers.toLowerCase()) || u.email.toLowerCase().includes(searchCreateUsers.toLowerCase())).map(user => (
+                
+                {(() => {
+                  const filteredUsers = users.filter(u => {
+                    const matchesSearch = u.full_name.toLowerCase().includes(searchCreateUsers.toLowerCase()) || u.email.toLowerCase().includes(searchCreateUsers.toLowerCase());
+                    const matchesDept = departmentFilterCreate === "ALL" || u.department === departmentFilterCreate;
+                    return matchesSearch && matchesDept;
+                  });
+                  const allFilteredIds = filteredUsers.map(u => u.id);
+                  const allSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => createGroupMembers.includes(id));
+                  
+                  return (
+                    <>
+                      {filteredUsers.length > 0 && (
+                        <div className="mb-3 px-1 flex items-center">
+                          <label className="flex items-center cursor-pointer text-sm font-bold text-slate-700">
+                            <input 
+                              type="checkbox" 
+                              className="w-4 h-4 mr-2 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+                              checked={allSelected}
+                              onChange={() => {
+                                if (allSelected) {
+                                  setCreateGroupMembers(createGroupMembers.filter(id => !allFilteredIds.includes(id)));
+                                } else {
+                                  const newSelections = new Set([...createGroupMembers, ...allFilteredIds]);
+                                  setCreateGroupMembers(Array.from(newSelections));
+                                }
+                              }}
+                            />
+                            Select All {filteredUsers.length} Users
+                          </label>
+                        </div>
+                      )}
+                      <div className="space-y-2">
+                        {filteredUsers.map(user => (
                     <label key={user.id} className="flex items-center p-3 border rounded-lg hover:bg-slate-50 cursor-pointer">
                       <input 
                         type="checkbox" 
@@ -232,11 +281,14 @@ export default function InstituteGroups() {
                         </span>
                       </div>
                     </label>
-                  ))}
-                  {users.filter(u => u.full_name.toLowerCase().includes(searchCreateUsers.toLowerCase()) || u.email.toLowerCase().includes(searchCreateUsers.toLowerCase())).length === 0 && (
-                    <div className="text-center py-6 text-slate-400 text-sm">No users found matching your search.</div>
-                  )}
-                </div>
+                        ))}
+                        {filteredUsers.length === 0 && (
+                          <div className="text-center py-6 text-slate-400 text-sm">No users found matching your filters.</div>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
                 </div>
               </div>
               <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
@@ -274,17 +326,59 @@ export default function InstituteGroups() {
             </div>
             
             <div className="p-6 overflow-y-auto flex-1">
-              <div className="mb-4">
+              <div className="mb-4 flex flex-col sm:flex-row gap-3">
                  <input 
                    type="text" 
                    placeholder="Search users..." 
                    value={searchManageUsers}
                    onChange={(e) => setSearchManageUsers(e.target.value)}
-                   className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm" 
+                   className="flex-1 px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm" 
                  />
+                 <select 
+                   value={departmentFilterManage} 
+                   onChange={(e) => setDepartmentFilterManage(e.target.value)}
+                   className="px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm sm:w-48"
+                 >
+                   <option value="ALL">All Departments</option>
+                   {departments.map((dept, i) => (
+                     <option key={i} value={dept}>{dept}</option>
+                   ))}
+                 </select>
               </div>
-              <div className="space-y-2">
-                {users.filter(u => u.full_name.toLowerCase().includes(searchManageUsers.toLowerCase()) || u.email.toLowerCase().includes(searchManageUsers.toLowerCase())).map(user => (
+              
+              {(() => {
+                const filteredUsers = users.filter(u => {
+                  const matchesSearch = u.full_name.toLowerCase().includes(searchManageUsers.toLowerCase()) || u.email.toLowerCase().includes(searchManageUsers.toLowerCase());
+                  const matchesDept = departmentFilterManage === "ALL" || u.department === departmentFilterManage;
+                  return matchesSearch && matchesDept;
+                });
+                const allFilteredIds = filteredUsers.map(u => u.id);
+                const allSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => groupMembers.includes(id));
+                
+                return (
+                  <>
+                    {filteredUsers.length > 0 && (
+                      <div className="mb-3 px-1 flex items-center">
+                        <label className="flex items-center cursor-pointer text-sm font-bold text-slate-700">
+                          <input 
+                            type="checkbox" 
+                            className="w-4 h-4 mr-2 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+                            checked={allSelected}
+                            onChange={() => {
+                              if (allSelected) {
+                                setGroupMembers(groupMembers.filter(id => !allFilteredIds.includes(id)));
+                              } else {
+                                const newSelections = new Set([...groupMembers, ...allFilteredIds]);
+                                setGroupMembers(Array.from(newSelections));
+                              }
+                            }}
+                          />
+                          Select All {filteredUsers.length} Users
+                        </label>
+                      </div>
+                    )}
+                    <div className="space-y-2">
+                      {filteredUsers.map(user => (
                   <label key={user.id} className="flex items-center p-3 border rounded-lg hover:bg-slate-50 cursor-pointer">
                     <input 
                       type="checkbox" 
@@ -302,8 +396,14 @@ export default function InstituteGroups() {
                       </span>
                     </div>
                   </label>
-                ))}
-              </div>
+                      ))}
+                      {filteredUsers.length === 0 && (
+                        <div className="text-center py-6 text-slate-400 text-sm">No users found matching your filters.</div>
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
             </div>
 
             <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center">

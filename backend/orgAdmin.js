@@ -228,7 +228,7 @@ module.exports = (authMiddleware) => {
     try {
       const orgId = req.user.organization_id;
       const result = await pool.query(
-        "SELECT id, email, full_name, is_active, created_at FROM users WHERE role = 'INSTRUCTOR' AND is_approved = true AND organization_id = $1 ORDER BY created_at DESC",
+        "SELECT id, email, full_name, is_active, created_at, department FROM users WHERE role = 'INSTRUCTOR' AND is_approved = true AND organization_id = $1 ORDER BY created_at DESC",
         [orgId]
       );
       res.json(result.rows);
@@ -244,7 +244,7 @@ module.exports = (authMiddleware) => {
     try {
       const orgId = req.user.organization_id;
       const result = await pool.query(
-        "SELECT id, email, full_name, is_active, created_at FROM users WHERE role = 'LEARNER' AND is_approved = true AND organization_id = $1 ORDER BY created_at DESC",
+        "SELECT id, email, full_name, is_active, created_at, department FROM users WHERE role = 'LEARNER' AND is_approved = true AND organization_id = $1 ORDER BY created_at DESC",
         [orgId]
       );
       res.json(result.rows);
