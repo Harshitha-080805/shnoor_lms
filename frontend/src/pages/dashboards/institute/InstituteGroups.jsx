@@ -103,7 +103,7 @@ export default function InstituteGroups() {
         </div>
         <button 
           onClick={() => setShowCreateModal(true)}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+          className="bg-yellow-500 text-blue-950 hover:bg-blue-900 hover:text-white px-5 py-2.5 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-sm"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>
           Create Group
@@ -196,7 +196,7 @@ export default function InstituteGroups() {
                 </button>
                 <button 
                   type="submit" 
-                  className="px-4 py-2 font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors"
+                  className="px-4 py-2 font-bold text-blue-950 bg-yellow-500 hover:bg-blue-900 hover:text-white rounded-xl transition-all shadow-sm"
                 >
                   Create Group
                 </button>
@@ -255,7 +255,7 @@ export default function InstituteGroups() {
                 </button>
                 <button 
                   onClick={handleSaveMembers}
-                  className="px-4 py-2 font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors"
+                  className="px-4 py-2 font-bold text-blue-950 bg-yellow-500 hover:bg-blue-900 hover:text-white rounded-xl transition-all shadow-sm"
                 >
                   Save Changes
                 </button>

@@ -6,7 +6,7 @@ const router = express.Router();
 // GET /api/groups - Get groups for the organization
 router.get('/', async (req, res) => {
   try {
-    const { role, organizationId, userId } = req.user;
+    const { role, organization_id: organizationId, userId } = req.user;
     let groups = [];
     
     if (role === 'ORGANIZATION_ADMIN') {
@@ -45,7 +45,7 @@ router.get('/', async (req, res) => {
 // POST /api/groups - Create a group (Org Admin Only)
 router.post('/', async (req, res) => {
   try {
-    const { role, organizationId } = req.user;
+    const { role, organization_id: organizationId } = req.user;
     if (role !== 'ORGANIZATION_ADMIN') {
       return res.status(403).json({ error: 'Only Organization Admins can create groups.' });
     }
@@ -68,7 +68,7 @@ router.post('/', async (req, res) => {
 // PUT /api/groups/:id - Update group (Org Admin Only)
 router.put('/:id', async (req, res) => {
   try {
-    const { role, organizationId } = req.user;
+    const { role, organization_id: organizationId } = req.user;
     if (role !== 'ORGANIZATION_ADMIN') {
       return res.status(403).json({ error: 'Only Organization Admins can update groups.' });
     }
@@ -92,7 +92,7 @@ router.put('/:id', async (req, res) => {
 // DELETE /api/groups/:id - Delete a group (Org Admin Only)
 router.delete('/:id', async (req, res) => {
     try {
-        const { role, organizationId } = req.user;
+        const { role, organization_id: organizationId } = req.user;
         if (role !== 'ORGANIZATION_ADMIN') {
             return res.status(403).json({ error: 'Only Organization Admins can delete groups.' });
         }
@@ -134,7 +134,7 @@ router.get('/:id/members', async (req, res) => {
 // PUT /api/groups/:id/members - Update all members of a group
 router.put('/:id/members', async (req, res) => {
   try {
-    const { role, organizationId } = req.user;
+    const { role, organization_id: organizationId } = req.user;
     if (role !== 'ORGANIZATION_ADMIN') {
       return res.status(403).json({ error: 'Only Organization Admins can manage group members.' });
     }
