@@ -8,6 +8,7 @@ export default function InstituteGroups() {
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
+  const [newGroupDesc, setNewGroupDesc] = useState("");
   const [createGroupMembers, setCreateGroupMembers] = useState([]);
   const [searchCreateUsers, setSearchCreateUsers] = useState("");
 
@@ -50,12 +51,13 @@ export default function InstituteGroups() {
   const handleCreateGroup = async (e) => {
     e.preventDefault();
     try {
-      const res = await api.post('/api/groups', { name: newGroupName, description: "" });
+      const res = await api.post('/api/groups', { name: newGroupName, description: newGroupDesc });
       const newGroup = res.data;
       if (createGroupMembers.length > 0) {
         await api.put(`/api/groups/${newGroup.id}/members`, { userIds: createGroupMembers });
       }
       setNewGroupName("");
+      setNewGroupDesc("");
       setCreateGroupMembers([]);
       setSearchCreateUsers("");
       setShowCreateModal(false);
@@ -176,30 +178,46 @@ export default function InstituteGroups() {
               </button>
             </div>
             <form onSubmit={handleCreateGroup} className="flex flex-col flex-1 overflow-hidden">
-              <div className="p-6 overflow-y-auto flex-1">
-                <div className="space-y-4 mb-6">
+              <div className="p-6 overflow-y-auto flex-1 bg-slate-50">
+                <div className="bg-white p-5 rounded-xl border border-slate-200 mb-6 space-y-4 shadow-sm">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Group Name</label>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">Group Name <span className="text-red-500">*</span></label>
                     <input 
                       type="text" 
                       required
                       value={newGroupName}
                       onChange={(e) => setNewGroupName(e.target.value)}
-                      className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                      className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500 bg-slate-50 transition-all text-sm font-medium"
                       placeholder="e.g. Batch 2024 - Section A"
                     />
                   </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">Description</label>
+                    <textarea 
+                      value={newGroupDesc}
+                      onChange={(e) => setNewGroupDesc(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500 resize-none h-20 bg-slate-50 transition-all text-sm"
+                      placeholder="Brief description of this group..."
+                    ></textarea>
+                  </div>
                 </div>
 
-                <div className="mb-4">
-                   <input 
-                     type="text" 
-                     placeholder="Search users..." 
-                     value={searchCreateUsers}
-                     onChange={(e) => setSearchCreateUsers(e.target.value)}
-                     className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm" 
-                   />
-                </div>
+                <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col min-h-[300px]">
+                  <h4 className="font-bold text-slate-800 mb-3">Assign Members</h4>
+                  <div className="mb-4">
+                     <div className="relative">
+                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                         <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                       </div>
+                       <input 
+                         type="text" 
+                         placeholder="Search students or instructors..." 
+                         value={searchCreateUsers}
+                         onChange={(e) => setSearchCreateUsers(e.target.value)}
+                         className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500/50 focus:border-yellow-500 text-sm bg-slate-50 transition-all" 
+                       />
+                     </div>
+                  </div>
                 <div className="space-y-2">
                   {users.filter(u => u.full_name.toLowerCase().includes(searchCreateUsers.toLowerCase()) || u.email.toLowerCase().includes(searchCreateUsers.toLowerCase())).map(user => (
                     <label key={user.id} className="flex items-center p-3 border rounded-lg hover:bg-slate-50 cursor-pointer">
@@ -226,6 +244,10 @@ export default function InstituteGroups() {
                       </div>
                     </label>
                   ))}
+                  {users.filter(u => u.full_name.toLowerCase().includes(searchCreateUsers.toLowerCase()) || u.email.toLowerCase().includes(searchCreateUsers.toLowerCase())).length === 0 && (
+                    <div className="text-center py-6 text-slate-400 text-sm">No users found matching your search.</div>
+                  )}
+                </div>
                 </div>
               </div>
               <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
