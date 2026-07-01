@@ -32,9 +32,12 @@ export default function InstituteGroups() {
 
   const fetchUsers = async () => {
     try {
-      const res = await api.get('/api/org-admin/users');
-      // filter only approved
-      setUsers(res.data.filter(u => u.is_approved));
+      const [instructorsRes, learnersRes] = await Promise.all([
+        api.get('/api/org-admin/instructors'),
+        api.get('/api/org-admin/learners')
+      ]);
+      const combined = [...(instructorsRes.data || []), ...(learnersRes.data || [])];
+      setUsers(combined.filter(u => u.is_approved));
     } catch (error) {
       console.error("Error fetching users:", error);
     }
