@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Eye, EyeOff } from "lucide-react";
+import { GoogleLogin } from '@react-oauth/google';
 import logo from "../assets/shnoor-logo.jpeg";
 import api from '../api';
 
@@ -87,6 +88,55 @@ function Login() {
           alert("Login failed");
         }
       });
+  };
+
+  const handleGoogleSuccess = (credentialResponse) => {
+    api.post("/api/accounts/google-login", { token: credentialResponse.credential })
+      .then(res => {
+        const data = res.data;
+        sessionStorage.setItem("access", data.token);
+        sessionStorage.setItem("role", data.user.role.toLowerCase());
+        sessionStorage.setItem("email", data.user.email);
+        sessionStorage.setItem("username", data.user.fullName);
+        if (data.user.profilePic) {
+          sessionStorage.setItem("profile_pic", data.user.profilePic);
+        } else {
+          sessionStorage.removeItem("profile_pic");
+        }
+        if (data.user.learnerType) {
+          sessionStorage.setItem("learnerType", data.user.learnerType);
+        }
+        const mappedUser = {
+          name: data.user.fullName,
+          email: data.user.email,
+          role: data.user.role === "ORGANIZATION_ADMIN" ? "Organization Admin" : data.user.role === "LEARNER" ? "Learner" : data.user.role === "INSTRUCTOR" ? "Instructor" : "Super Admin",
+          status: "Approved"
+        };
+        sessionStorage.setItem("loggedInUser", JSON.stringify(mappedUser));
+
+        const role = data.user.role.toLowerCase();
+        if (role === "admin") {
+          navigate("/admin-dashboard");
+        } else if (role === "learner") {
+          navigate("/student-dashboard");
+        } else if (role === "instructor") {
+          navigate("/instructor-dashboard");
+        } else {
+          navigate("/institute-dashboard");
+        }
+      })
+      .catch((err) => {
+        const errData = err.response?.data;
+        if (errData && errData.error) {
+          alert(errData.error);
+        } else {
+          alert("Google Login failed");
+        }
+      });
+  };
+
+  const handleGoogleError = () => {
+    alert("Google Sign-In failed or was cancelled.");
   };
 
   return (
@@ -189,6 +239,22 @@ function Login() {
             <button type="submit" className="w-full bg-[#0F2F2B] hover:bg-[#123A38] text-white py-4 rounded-lg font-bold flex items-center justify-center gap-2 mt-4 shadow-lg transition-transform hover:-translate-y-0.5 text-base">
               Login <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </button>
+            
+            <div className="flex items-center my-4 before:flex-1 before:border-t before:border-gray-300 before:mt-0.5 after:flex-1 after:border-t after:border-gray-300 after:mt-0.5">
+              <p className="text-center font-semibold mx-4 mb-0 text-slate-500">OR</p>
+            </div>
+            
+            <div className="flex justify-center w-full">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={handleGoogleError}
+                shape="rectangular"
+                size="large"
+                theme="outline"
+                text="continue_with"
+                width="100%"
+              />
+            </div>
           </form>
           
           <div className="mt-12 text-center text-sm font-medium text-slate-600">

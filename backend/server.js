@@ -6,6 +6,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const axios = require('axios');
+const { OAuth2Client } = require('google-auth-library');
 const pool = require('./db');
 const http = require('http');
 const socketManager = require('./socketManager');
@@ -18,6 +19,7 @@ const path = require('path');
 dotenv.config();
 
 const app = express();
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 app.use(cors({
   origin: process.env.FRONTEND_URL || '*' // In production, set FRONTEND_URL in your .env
@@ -215,6 +217,87 @@ const loginUser = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+const googleLoginUser = async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ error: 'Token is required' });
+
+    // Verify token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    const email = payload.email;
+
+    // Find user
+    const userQuery = await pool.query(`
+      SELECT u.*, 
+             (SELECT status FROM subscriptions s WHERE s.organization_id = u.organization_id ORDER BY end_date DESC LIMIT 1) as org_sub_status,
+             (SELECT status FROM subscriptions s WHERE s.user_id = u.id ORDER BY end_date DESC LIMIT 1) as user_sub_status
+      FROM users u WHERE email = $1
+    `, [email]);
+
+    if (userQuery.rows.length === 0) {
+      // User rejected because they don't exist
+      return res.status(400).json({ error: 'Account not found. Please register first.' });
+    }
+    const user = userQuery.rows[0];
+
+    // 1. Manual revoke by super admin blocks everyone
+    if (user.org_sub_status === 'revoked' || user.user_sub_status === 'revoked') {
+      return res.status(403).json({ error: 'User access is suspended. Please contact your administrator.' });
+    }
+
+    // 2. Expired subscription blocks members, but allows Org Admin / Independent Learner
+    if (user.org_sub_status === 'expired' || user.user_sub_status === 'expired') {
+      const isOrgAdmin = user.role === 'ORGANIZATION_ADMIN';
+      const isIndependentLearner = user.role === 'LEARNER' && !user.organization_id;
+
+      if (!isOrgAdmin && !isIndependentLearner) {
+        return res.status(403).json({ error: 'Subscription payment is not done. Access is revoked. Please contact your organization administrator.' });
+      }
+    }
+
+    // 3. Any other deactivation reasons
+    if (!user.is_active) {
+      if (user.role === 'LEARNER' && user.organization_id) {
+        return res.status(403).json({ error: 'Account is suspended. Please contact your organization administrator.' });
+      }
+      return res.status(403).json({ error: 'Account is suspended. Please contact support.' });
+    }
+
+    if (!user.is_approved) {
+      return res.status(403).json({ error: 'Account is pending admin approval. You will be able to login once approved.' });
+    }
+
+    // Generate token
+    const jwtPayload = {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      organization_id: user.organization_id,
+    };
+
+    const jwtToken = jwt.sign(jwtPayload, process.env.JWT_SECRET || 'your_secret_key', { expiresIn: '1d' });
+
+    res.status(200).json({
+      token: jwtToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        fullName: user.full_name,
+        role: user.role,
+        learnerType: user.learner_type,
+        profilePic: user.profile_pic,
+      },
+    });
+  } catch (error) {
+    console.error('Google login error:', error);
+    res.status(500).json({ error: 'Internal server error during Google login' });
   }
 };
 
@@ -1123,6 +1206,7 @@ const submitQuiz = async (req, res) => {
 // Auth Routes (/api/accounts)
 app.post('/api/accounts/register', registerUser);
 app.post('/api/accounts/login', loginUser);
+app.post('/api/accounts/google-login', googleLoginUser);
 app.post('/api/forgot-password', forgotPassword);
 app.get('/api/verify-reset-token/:token', verifyResetToken);
 app.post('/api/reset-password-with-token', resetPasswordWithToken);
