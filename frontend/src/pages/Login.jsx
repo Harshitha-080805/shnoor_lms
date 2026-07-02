@@ -239,25 +239,25 @@ function Login() {
             <button type="submit" className="w-full bg-[#0F2F2B] hover:bg-[#123A38] text-white py-4 rounded-lg font-bold flex items-center justify-center gap-2 mt-4 shadow-lg transition-transform hover:-translate-y-0.5 text-base">
               Login <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </button>
-            
-            <div className="flex items-center my-4 before:flex-1 before:border-t before:border-gray-300 before:mt-0.5 after:flex-1 after:border-t after:border-gray-300 after:mt-0.5">
-              <p className="text-center font-semibold mx-4 mb-0 text-slate-500">OR</p>
-            </div>
-            
-            <div className="flex justify-center w-full">
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={handleGoogleError}
-                shape="rectangular"
-                size="large"
-                theme="outline"
-                text="continue_with"
-                width="100%"
-              />
-            </div>
           </form>
           
-          <div className="mt-12 text-center text-sm font-medium text-slate-600">
+          <div className="flex items-center my-6 before:flex-1 before:border-t before:border-gray-300 before:mt-0.5 after:flex-1 after:border-t after:border-gray-300 after:mt-0.5">
+            <p className="text-center font-semibold mx-4 mb-0 text-slate-500">OR</p>
+          </div>
+          
+          <div className="flex justify-center w-full">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              shape="rectangular"
+              size="large"
+              theme="outline"
+              text="continue_with"
+              width="400"
+            />
+          </div>
+          
+          <div className="mt-8 text-center text-sm font-medium text-slate-600">
             Don't have an account? <Link to="/register" className="text-yellow-600 hover:text-yellow-700 font-bold ml-1 transition-colors">Register Now</Link>
           </div>
         </div>
