@@ -1,26 +1,34 @@
 import React, { useState, useEffect } from "react";
 import { BookOpen, Users, Clock, AlertCircle, Calendar } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { useNavigate } from 'react-router-dom';
 import api from '../../../api';
+import { chatService } from "../../../services/chatService";
 
 function InstructorOverview() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState([
-    { label: "Total Courses", value: "0", icon: <BookOpen className="text-blue-950" size={24} />, bgColor: "bg-blue-50" },
-    { label: "Active Students", value: "0", icon: <Users className="text-blue-950" size={24} />, bgColor: "bg-blue-50" },
-    { label: "Pending Assignments", value: "0", icon: <Clock className="text-blue-950" size={24} />, bgColor: "bg-blue-50" },
-    { label: "Unread Messages", value: "0", icon: <AlertCircle className="text-blue-950" size={24} />, bgColor: "bg-blue-50" },
+    { label: "Total Courses", value: "0", icon: <BookOpen className="text-blue-950" size={24} />, bgColor: "bg-blue-50", path: "/instructor-dashboard/courses" },
+    { label: "Active Students", value: "0", icon: <Users className="text-blue-950" size={24} />, bgColor: "bg-blue-50", path: "/instructor-dashboard/students" },
+    { label: "Pending Assignments", value: "0", icon: <Clock className="text-blue-950" size={24} />, bgColor: "bg-blue-50", path: "/instructor-dashboard/assignments" },
+    { label: "Unread Messages", value: "0", icon: <AlertCircle className="text-blue-950" size={24} />, bgColor: "bg-blue-50", path: "/instructor-dashboard/chat" },
   ]);
   const [trendStats, setTrendStats] = useState({ enrollments: 0, completions: 0, active: 0, rate: 0 });
   const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  const [rawCourses, setRawCourses] = useState([]);
+  const [rawStudents, setRawStudents] = useState([]);
+  const [dateFilter, setDateFilter] = useState('this_month');
 
   useEffect(() => {
     const loadOverview = async () => {
       try {
-        const [resCourses, resSubmissions, resStudents] = await Promise.all([
+        const [resCourses, resSubmissions, resStudents, unreadCount] = await Promise.all([
           api.get(`/api/courses/instructor/my-courses`),
           api.get(`/api/courses/instructor/submissions`),
-          api.get(`/api/courses/instructor/students`)
+          api.get(`/api/courses/instructor/students`),
+          chatService.getUnreadCount()
         ]);
         let coursesList = [];
         let subsList = [];
@@ -33,49 +41,77 @@ function InstructorOverview() {
         const activeStudents = coursesList.reduce((acc, c) => acc + (parseInt(c.enrollments_count) || 0), 0);
         const pendingSubmissions = subsList.filter(s => !s.is_graded).length;
         setStats([
-          { label: "Total Courses", value: totalCourses.toString(), icon: <BookOpen className="text-white" size={24} />, bgColor: "bg-sky-500" },
-          { label: "Active Students", value: activeStudents.toString(), icon: <Users className="text-white" size={24} />, bgColor: "bg-teal-500" },
-          { label: "Pending Assignments", value: pendingSubmissions.toString(), icon: <Clock className="text-white" size={24} />, bgColor: "bg-amber-500" },
-          { label: "Unread Messages", value: "0", icon: <AlertCircle className="text-white" size={24} />, bgColor: "bg-rose-500" },
+          { label: "Total Courses", value: totalCourses.toString(), icon: <BookOpen className="text-white" size={24} />, bgColor: "bg-sky-500", path: "/instructor-dashboard/courses" },
+          { label: "Active Students", value: activeStudents.toString(), icon: <Users className="text-white" size={24} />, bgColor: "bg-teal-500", path: "/instructor-dashboard/students" },
+          { label: "Pending Assignments", value: pendingSubmissions.toString(), icon: <Clock className="text-white" size={24} />, bgColor: "bg-amber-500", path: "/instructor-dashboard/assignments" },
+          { label: "Unread Messages", value: (unreadCount || 0).toString(), icon: <AlertCircle className="text-white" size={24} />, bgColor: "bg-rose-500", path: "/instructor-dashboard/chat" },
         ]);
-        
-        const courseCompletions = studentsList.filter(e => {
-          let total = 0;
-          e.course.modules?.forEach(m => { total += m.lessons?.length || 0; });
-          const completed = e.lesson_progress?.filter(p => p.is_completed).length || 0;
-          return total > 0 && Math.round((completed / total) * 100) === 100;
-        }).length;
-        
-        const completionRate = activeStudents > 0 ? Math.round((courseCompletions / activeStudents) * 100) : 0;
-        
-        setTrendStats({
-          enrollments: activeStudents,
-          completions: courseCompletions,
-          active: activeStudents,
-          rate: completionRate
-        });
-        const cData = coursesList.map(c => {
-          const courseStudents = studentsList.filter(e => e.course.id === c.id);
-          const completions = courseStudents.filter(e => {
-            let total = 0;
-            e.course.modules?.forEach(m => { total += m.lessons?.length || 0; });
-            const completed = e.lesson_progress?.filter(p => p.is_completed).length || 0;
-            return total > 0 && Math.round((completed / total) * 100) === 100;
-          }).length;
-          
-          return {
-            name: c.title,
-            enrollments: parseInt(c.enrollments_count) || 0,
-            completions: completions
-          };
-        });
-        setChartData(cData);
+        setRawCourses(coursesList);
+        setRawStudents(studentsList);
       } catch (e) { } finally {
         setLoading(false);
       }
     };
     loadOverview();
   }, []);
+
+  useEffect(() => {
+    if (!rawCourses.length && !rawStudents.length) return;
+    
+    const now = new Date();
+    let startDate = new Date(0); // all time
+    
+    if (dateFilter === 'this_week') {
+      startDate = new Date(now);
+      startDate.setDate(now.getDate() - now.getDay());
+      startDate.setHours(0, 0, 0, 0);
+    } else if (dateFilter === 'this_month') {
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    } else if (dateFilter === 'this_year') {
+      startDate = new Date(now.getFullYear(), 0, 1);
+    }
+
+    const filteredStudents = rawStudents.filter(e => {
+      if (dateFilter === 'all') return true;
+      const enrolledDate = new Date(e.created_at);
+      return enrolledDate >= startDate;
+    });
+
+    const activeStudents = filteredStudents.length;
+    const courseCompletions = filteredStudents.filter(e => {
+      let total = 0;
+      e.course.modules?.forEach(m => { total += m.lessons?.length || 0; });
+      const completed = e.lesson_progress?.filter(p => p.is_completed).length || 0;
+      return total > 0 && Math.round((completed / total) * 100) === 100;
+    }).length;
+    
+    const completionRate = activeStudents > 0 ? Math.round((courseCompletions / activeStudents) * 100) : 0;
+    
+    setTrendStats({
+      enrollments: activeStudents,
+      completions: courseCompletions,
+      active: activeStudents,
+      rate: completionRate
+    });
+
+    const cData = rawCourses.map(c => {
+      const courseStudents = filteredStudents.filter(e => e.course.id === c.id);
+      const completions = courseStudents.filter(e => {
+        let total = 0;
+        e.course.modules?.forEach(m => { total += m.lessons?.length || 0; });
+        const completed = e.lesson_progress?.filter(p => p.is_completed).length || 0;
+        return total > 0 && Math.round((completed / total) * 100) === 100;
+      }).length;
+      
+      return {
+        name: c.title,
+        enrollments: courseStudents.length,
+        completions: completions
+      };
+    });
+    setChartData(cData);
+  }, [dateFilter, rawCourses, rawStudents]);
+
   return (
     <div className="space-y-6">
       {loading ? (
@@ -86,7 +122,11 @@ function InstructorOverview() {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             {stats.map((stat, idx) => (
-              <div key={idx} className="bg-blue-950 p-5 rounded-2xl border border-blue-900 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] flex items-center gap-5 hover:shadow-md transition-shadow">
+              <div 
+                key={idx} 
+                onClick={() => navigate(stat.path)}
+                className="bg-blue-950 p-5 rounded-2xl border border-blue-900 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.05)] flex items-center gap-5 cursor-pointer hover:shadow-md hover:border-blue-700 transition-all"
+              >
                 <div className={`p-4 rounded-xl ${stat.bgColor}`}>{stat.icon}</div>
                 <div className="flex flex-col">
                   <p className="text-xs font-semibold text-blue-200 mb-0.5">{stat.label}</p>
@@ -99,11 +139,20 @@ function InstructorOverview() {
           <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-[0_2px_20px_-4px_rgba(0,0,0,0.05)]">
             <div className="flex justify-between items-center mb-8">
               <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Enrollment Trends</h2>
-              <button className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
-                <Calendar size={16} />
-                This Month
-                <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-              </button>
+              <div className="flex items-center gap-2">
+                <Calendar size={16} className="text-slate-500" />
+                <select 
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  className="bg-transparent border border-slate-200 rounded-xl px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-950 appearance-none cursor-pointer"
+                  style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.5rem center', paddingRight: '2.5rem' }}
+                >
+                  <option value="all">All Time</option>
+                  <option value="this_week">This Week</option>
+                  <option value="this_month">This Month</option>
+                  <option value="this_year">This Year</option>
+                </select>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
