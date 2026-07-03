@@ -37,6 +37,7 @@ function CourseBuilder(){
   const[quizTitle,setQuizTitle]=useState('');
   const[passingScore,setPassingScore]=useState(60);
   const[showQuesModal,setShowQuesModal]=useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const[selectedQuizId,setSelectedQuizId]=useState(null);
   const[qText,setQText]=useState('');
   const[qType,setQType]=useState('single');
@@ -177,6 +178,7 @@ function CourseBuilder(){
   const handleAddModule=async(e)=>{
     e.preventDefault();
     if(!modTitle.trim())return;
+    setIsSubmitting(true);
     try{
       const res=await api.post(`/api/courses/${courseId}/modules`, {title:modTitle,order:modules.length});
       if((res.status >= 200 && res.status < 300)){
@@ -185,6 +187,7 @@ function CourseBuilder(){
         loadCourse();
       }
     }catch(e){}
+    finally { setIsSubmitting(false); }
   };
 
 
@@ -192,7 +195,7 @@ function CourseBuilder(){
     e.preventDefault();
     if(!lesTitle.trim())return;
 
-
+    setIsSubmitting(true);
 
     const formData=new FormData();
     formData.append("title",lesTitle);
@@ -240,6 +243,8 @@ function CourseBuilder(){
     }catch(e){
       console.error(e);
       alert('An error occurred: ' + (e.response?.data?.error || e.message));
+    }finally{
+      setIsSubmitting(false);
     }
   };
   const handleAddQuiz=async(e)=>{
@@ -821,8 +826,8 @@ function CourseBuilder(){
             </div>
             <input type="text" value={modTitle} onChange={(e)=>setModTitle(e.target.value)} required placeholder="Module Title" className="w-full p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-100 outline-none text-sm font-medium bg-slate-50"/>
             <div className="flex justify-end gap-3 pt-2">
-              <button type="button" onClick={()=>setShowModModal(false)} className="px-4 py-2 text-slate-500 text-xs font-bold hover:bg-slate-100 rounded-xl">Cancel</button>
-              <button type="submit" className="px-4 py-2 bg-yellow-500 text-blue-950 font-black text-xs font-bold rounded-xl hover:bg-blue-700">Add Module</button>
+              <button type="button" onClick={()=>setShowModModal(false)} className="px-4 py-2 text-slate-500 text-xs font-bold hover:bg-slate-100 rounded-xl" disabled={isSubmitting}>Cancel</button>
+              <button type="submit" className="px-4 py-2 bg-yellow-500 text-blue-950 font-black text-xs font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Add Module'}</button>
             </div>
           </form>
         </div>
@@ -902,8 +907,8 @@ function CourseBuilder(){
               </div>
             )}
             <div className="flex justify-end gap-3 pt-2">
-              <button type="button" onClick={()=>setShowLesModal(false)} className="px-4 py-2 text-slate-500 text-xs font-bold hover:bg-slate-100 rounded-xl">Cancel</button>
-              <button type="submit" className="px-4 py-2 bg-yellow-500 text-blue-950 font-black text-xs font-bold rounded-xl hover:bg-blue-700">Add Lesson</button>
+              <button type="button" onClick={()=>setShowLesModal(false)} className="px-4 py-2 text-slate-500 text-xs font-bold hover:bg-slate-100 rounded-xl" disabled={isSubmitting}>Cancel</button>
+              <button type="submit" className="px-4 py-2 bg-yellow-500 text-blue-950 font-black text-xs font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50" disabled={isSubmitting}>{isSubmitting ? 'Saving... (This may take a minute for videos)' : editLesId ? 'Save Lesson' : 'Add Lesson'}</button>
             </div>
           </form>
         </div>
