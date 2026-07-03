@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Award, Search, TrendingUp, Users, CheckCircle, XCircle, Download } from 'lucide-react';
 import api from '../../../api';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
 function InstituteExams() {
   const [stats, setStats] = useState(null);
@@ -42,32 +44,86 @@ function InstituteExams() {
     return dataCopy;
   }, [stats, search, sortOption]);
 
-  const exportToCSV = () => {
+  const exportExcel = async () => {
     if (!sortedAttempts || sortedAttempts.length === 0) return;
     
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Exam Attempts');
+
+    // Title Row
+    worksheet.mergeCells('A1:F1');
+    const titleCell = worksheet.getCell('A1');
+    titleCell.value = 'SHNOOR LMS - EXAM ATTEMPTS REPORT';
+    titleCell.font = { name: 'Arial', size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
+    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } }; // blue-950
+    titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
+
+    // Metadata
+    worksheet.getCell('A3').value = 'Generated On:';
+    worksheet.getCell('A3').font = { bold: true };
+    worksheet.getCell('B3').value = new Date().toLocaleString();
+    worksheet.getCell('B3').alignment = { horizontal: 'left' };
+
+    worksheet.getCell('A4').value = 'Total Records:';
+    worksheet.getCell('A4').font = { bold: true };
+    worksheet.getCell('B4').value = sortedAttempts.length;
+    worksheet.getCell('B4').alignment = { horizontal: 'left' };
+
+    // Table Headers
     const headers = ['Student', 'Exam', 'Course', 'Score', 'Status', 'Date'];
-    const csvData = sortedAttempts.map(attempt => [
-      attempt.student_name,
-      attempt.exam_title,
-      attempt.course_title,
-      `${Math.round(parseFloat(attempt.total_score || 0))}%`,
-      attempt.status,
-      new Date(attempt.submitted_at || attempt.started_at).toLocaleDateString()
-    ]);
+    worksheet.getRow(6).values = headers;
+    worksheet.getRow(6).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    worksheet.getRow(6).alignment = { vertical: 'middle', horizontal: 'center' };
     
-    const csvContent = [
-      headers.join(','),
-      ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))
-    ].join('\n');
-    
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'Exam_Attempts.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Header styling
+    headers.forEach((_, index) => {
+      const cell = worksheet.getCell(6, index + 1);
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF3B82F6' } }; // blue-500
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+        bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+        left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+        right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+      };
+    });
+
+    // Column widths
+    worksheet.columns = [
+      { width: 25 }, { width: 35 }, { width: 35 }, { width: 15 }, { width: 15 }, { width: 15 }
+    ];
+
+    // Data Rows
+    sortedAttempts.forEach((attempt, index) => {
+      const row = worksheet.addRow([
+        attempt.student_name || '',
+        attempt.exam_title || '',
+        attempt.course_title || '',
+        `${Math.round(parseFloat(attempt.total_score || 0))}%`,
+        attempt.status || '',
+        new Date(attempt.submitted_at || attempt.started_at).toLocaleDateString()
+      ]);
+
+      // Alternating row colors
+      const fillColor = index % 2 === 0 ? 'FFF8FAFC' : 'FFFFFFFF'; // slate-50
+      
+      row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fillColor } };
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+        };
+        if (colNumber >= 4 && colNumber <= 6) {
+          cell.alignment = { horizontal: 'center' };
+        }
+      });
+    });
+
+    // Save File
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    saveAs(blob, `Shnoor_LMS_Exam_Attempts_${new Date().getTime()}.xlsx`);
   };
 
   if (loading) {
@@ -130,8 +186,8 @@ function InstituteExams() {
 
           <div className="flex items-center gap-3 w-full sm:w-auto">
             <button
-              onClick={exportToCSV}
-              className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-slate-50 transition-colors shadow-sm"
+              onClick={exportExcel}
+              className="px-4 py-2 bg-emerald-600 text-white border-emerald-600 border rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-emerald-700 transition-colors shadow-sm"
             >
               <Download size={16} /> Export
             </button>
