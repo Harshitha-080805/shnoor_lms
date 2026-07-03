@@ -1713,7 +1713,7 @@ app.put('/api/courses/lessons/:lessonId', authMiddleware(['INSTRUCTOR']), upload
           document_file = COALESCE($11, document_file)
       WHERE id = $12 RETURNING *
     `;
-    const values = [title, content_type, text_content, video_url, audio_url, image_url, document_url, video_file, audio_file, image_file, document_file, lessonId];
+    const values = [title, content_type ? content_type.toUpperCase() : null, text_content, video_url, audio_url, image_url, document_url, video_file, audio_file, image_file, document_file, lessonId];
     const result = await pool.query(query, values);
     if (result.rowCount === 0) return res.status(404).json({ error: 'Lesson not found' });
     res.json(result.rows[0]);
@@ -1771,7 +1771,7 @@ app.put('/api/courses/quizzes/questions/:questionId', authMiddleware(['INSTRUCTO
           correct_answers = COALESCE($7, correct_answers)
       WHERE id = $8 RETURNING *
     `;
-    const values = [text, question_type, option_a, option_b, option_c, option_d, correct_answers, questionId];
+    const values = [text, question_type ? question_type.toUpperCase() : null, option_a, option_b, option_c, option_d, correct_answers, questionId];
     const result = await pool.query(query, values);
     if (result.rowCount === 0) return res.status(404).json({ error: 'Question not found' });
     res.json(result.rows[0]);

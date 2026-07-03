@@ -276,7 +276,7 @@ function CourseBuilder(){
       }
     }catch(e){
       console.error(e);
-      alert('An error occurred: ' + e.message);
+      alert('An error occurred: ' + (e.response?.data?.error || e.message));
     }
   };
   const handleAddQuiz=async(e)=>{
@@ -770,7 +770,7 @@ function CourseBuilder(){
                               <input type="number" min="0" max="100" value={quiz.passing_score||60} onChange={async(e)=>{const val=parseInt(e.target.value)||60;await handleUpdateQuizScore(quiz.id,val);}} className="w-12 p-0.5 border rounded text-xs text-center bg-white font-bold text-indigo-700"/>
                               <span className="text-xs text-slate-500 font-medium">%</span>
                             </div>
-                            <button onClick={()=>{setSelectedQuizId(quiz.id);setShowQuesModal(true);}} className="text-xs text-indigo-600 font-semibold hover:underline">+ Add MCQ Question</button>
+                            <button onClick={()=>{setSelectedQuizId(quiz.id);setEditQuesId(null);setQText('');setOptA('');setOptB('');setOptC('');setOptD('');setCorrect('');setQType('single');setShowQuesModal(true);}} className="text-xs text-indigo-600 font-semibold hover:underline">+ Add MCQ Question</button>
                           </div>
                           <div className="space-y-1.5">
                             {quiz.questions?.map((q,qIdx)=>(
