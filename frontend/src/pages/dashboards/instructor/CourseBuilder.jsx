@@ -678,7 +678,7 @@ function CourseBuilder(){
               </div>
 
               <div className="flex justify-end pt-2">
-                <button type="submit" className="px-6 py-2.5 bg-yellow-500 text-blue-950 font-black font-bold rounded-xl text-sm hover:bg-blue-700 transition flex items-center gap-1.5 shadow">Save & Continue to Step 2</button>
+                <button type="submit" className="px-6 py-2.5 bg-yellow-500 text-blue-950 font-black font-bold rounded-xl text-sm hover:bg-blue-700 hover:text-white transition flex items-center gap-1.5 shadow">Save & Continue to Step 2</button>
               </div>
             </form>
           )}
@@ -686,7 +686,7 @@ function CourseBuilder(){
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-bold text-slate-800">Step 2: Course Content & Modules</h3>
-                <button onClick={()=>setShowModModal(true)} className="bg-yellow-500 text-blue-950 font-black px-4 py-2 rounded-xl text-xs font-bold hover:bg-blue-700 flex items-center gap-1.5 shadow"><Plus size={16}/> Add Module</button>
+                <button onClick={()=>setShowModModal(true)} className="bg-yellow-500 text-blue-950 font-black px-4 py-2 rounded-xl text-xs font-bold hover:bg-blue-700 hover:text-white flex items-center gap-1.5 shadow"><Plus size={16}/> Add Module</button>
               </div>
               <div className="space-y-4">
                 {regularModules.map((mod,index)=>(
@@ -765,7 +765,7 @@ function CourseBuilder(){
               </div>
               <div className="pt-4 border-t border-slate-100 flex justify-between">
                 <button onClick={()=>setStep(1)} className="px-6 py-2.5 border border-slate-200 text-slate-700 font-bold rounded-xl text-sm hover:bg-slate-50 transition">Back to Step 1</button>
-                <button onClick={()=>setStep(3)} className="px-6 py-2.5 bg-yellow-500 text-blue-950 font-black font-bold rounded-xl text-sm hover:bg-blue-700 transition">Continue to Step 3</button>
+                <button onClick={()=>setStep(3)} className="px-6 py-2.5 bg-yellow-500 text-blue-950 font-black font-bold rounded-xl text-sm hover:bg-blue-700 hover:text-white transition">Continue to Step 3</button>
               </div>
             </div>
           )}
@@ -827,7 +827,7 @@ function CourseBuilder(){
             <input type="text" value={modTitle} onChange={(e)=>setModTitle(e.target.value)} required placeholder="Module Title" className="w-full p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-100 outline-none text-sm font-medium bg-slate-50"/>
             <div className="flex justify-end gap-3 pt-2">
               <button type="button" onClick={()=>setShowModModal(false)} className="px-4 py-2 text-slate-500 text-xs font-bold hover:bg-slate-100 rounded-xl" disabled={isSubmitting}>Cancel</button>
-              <button type="submit" className="px-4 py-2 bg-yellow-500 text-blue-950 font-black text-xs font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Add Module'}</button>
+              <button type="submit" className="px-4 py-2 bg-yellow-500 text-blue-950 font-black text-xs font-bold rounded-xl hover:bg-blue-700 hover:text-white disabled:opacity-50" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Add Module'}</button>
             </div>
           </form>
         </div>
@@ -908,7 +908,7 @@ function CourseBuilder(){
             )}
             <div className="flex justify-end gap-3 pt-2">
               <button type="button" onClick={()=>setShowLesModal(false)} className="px-4 py-2 text-slate-500 text-xs font-bold hover:bg-slate-100 rounded-xl" disabled={isSubmitting}>Cancel</button>
-              <button type="submit" className="px-4 py-2 bg-yellow-500 text-blue-950 font-black text-xs font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50" disabled={isSubmitting}>{isSubmitting ? 'Saving... (This may take a minute for videos)' : editLesId ? 'Save Lesson' : 'Add Lesson'}</button>
+              <button type="submit" className="px-4 py-2 bg-yellow-500 text-blue-950 font-black text-xs font-bold rounded-xl hover:bg-blue-700 hover:text-white disabled:opacity-50" disabled={isSubmitting}>{isSubmitting ? 'Saving... (This may take a minute for videos)' : editLesId ? 'Save Lesson' : 'Add Lesson'}</button>
             </div>
           </form>
         </div>
@@ -927,7 +927,7 @@ function CourseBuilder(){
             </div>
             <div className="flex justify-end gap-3 pt-2">
               <button type="button" onClick={()=>setShowQuizModal(false)} className="px-4 py-2 text-slate-500 text-xs font-bold hover:bg-slate-100 rounded-xl">Cancel</button>
-              <button type="submit" className="px-4 py-2 bg-yellow-500 text-blue-950 font-black text-xs font-bold rounded-xl hover:bg-blue-700">Add Quiz</button>
+              <button type="submit" className="px-4 py-2 bg-yellow-500 text-blue-950 font-black text-xs font-bold rounded-xl hover:bg-blue-700 hover:text-white">Add Quiz</button>
             </div>
           </form>
         </div>
@@ -979,7 +979,7 @@ function CourseBuilder(){
             )}
             <div className="flex justify-end gap-3 pt-2">
               <button type="button" onClick={()=>setShowQuesModal(false)} className="px-4 py-2 text-slate-500 text-xs font-bold hover:bg-slate-100 rounded-xl">Cancel</button>
-              <button type="submit" className="px-4 py-2 bg-yellow-500 text-blue-950 font-black text-xs font-bold rounded-xl hover:bg-blue-700">Add Question</button>
+              <button type="submit" className="px-4 py-2 bg-yellow-500 text-blue-950 font-black text-xs font-bold rounded-xl hover:bg-blue-700 hover:text-white">Add Question</button>
             </div>
           </form>
         </div>
