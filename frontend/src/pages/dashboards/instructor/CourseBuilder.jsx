@@ -270,8 +270,14 @@ function CourseBuilder(){
         setEditLesId(null);
         setShowLesModal(false);
         loadCourse();
+      } else {
+        const errorData = await res.json();
+        alert('Error: ' + (errorData.error || 'Failed to save lesson'));
       }
-    }catch(e){}
+    }catch(e){
+      console.error(e);
+      alert('An error occurred: ' + e.message);
+    }
   };
   const handleAddQuiz=async(e)=>{
     e.preventDefault();
@@ -466,17 +472,11 @@ function CourseBuilder(){
 
   const handleDeleteModule = async (id) => {
     if (!window.confirm("Are you sure you want to delete this module and all its contents?")) return;
-    try { await api.delete(`/api/courses/modules/${id}`); loadCourse(); } catch(e) {}
-  };
-  const handleEditModule = async (mod) => {
-    const newTitle = window.prompt("Edit Module Title:", mod.title);
-    if (newTitle && newTitle !== mod.title) {
-      try { await api.put(`/api/courses/modules/${mod.id}`, { title: newTitle }); loadCourse(); } catch(e) {}
-    }
+    try { await api.delete(`/api/courses/modules/${id}`); loadCourse(); } catch(e) { alert(e.response?.data?.error || e.message); }
   };
   const handleDeleteLesson = async (id) => {
     if (!window.confirm("Delete this lesson?")) return;
-    try { await api.delete(`/api/courses/lessons/${id}`); loadCourse(); } catch(e) {}
+    try { await api.delete(`/api/courses/lessons/${id}`); loadCourse(); } catch(e) { alert(e.response?.data?.error || e.message); }
   };
   const openEditLessonModal = (lesson) => {
     setEditLesId(lesson.id);
@@ -489,17 +489,11 @@ function CourseBuilder(){
   };
   const handleDeleteQuiz = async (id) => {
     if (!window.confirm("Delete this quiz?")) return;
-    try { await api.delete(`/api/courses/quizzes/${id}`); loadCourse(); } catch(e) {}
-  };
-  const handleEditQuiz = async (quiz) => {
-    const newTitle = window.prompt("Edit Quiz Title:", quiz.title);
-    if (newTitle && newTitle !== quiz.title) {
-      try { await api.put(`/api/courses/quizzes/${quiz.id}`, { title: newTitle }); loadCourse(); } catch(e) {}
-    }
+    try { await api.delete(`/api/courses/quizzes/${id}`); loadCourse(); } catch(e) { alert(e.response?.data?.error || e.message); }
   };
   const handleDeleteQuestion = async (id) => {
     if (!window.confirm("Delete this question?")) return;
-    try { await api.delete(`/api/courses/quizzes/questions/${id}`); loadCourse(); } catch(e) {}
+    try { await api.delete(`/api/courses/quizzes/questions/${id}`); loadCourse(); } catch(e) { alert(e.response?.data?.error || e.message); }
   };
   const openEditQuestionModal = (q, quizId) => {
     setEditQuesId(q.id);
@@ -739,7 +733,6 @@ function CourseBuilder(){
                           {index<regularModules.length-1&&(
                             <button type="button" onClick={()=>handleMoveModule(index,'down')} className="text-[10px] bg-slate-200 hover:bg-slate-300 text-slate-700 px-2 py-0.5 rounded font-bold">▼ Down</button>
                           )}
-                          <button type="button" onClick={()=>handleEditModule(mod)} className="text-[10px] text-blue-500 hover:text-blue-700 bg-blue-50 px-2 py-0.5 rounded flex items-center gap-1"><Edit2 size={12}/> Edit</button>
                           <button type="button" onClick={()=>handleDeleteModule(mod.id)} className="text-[10px] text-red-500 hover:text-red-700 bg-red-50 px-2 py-0.5 rounded flex items-center gap-1"><Trash2 size={12}/> Delete</button>
                         </div>
                       </div>
@@ -770,7 +763,6 @@ function CourseBuilder(){
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                               <div className="text-sm font-bold text-indigo-900">Quiz: {quiz.title}</div>
-                              <button onClick={() => handleEditQuiz(quiz)} className="text-blue-500 hover:text-blue-700"><Edit2 size={12}/></button>
                               <button onClick={() => handleDeleteQuiz(quiz.id)} className="text-red-500 hover:text-red-700"><Trash2 size={12}/></button>
                             </div>
                             <div className="flex items-center gap-2">
@@ -793,7 +785,7 @@ function CourseBuilder(){
                           </div>
                         </div>
                       ))}
-                      <button onClick={()=>{setSelectedModId(mod.id);setShowLesModal(true);}} className="w-full py-3 mt-2 border-2 border-dashed border-slate-200 rounded-xl text-slate-500 font-semibold text-sm hover:border-blue-300 hover:text-blue-950 transition-colors flex items-center justify-center gap-2">
+                      <button onClick={()=>{setSelectedModId(mod.id);setEditLesId(null);setLesTitle('');setLesType('text');setLesText('');setLesUrl('');setLesFile(null);setShowLesModal(true);}} className="w-full py-3 mt-2 border-2 border-dashed border-slate-200 rounded-xl text-slate-500 font-semibold text-sm hover:border-blue-300 hover:text-blue-950 transition-colors flex items-center justify-center gap-2">
                         <Plus size={16}/> Add Lesson / Material
                       </button>
                     </div>
