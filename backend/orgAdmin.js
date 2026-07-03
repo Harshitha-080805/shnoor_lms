@@ -582,15 +582,38 @@ module.exports = (authMiddleware) => {
       // 4. Avg Completion
       const avgCompletion = Math.round(Math.random() * 20 + 70); // Placeholder, compute from lesson_progress if needed
 
-      // 5. Platform Growth (Mock data for UI)
-      const platformGrowth = [
-        { name: 'Jan', learners: Math.floor(totalLearners * 0.2), courses: Math.floor(activeCourses * 0.2) },
-        { name: 'Feb', learners: Math.floor(totalLearners * 0.4), courses: Math.floor(activeCourses * 0.4) },
-        { name: 'Mar', learners: Math.floor(totalLearners * 0.6), courses: Math.floor(activeCourses * 0.5) },
-        { name: 'Apr', learners: Math.floor(totalLearners * 0.8), courses: Math.floor(activeCourses * 0.8) },
-        { name: 'May', learners: Math.floor(totalLearners * 0.9), courses: Math.floor(activeCourses * 0.9) },
-        { name: 'Jun', learners: totalLearners, courses: activeCourses },
-      ];
+      // 5. Platform Growth (Mock data for UI based on filter)
+      const filter = req.query.filter || 'year';
+      let platformGrowth = [];
+
+      if (filter === 'week') {
+        platformGrowth = [
+          { name: 'Mon', learners: Math.floor(totalLearners * 0.8), courses: Math.floor(activeCourses * 0.8) },
+          { name: 'Tue', learners: Math.floor(totalLearners * 0.85), courses: Math.floor(activeCourses * 0.85) },
+          { name: 'Wed', learners: Math.floor(totalLearners * 0.9), courses: Math.floor(activeCourses * 0.9) },
+          { name: 'Thu', learners: Math.floor(totalLearners * 0.95), courses: Math.floor(activeCourses * 0.95) },
+          { name: 'Fri', learners: totalLearners, courses: activeCourses },
+          { name: 'Sat', learners: totalLearners, courses: activeCourses },
+          { name: 'Sun', learners: totalLearners, courses: activeCourses },
+        ];
+      } else if (filter === 'month') {
+        platformGrowth = [
+          { name: 'Week 1', learners: Math.floor(totalLearners * 0.7), courses: Math.floor(activeCourses * 0.7) },
+          { name: 'Week 2', learners: Math.floor(totalLearners * 0.8), courses: Math.floor(activeCourses * 0.8) },
+          { name: 'Week 3', learners: Math.floor(totalLearners * 0.9), courses: Math.floor(activeCourses * 0.9) },
+          { name: 'Week 4', learners: totalLearners, courses: activeCourses },
+        ];
+      } else {
+        // year
+        platformGrowth = [
+          { name: 'Jan', learners: Math.floor(totalLearners * 0.2), courses: Math.floor(activeCourses * 0.2) },
+          { name: 'Feb', learners: Math.floor(totalLearners * 0.4), courses: Math.floor(activeCourses * 0.4) },
+          { name: 'Mar', learners: Math.floor(totalLearners * 0.6), courses: Math.floor(activeCourses * 0.5) },
+          { name: 'Apr', learners: Math.floor(totalLearners * 0.8), courses: Math.floor(activeCourses * 0.8) },
+          { name: 'May', learners: Math.floor(totalLearners * 0.9), courses: Math.floor(activeCourses * 0.9) },
+          { name: 'Jun', learners: totalLearners, courses: activeCourses },
+        ];
+      }
 
       // 6. Recent Activity
       const recentActivity = [

@@ -16,10 +16,12 @@ function InstituteOverview() {
   });
   const [loading, setLoading] = useState(true);
 
+  const [filter, setFilter] = useState("year");
+
   useEffect(() => {
     const loadOverview = async () => {
       try {
-        const res = await api.get("/api/org-admin/overview-stats");
+        const res = await api.get(`/api/org-admin/overview-stats?filter=${filter}`);
         setStats(res.data);
       } catch (e) {
         console.error("Failed to load overview stats:", e);
@@ -28,7 +30,7 @@ function InstituteOverview() {
       }
     };
     loadOverview();
-  }, []);
+  }, [filter]);
 
   const statCards = [
     {
@@ -95,11 +97,22 @@ function InstituteOverview() {
         
         {/* Platform Growth Chart */}
         <div className="lg:col-span-2 bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
-          <div className="flex items-center gap-2 mb-8">
-            <Activity className="text-slate-500" size={20} />
-            <h3 className="text-lg font-bold text-slate-800">
-              Platform Growth
-            </h3>
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-2">
+              <Activity className="text-slate-500" size={20} />
+              <h3 className="text-lg font-bold text-slate-800">
+                Platform Growth
+              </h3>
+            </div>
+            <select
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 outline-none hover:bg-slate-100 transition-colors cursor-pointer"
+            >
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="year">This Year</option>
+            </select>
           </div>
           
           <div className="h-[300px]">
@@ -124,7 +137,7 @@ function InstituteOverview() {
                   axisLine={false}
                   tickLine={false}
                   dx={-10}
-                  ticks={[0, 350, 700, 1050, 1400]}
+                  allowDecimals={false}
                 />
                 <Tooltip
                   contentStyle={{
