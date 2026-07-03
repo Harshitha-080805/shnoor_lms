@@ -186,48 +186,13 @@ function CourseBuilder(){
       }
     }catch(e){}
   };
-  const calculateDuration = (type, text, file, url) => {
-    return new Promise((resolve) => {
-      if (type === 'text') {
-        const wordCount = text.trim().split(/\s+/).filter(w => w.length > 0).length;
-        const seconds = Math.ceil((wordCount / 200) * 60);
-        resolve(seconds || 10);
-      } else if (type === 'image') {
-        resolve(10);
-      } else if (type === 'document') {
-        resolve(60);
-      } else if (type === 'video' || type === 'audio') {
-        if (!file && !url) return resolve(0);
-        
-        const media = type === 'video' ? document.createElement('video') : document.createElement('audio');
-        media.preload = 'metadata';
-        
-        media.onloadedmetadata = () => {
-          resolve(Math.floor(media.duration) || 0);
-          if(file) URL.revokeObjectURL(media.src);
-        };
-        
-        media.onerror = () => {
-          resolve(0);
-          if(file) URL.revokeObjectURL(media.src);
-        };
 
-        if (file) {
-          media.src = URL.createObjectURL(file);
-        } else if (url) {
-          media.src = url;
-        }
-      } else {
-        resolve(0);
-      }
-    });
-  };
 
   const handleAddLesson=async(e)=>{
     e.preventDefault();
     if(!lesTitle.trim())return;
 
-    const autoDuration = await calculateDuration(lesType, lesText, lesFile, lesUrl);
+
 
     const formData=new FormData();
     formData.append("title",lesTitle);
@@ -248,9 +213,7 @@ function CourseBuilder(){
       if(lesFile)formData.append("document_file",lesFile);
       else if(lesUrl)formData.append("document_url",lesUrl);
     }
-    if(autoDuration) {
-      formData.append("duration", autoDuration);
-    }
+
     if(lesVttFile) {
       formData.append("vtt_file", lesVttFile);
     }
