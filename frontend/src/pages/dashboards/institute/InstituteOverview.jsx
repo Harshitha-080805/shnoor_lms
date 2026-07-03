@@ -95,12 +95,12 @@ function InstituteOverview() {
         <h3 className="text-sm font-extrabold text-slate-800 mb-4">Quick Actions</h3>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {[
-            { title: "Manage Users", sub: "View org users", icon: <Users size={16} />, color: "text-blue-600", bg: "bg-blue-50", click: "/institute-dashboard/users" },
-            { title: "Course Catalog", sub: "View all courses", icon: <BookOpen size={16} />, color: "text-cyan-600", bg: "bg-cyan-50", click: "/institute-dashboard/courses" },
-            { title: "Certificates", sub: "Track approvals", icon: <Award size={16} />, color: "text-emerald-600", bg: "bg-emerald-50", click: "/institute-dashboard/certificates" },
-            { title: "Subscriptions", sub: "Manage plans", icon: <CreditCard size={16} />, color: "text-violet-600", bg: "bg-violet-50", click: "/institute-dashboard/subscriptions" },
-            { title: "Announcements", sub: "View updates", icon: <Bell size={16} />, color: "text-rose-600", bg: "bg-rose-50", click: "/institute-dashboard/announcements" },
-            { title: "Reports", sub: "View analytics", icon: <BarChart3 size={16} />, color: "text-fuchsia-600", bg: "bg-fuchsia-50", click: "/institute-dashboard/reports" },
+            { title: "View Users", sub: "Manage members", icon: <Users size={16} />, color: "text-blue-600", bg: "bg-blue-50", click: "/institute-dashboard/users" },
+            { title: "Browse Courses", sub: "Explore catalog", icon: <BookOpen size={16} />, color: "text-cyan-600", bg: "bg-cyan-50", click: "/institute-dashboard/courses" },
+            { title: "Track Certs", sub: "View approvals", icon: <Award size={16} />, color: "text-emerald-600", bg: "bg-emerald-50", click: "/institute-dashboard/certificates" },
+            { title: "My Subscription", sub: "Plan details", icon: <CreditCard size={16} />, color: "text-violet-600", bg: "bg-violet-50", click: "/institute-dashboard/subscriptions" },
+            { title: "Latest Updates", sub: "View announcements", icon: <Bell size={16} />, color: "text-rose-600", bg: "bg-rose-50", click: "/institute-dashboard/announcements" },
+            { title: "Analytics", sub: "View reports", icon: <BarChart3 size={16} />, color: "text-fuchsia-600", bg: "bg-fuchsia-50", click: "/institute-dashboard/reports" },
           ].map((btn, idx) => (
             <button key={idx} onClick={() => navigate(btn.click)} className="bg-white rounded-xl p-4 border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all text-left flex flex-col group">
               <div className={`w-8 h-8 rounded-lg ${btn.bg} ${btn.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
