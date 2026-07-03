@@ -1,7 +1,7 @@
 import{Link,useNavigate}from"react-router-dom";
 import { useState, useEffect } from "react";
-import { Eye, EyeOff } from "lucide-react";
 import { GoogleLogin } from '@react-oauth/google';
+import { Eye, EyeOff } from "lucide-react";
 import logo from"../assets/shnoor-logo.jpeg";
 import api from '../api';
 
@@ -52,6 +52,20 @@ function Register(){
   const inputClass="w-full mt-2 border-2 border-slate-200 rounded-xl px-5 py-4 bg-white outline-none focus:border-blue-950 focus:ring-2 focus:ring-blue-900/10 transition-all font-medium text-blue-950";
   const labelClass="font-bold text-sm text-blue-950 block";
 
+  const handleGoogleSuccess = (credentialResponse) => {
+    try {
+      const payload = JSON.parse(atob(credentialResponse.credential.split(".")[1]));
+      if (payload.email) setEmail(payload.email);
+      if (payload.name) setName(payload.name);
+    } catch (e) {
+      alert("Failed to parse Google account info");
+    }
+  };
+
+  const handleGoogleError = () => {
+    alert("Google Sign-In failed or was cancelled.");
+  };
+
   const handleRegister=(e)=>{
     e.preventDefault();
     if(password!==confirmPassword){
@@ -93,76 +107,6 @@ function Register(){
         alert("Registration failed. Please try again.");
       }
     });
-  };
-
-  const handleGoogleSuccess = (credentialResponse) => {
-    const payload = {
-      token: credentialResponse.credential,
-      role: role === "Learner" ? "learner" : role === "Instructor" ? "instructor" : "organization_admin"
-    };
-
-    if (payload.role === "learner") {
-      payload.learner_type = learnerType === "Independent Learner" ? "independent" : learnerType === "Student" ? "student" : "employee";
-      if (organizationCode) payload.organization_code = organizationCode;
-      if (rollNumber) payload.roll_number = rollNumber;
-      if (employeeId) payload.employee_id = employeeId;
-    } else if (payload.role === "instructor") {
-      if (organizationCode) payload.organization_code = organizationCode;
-      if (employeeId) payload.employee_id = employeeId;
-    } else if (payload.role === "organization_admin") {
-      payload.organization_type = organizationType === "Company" ? "company" : "institute";
-      payload.organization_name = organizationName;
-      payload.location = organizationLocation;
-      if (website) payload.website = website;
-      payload.organization_code = organizationCode;
-    }
-
-    api.post("/api/accounts/google-register", payload)
-      .then(res => {
-        const data = res.data;
-        sessionStorage.setItem("access", data.token);
-        sessionStorage.setItem("role", data.user.role.toLowerCase());
-        sessionStorage.setItem("email", data.user.email);
-        sessionStorage.setItem("username", data.user.fullName);
-        if (data.user.profilePic) {
-          sessionStorage.setItem("profile_pic", data.user.profilePic);
-        } else {
-          sessionStorage.removeItem("profile_pic");
-        }
-        if (data.user.learnerType) {
-          sessionStorage.setItem("learnerType", data.user.learnerType);
-        }
-        const mappedUser = {
-          name: data.user.fullName,
-          email: data.user.email,
-          role: data.user.role === "ORGANIZATION_ADMIN" ? "Organization Admin" : data.user.role === "LEARNER" ? "Learner" : data.user.role === "INSTRUCTOR" ? "Instructor" : "Super Admin",
-          status: "Approved"
-        };
-        sessionStorage.setItem("loggedInUser", JSON.stringify(mappedUser));
-
-        const userRole = data.user.role.toLowerCase();
-        if (userRole === "admin") {
-          navigate("/admin-dashboard");
-        } else if (userRole === "learner") {
-          navigate("/student-dashboard");
-        } else if (userRole === "instructor") {
-          navigate("/instructor-dashboard");
-        } else {
-          navigate("/institute-dashboard");
-        }
-      })
-      .catch((err) => {
-        const errData = err.response?.data;
-        if (errData && errData.error) {
-          alert(`Error: ${errData.error}`);
-        } else {
-          alert("Google Registration failed. Please try again.");
-        }
-      });
-  };
-
-  const handleGoogleError = () => {
-    alert("Google Sign-In failed or was cancelled.");
   };
 
   return(
@@ -229,7 +173,19 @@ function Register(){
           </div>
 
           <h2 className="text-3xl lg:text-4xl font-bold text-[#0F2F2B] mb-3">Create account</h2>
-          <p className="text-sm lg:text-base text-slate-600 mb-12">Join us and start your journey today.</p>
+          <p className="text-sm lg:text-base text-slate-600 mb-8">Join us and start your journey today.</p>
+
+          <div className="flex justify-center w-full mb-8">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              shape="rectangular"
+              size="large"
+              theme="outline"
+              text="signup_with"
+              width="400"
+            />
+          </div>
           
           <form onSubmit={handleRegister} className="flex flex-col gap-6">
             <div>
@@ -397,22 +353,6 @@ function Register(){
               Create Account <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </button>
           </form>
-
-          <div className="flex items-center my-6 before:flex-1 before:border-t before:border-gray-300 before:mt-0.5 after:flex-1 after:border-t after:border-gray-300 after:mt-0.5">
-            <p className="text-center font-semibold mx-4 mb-0 text-slate-500">OR</p>
-          </div>
-          
-          <div className="flex justify-center w-full">
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={handleGoogleError}
-              shape="rectangular"
-              size="large"
-              theme="outline"
-              text="continue_with"
-              width="400"
-            />
-          </div>
           
           <div className="mt-8 text-center text-sm font-medium text-slate-600 pb-4">
             Already have an account? <Link to="/login" className="text-[#0F2F2B] hover:text-[#123A38] font-bold ml-1">Login here</Link>

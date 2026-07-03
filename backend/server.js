@@ -301,110 +301,6 @@ const googleLoginUser = async (req, res) => {
   }
 };
 
-const googleRegisterUser = async (req, res) => {
-  try {
-    const {
-      token, role, organization_code, learner_type, roll_number, employee_id,
-      organization_type, organization_name, location, website
-    } = req.body;
-
-    if (!token) return res.status(400).json({ error: 'Google Token is required' });
-
-    // Verify token
-    const ticket = await googleClient.verifyIdToken({
-      idToken: token,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
-    const payload = ticket.getPayload();
-    const email = payload.email;
-    const full_name = payload.name;
-    const profile_pic = payload.picture;
-
-    const userRole = (role || 'LEARNER').toUpperCase();
-
-    // Check if user already exists
-    const existingUserQuery = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-    if (existingUserQuery.rows.length > 0) {
-      return res.status(400).json({ error: 'Email already exists, please login instead.' });
-    }
-
-    // Hash dummy password
-    const dummyPassword = crypto.randomBytes(16).toString('hex');
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(dummyPassword, salt);
-
-    let orgId = null;
-
-    if (userRole === 'ORGANIZATION_ADMIN') {
-      if (!organization_code || !organization_name) {
-        return res.status(400).json({ error: 'Organization name and code are required for Organization Admins' });
-      }
-      const orgCheck = await pool.query('SELECT * FROM organizations WHERE code = $1', [organization_code]);
-      if (orgCheck.rows.length > 0) {
-        return res.status(400).json({ error: 'Organization code already exists. Please choose a unique code.' });
-      }
-
-      const newOrg = await pool.query(
-        'INSERT INTO organizations (name, code, type, location, website) VALUES ($1, $2, $3, $4, $5) RETURNING id',
-        [organization_name, organization_code, organization_type || 'institute', location || null, website || null]
-      );
-      orgId = newOrg.rows[0].id;
-
-    } else if (organization_code) {
-      const orgQuery = await pool.query('SELECT id FROM organizations WHERE code = $1', [organization_code]);
-      if (orgQuery.rows.length === 0) {
-        return res.status(400).json({ error: 'Invalid organization code' });
-      }
-      orgId = orgQuery.rows[0].id;
-    }
-
-    // Insert new user
-    const insertQuery = `
-      INSERT INTO users (email, password, full_name, role, organization_id, learner_type, roll_number, employee_id, profile_pic) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
-      RETURNING id, email, full_name, role
-    `;
-    const newUserQuery = await pool.query(insertQuery, [
-      email,
-      hashedPassword,
-      full_name,
-      userRole,
-      orgId,
-      learner_type || null,
-      roll_number || null,
-      employee_id || null,
-      profile_pic || null
-    ]);
-    const user = newUserQuery.rows[0];
-
-    // Generate token so they can login immediately
-    const jwtPayload = {
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-      organization_id: orgId,
-    };
-
-    const jwtToken = jwt.sign(jwtPayload, process.env.JWT_SECRET || 'your_secret_key', { expiresIn: '1d' });
-
-    res.status(201).json({ 
-      message: 'User registered successfully',
-      token: jwtToken,
-      user: {
-        id: user.id,
-        email: user.email,
-        fullName: user.full_name,
-        role: user.role,
-        learnerType: learner_type || null,
-        profilePic: profile_pic || null,
-      }
-    });
-  } catch (error) {
-    console.error('Google register error:', error);
-    res.status(500).json({ error: 'Internal server error during Google register' });
-  }
-};
-
 // Forgot Password Logic
 const forgotPassword = async (req, res) => {
   try {
@@ -1311,7 +1207,6 @@ const submitQuiz = async (req, res) => {
 app.post('/api/accounts/register', registerUser);
 app.post('/api/accounts/login', loginUser);
 app.post('/api/accounts/google-login', googleLoginUser);
-app.post('/api/accounts/google-register', googleRegisterUser);
 app.post('/api/forgot-password', forgotPassword);
 app.get('/api/verify-reset-token/:token', verifyResetToken);
 app.post('/api/reset-password-with-token', resetPasswordWithToken);
