@@ -173,19 +173,7 @@ function Register(){
           </div>
 
           <h2 className="text-3xl lg:text-4xl font-bold text-[#0F2F2B] mb-3">Create account</h2>
-          <p className="text-sm lg:text-base text-slate-600 mb-8">Join us and start your journey today.</p>
-
-          <div className="flex justify-center w-full mb-8">
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={handleGoogleError}
-              shape="rectangular"
-              size="large"
-              theme="outline"
-              text="signup_with"
-              width="400"
-            />
-          </div>
+          <p className="text-sm lg:text-base text-slate-600 mb-12">Join us and start your journey today.</p>
           
           <form onSubmit={handleRegister} className="flex flex-col gap-6">
             <div>
@@ -353,6 +341,19 @@ function Register(){
               Create Account <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </button>
           </form>
+
+          <div className="flex justify-center w-full mt-6">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+              type="standard"
+              shape="rectangular"
+              size="large"
+              theme="outline"
+              text="signup_with"
+              width="400"
+            />
+          </div>
           
           <div className="mt-8 text-center text-sm font-medium text-slate-600 pb-4">
             Already have an account? <Link to="/login" className="text-[#0F2F2B] hover:text-[#123A38] font-bold ml-1">Login here</Link>
