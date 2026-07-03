@@ -837,14 +837,19 @@ function StudentCourses() {
                     return (
                     <div key={q.id} className={`p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3 text-sm transition-all ${!isUnlocked ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
                       <div className="font-bold text-slate-800 flex justify-between items-center">
-                        <span>{idx + 1}. {q.text}</span>
+                        <span>
+                          {idx + 1}. {q.text}
+                          {q.question_type?.toLowerCase() === 'multiple' && (
+                            <span className="ml-2 text-[10px] uppercase font-bold text-slate-500 bg-slate-200 px-1.5 py-0.5 rounded">Multiple Answers</span>
+                          )}
+                        </span>
                         {!isUnlocked && <Lock size={14} className="text-slate-400" />}
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {['A', 'B', 'C', 'D'].map(k => {
                           const val = q[`option_${k.toLowerCase()}`];
                           if (!val) return null;
-                          const isMult = q.question_type === 'multiple';
+                          const isMult = q.question_type?.toLowerCase() === 'multiple';
                           const isSel = isMult ? (quizAnswers[q.id] || []).includes(k) : quizAnswers[q.id] === k;
                           return (
                             <label key={k} className={`flex items-center gap-3 p-3 rounded-lg border bg-white cursor-pointer transition ${isSel ? 'border-blue-500 bg-blue-50/30' : 'border-slate-200 hover:bg-slate-100'}`}>

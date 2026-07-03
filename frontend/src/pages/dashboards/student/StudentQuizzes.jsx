@@ -111,12 +111,19 @@ function StudentQuizzes() {
         <div className="space-y-6">
           {questions.map((q, idx) => (
             <div key={q.id} className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-              <h3 className="text-lg font-bold text-slate-800">{idx + 1}. {q.text}</h3>
-              <div className="space-y-3">
+              <div className="font-bold text-slate-800 flex justify-between items-center">
+                <span>
+                  {idx + 1}. {q.text}
+                  {q.question_type?.toLowerCase() === 'multiple' && (
+                    <span className="ml-2 text-[10px] uppercase font-bold text-slate-500 bg-slate-200 px-1.5 py-0.5 rounded">Multiple Answers</span>
+                  )}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {['A', 'B', 'C', 'D'].map(optKey => {
                   const optText = q[`option_${optKey.toLowerCase()}`];
                   if (!optText) return null;
-                  const isMult = q.question_type === 'multiple';
+                  const isMult = q.question_type?.toLowerCase() === 'multiple';
                   const isChecked = isMult ? (quizAnswers[q.id] || []).includes(optKey) : quizAnswers[q.id] === optKey;
                   return (
                     <label key={optKey} className={`flex items-center gap-4 p-4 border rounded-xl cursor-pointer transition-colors ${isChecked ? 'bg-blue-50 border-blue-400 text-blue-900' : 'border-slate-200 hover:bg-slate-50'}`}>
