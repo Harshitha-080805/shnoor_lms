@@ -1357,6 +1357,11 @@ const storage = multer.diskStorage({
     cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
   }
 });
+
+pool.query('ALTER TABLE lessons ADD COLUMN IF NOT EXISTS vtt_file VARCHAR(255);')
+  .then(() => console.log('DB Schema verified: vtt_file column is present.'))
+  .catch(err => console.error('Migration error:', err.message));
+
 const upload = multer({ storage: storage });
 
 app.use('/uploads', express.static('uploads'));
@@ -1687,6 +1692,7 @@ app.put('/api/courses/lessons/:lessonId', authMiddleware(['INSTRUCTOR']), upload
   let audio_file = null;
   let image_file = null;
   let document_file = null;
+  let vtt_file = null;
 
   if (req.files && req.files.length > 0) {
     for (const file of req.files) {
@@ -1694,6 +1700,7 @@ app.put('/api/courses/lessons/:lessonId', authMiddleware(['INSTRUCTOR']), upload
       if (file.fieldname === 'audio_file') audio_file = file.path;
       if (file.fieldname === 'image_file') image_file = file.path;
       if (file.fieldname === 'document_file') document_file = file.path;
+      if (file.fieldname === 'vtt_file') vtt_file = file.path;
     }
   }
 
@@ -1710,10 +1717,11 @@ app.put('/api/courses/lessons/:lessonId', authMiddleware(['INSTRUCTOR']), upload
           video_file = COALESCE($8, video_file),
           audio_file = COALESCE($9, audio_file),
           image_file = COALESCE($10, image_file),
-          document_file = COALESCE($11, document_file)
-      WHERE id = $12 RETURNING *
+          document_file = COALESCE($11, document_file),
+          vtt_file = COALESCE($12, vtt_file)
+      WHERE id = $13 RETURNING *
     `;
-    const values = [title, content_type ? content_type.toUpperCase() : null, text_content, video_url, audio_url, image_url, document_url, video_file, audio_file, image_file, document_file, lessonId];
+    const values = [title, content_type ? content_type.toUpperCase() : null, text_content, video_url, audio_url, image_url, document_url, video_file, audio_file, image_file, document_file, vtt_file, lessonId];
     const result = await pool.query(query, values);
     if (result.rowCount === 0) return res.status(404).json({ error: 'Lesson not found' });
     res.json(result.rows[0]);
@@ -1904,6 +1912,7 @@ app.post('/api/courses/modules/:moduleId/lessons', authMiddleware(['INSTRUCTOR']
   let audio_file = null;
   let image_file = null;
   let document_file = null;
+  let vtt_file = null;
 
   if (req.files) {
     req.files.forEach(f => {
@@ -1911,6 +1920,7 @@ app.post('/api/courses/modules/:moduleId/lessons', authMiddleware(['INSTRUCTOR']
       if (f.fieldname === 'audio_file') audio_file = f.path;
       if (f.fieldname === 'image_file') image_file = f.path;
       if (f.fieldname === 'document_file') document_file = f.path;
+      if (f.fieldname === 'vtt_file') vtt_file = f.path;
     });
   }
 
@@ -1927,12 +1937,12 @@ app.post('/api/courses/modules/:moduleId/lessons', authMiddleware(['INSTRUCTOR']
     if (checkResult.rows[0].instructor_id !== req.user.userId) return res.status(403).json({ error: 'Access denied' });
 
     const insertQuery = `
-      INSERT INTO lessons (module_id, title, content_type, text_content, video_url, video_file, audio_url, audio_file, image_url, image_file, document_url, document_file, "order")
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      INSERT INTO lessons (module_id, title, content_type, text_content, video_url, video_file, audio_url, audio_file, image_url, image_file, document_url, document_file, vtt_file, "order")
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *
     `;
     const insertResult = await pool.query(insertQuery, [
-      moduleId, title, (content_type || 'TEXT').toUpperCase(), text_content, video_url, video_file, audio_url, audio_file, image_url, image_file, document_url, document_file, order || 0
+      moduleId, title, (content_type || 'TEXT').toUpperCase(), text_content, video_url, video_file, audio_url, audio_file, image_url, image_file, document_url, document_file, vtt_file, order || 0
     ]);
 
     await pool.query('UPDATE courses SET is_approved = false, is_published = false WHERE id = $1', [checkResult.rows[0].course_id]);
