@@ -1,7 +1,7 @@
 import React,{useState,useEffect}from"react";
 import api from '../../../api';
 import{useParams,useNavigate}from"react-router-dom";
-import{ArrowLeft,Plus,Video,FileText,File,Save,Send,Trash,Image,Music,X, Trash2}from"lucide-react";
+import{ArrowLeft,Plus,Video,FileText,File,Save,Send,Trash,Image,Music,X, Trash2, Edit2}from"lucide-react";
 function CourseBuilder(){
   const{courseId}=useParams();
   const navigate=useNavigate();
@@ -45,6 +45,9 @@ function CourseBuilder(){
   const[optC,setOptC]=useState('');
   const[optD,setOptD]=useState('');
   const[correct,setCorrect]=useState('');
+  
+  const [editLesId, setEditLesId] = useState(null);
+  const [editQuesId, setEditQuesId] = useState(null);
 
   // Advanced Exam State Variables
   const [courseExam, setCourseExam] = useState(null);
@@ -252,13 +255,19 @@ function CourseBuilder(){
       formData.append("vtt_file", lesVttFile);
     }
     try{
-      const res=await api.post(`/api/courses/modules/${selectedModId}/lessons`, formData);
+      let res;
+      if (editLesId) {
+        res = await api.put(`/api/courses/lessons/${editLesId}`, formData);
+      } else {
+        res = await api.post(`/api/courses/modules/${selectedModId}/lessons`, formData);
+      }
       if((res.status >= 200 && res.status < 300)){
         setLesTitle('');
         setLesText('');
         setLesUrl('');
         setLesFile(null);
         setLesVttFile(null);
+        setEditLesId(null);
         setShowLesModal(false);
         loadCourse();
       }
@@ -289,7 +298,7 @@ function CourseBuilder(){
     e.preventDefault();
     if(!qText.trim()||!optA||!optB||!correct)return;
     try{
-      const res=await api.post(`/api/courses/quizzes/${selectedQuizId}/questions`, {
+      const payload = {
         text:qText,
         question_type:qType,
         option_a:optA,
@@ -297,7 +306,13 @@ function CourseBuilder(){
         option_c:optC,
         option_d:optD,
         correct_answers:correct
-      });
+      };
+      let res;
+      if (editQuesId) {
+        res = await api.put(`/api/courses/quizzes/questions/${editQuesId}`, payload);
+      } else {
+        res = await api.post(`/api/courses/quizzes/${selectedQuizId}/questions`, payload);
+      }
       if((res.status >= 200 && res.status < 300)){
         setQText('');
         setQType('single');
@@ -306,6 +321,7 @@ function CourseBuilder(){
         setOptC('');
         setOptD('');
         setCorrect('');
+        setEditQuesId(null);
         setShowQuesModal(false);
         loadCourse();
       }
@@ -446,6 +462,56 @@ function CourseBuilder(){
       await api.put(`/api/courses/${courseId}/modules/reorder`, {modules:updated.map(m=>({id:m.id,order:m.order}))});
       await loadCourse();
     }catch(e){}
+  };
+
+  const handleDeleteModule = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this module and all its contents?")) return;
+    try { await api.delete(`/api/courses/modules/${id}`); loadCourse(); } catch(e) {}
+  };
+  const handleEditModule = async (mod) => {
+    const newTitle = window.prompt("Edit Module Title:", mod.title);
+    if (newTitle && newTitle !== mod.title) {
+      try { await api.put(`/api/courses/modules/${mod.id}`, { title: newTitle }); loadCourse(); } catch(e) {}
+    }
+  };
+  const handleDeleteLesson = async (id) => {
+    if (!window.confirm("Delete this lesson?")) return;
+    try { await api.delete(`/api/courses/lessons/${id}`); loadCourse(); } catch(e) {}
+  };
+  const openEditLessonModal = (lesson) => {
+    setEditLesId(lesson.id);
+    setLesTitle(lesson.title);
+    setLesType(lesson.content_type);
+    setLesText(lesson.text_content || '');
+    setLesUrl(lesson.video_url || lesson.audio_url || lesson.image_url || lesson.document_url || '');
+    setSelectedModId(lesson.module_id);
+    setShowLesModal(true);
+  };
+  const handleDeleteQuiz = async (id) => {
+    if (!window.confirm("Delete this quiz?")) return;
+    try { await api.delete(`/api/courses/quizzes/${id}`); loadCourse(); } catch(e) {}
+  };
+  const handleEditQuiz = async (quiz) => {
+    const newTitle = window.prompt("Edit Quiz Title:", quiz.title);
+    if (newTitle && newTitle !== quiz.title) {
+      try { await api.put(`/api/courses/quizzes/${quiz.id}`, { title: newTitle }); loadCourse(); } catch(e) {}
+    }
+  };
+  const handleDeleteQuestion = async (id) => {
+    if (!window.confirm("Delete this question?")) return;
+    try { await api.delete(`/api/courses/quizzes/questions/${id}`); loadCourse(); } catch(e) {}
+  };
+  const openEditQuestionModal = (q, quizId) => {
+    setEditQuesId(q.id);
+    setQText(q.text);
+    setQType(q.question_type);
+    setOptA(q.option_a);
+    setOptB(q.option_b);
+    setOptC(q.option_c || '');
+    setOptD(q.option_d || '');
+    setCorrect(q.correct_answers || '');
+    setSelectedQuizId(quizId);
+    setShowQuesModal(true);
   };
   if(loading){
     return(
@@ -673,6 +739,8 @@ function CourseBuilder(){
                           {index<regularModules.length-1&&(
                             <button type="button" onClick={()=>handleMoveModule(index,'down')} className="text-[10px] bg-slate-200 hover:bg-slate-300 text-slate-700 px-2 py-0.5 rounded font-bold">▼ Down</button>
                           )}
+                          <button type="button" onClick={()=>handleEditModule(mod)} className="text-[10px] text-blue-500 hover:text-blue-700 bg-blue-50 px-2 py-0.5 rounded flex items-center gap-1"><Edit2 size={12}/> Edit</button>
+                          <button type="button" onClick={()=>handleDeleteModule(mod.id)} className="text-[10px] text-red-500 hover:text-red-700 bg-red-50 px-2 py-0.5 rounded flex items-center gap-1"><Trash2 size={12}/> Delete</button>
                         </div>
                       </div>
                       <div className="flex gap-2">
@@ -691,12 +759,20 @@ function CourseBuilder(){
                               <p className="text-xs text-slate-500 uppercase">{lesson.content_type}</p>
                             </div>
                           </div>
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => openEditLessonModal(lesson)} className="text-blue-500 hover:text-blue-700 p-1 bg-blue-50 rounded-full"><Edit2 size={14}/></button>
+                            <button onClick={() => handleDeleteLesson(lesson.id)} className="text-red-500 hover:text-red-700 p-1 bg-red-50 rounded-full"><Trash2 size={14}/></button>
+                          </div>
                         </div>
                       ))}
                       {mod.quizzes?.map(quiz=>(
                         <div key={quiz.id} className="p-3 border border-indigo-100 bg-indigo-50/20 rounded-xl space-y-2">
                           <div className="flex items-center justify-between">
-                            <div className="text-sm font-bold text-indigo-900">Quiz: {quiz.title}</div>
+                            <div className="flex items-center gap-3">
+                              <div className="text-sm font-bold text-indigo-900">Quiz: {quiz.title}</div>
+                              <button onClick={() => handleEditQuiz(quiz)} className="text-blue-500 hover:text-blue-700"><Edit2 size={12}/></button>
+                              <button onClick={() => handleDeleteQuiz(quiz.id)} className="text-red-500 hover:text-red-700"><Trash2 size={12}/></button>
+                            </div>
                             <div className="flex items-center gap-2">
                               <span className="text-xs text-slate-500 font-medium">Pass Score:</span>
                               <input type="number" min="0" max="100" value={quiz.passing_score||60} onChange={async(e)=>{const val=parseInt(e.target.value)||60;await handleUpdateQuizScore(quiz.id,val);}} className="w-12 p-0.5 border rounded text-xs text-center bg-white font-bold text-indigo-700"/>
@@ -706,7 +782,13 @@ function CourseBuilder(){
                           </div>
                           <div className="space-y-1.5">
                             {quiz.questions?.map((q,qIdx)=>(
-                              <div key={q.id} className="text-xs text-slate-600 pl-3">{qIdx+1}. {q.text}</div>
+                              <div key={q.id} className="text-xs text-slate-600 pl-3 flex justify-between items-center group bg-indigo-50/50 p-2 rounded-lg border border-transparent hover:border-indigo-100">
+                                <span>{qIdx+1}. {q.text}</span>
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button onClick={() => openEditQuestionModal(q, quiz.id)} className="text-blue-500 hover:text-blue-700 p-1 bg-white rounded-full shadow-sm"><Edit2 size={12}/></button>
+                                  <button onClick={() => handleDeleteQuestion(q.id)} className="text-red-500 hover:text-red-700 p-1 bg-white rounded-full shadow-sm"><Trash2 size={12}/></button>
+                                </div>
+                              </div>
                             ))}
                           </div>
                         </div>

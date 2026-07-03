@@ -1849,6 +1849,134 @@ app.post('/api/courses/quizzes/:quizId/questions', authMiddleware(['INSTRUCTOR']
 });
 
 // Enrollment routes
+// PUT & DELETE for Modules
+app.put('/api/courses/modules/:moduleId', authMiddleware(['INSTRUCTOR']), async (req, res) => {
+  const { moduleId } = req.params;
+  const { title } = req.body;
+  try {
+    const result = await pool.query('UPDATE modules SET title = COALESCE($1, title) WHERE id = $2 RETURNING *', [title, moduleId]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Module not found' });
+    res.json(result.rows[0]);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/courses/modules/:moduleId', authMiddleware(['INSTRUCTOR']), async (req, res) => {
+  const { moduleId } = req.params;
+  try {
+    const result = await pool.query('DELETE FROM modules WHERE id = $1 RETURNING *', [moduleId]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Module not found' });
+    res.json({ message: 'Module deleted successfully' });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// PUT & DELETE for Lessons
+app.put('/api/courses/lessons/:lessonId', authMiddleware(['INSTRUCTOR']), upload.any(), async (req, res) => {
+  const { lessonId } = req.params;
+  const { title, content_type, text_content, video_url, audio_url, image_url, document_url, duration } = req.body;
+  let finalVideoUrl = video_url;
+  let finalAudioUrl = audio_url;
+  let finalImageUrl = image_url;
+  let finalDocumentUrl = document_url;
+  let finalVttUrl = null;
+
+  if (req.files && req.files.length > 0) {
+    for (const file of req.files) {
+      if (file.fieldname === 'video_file') finalVideoUrl = `/uploads/${file.filename}`;
+      if (file.fieldname === 'audio_file') finalAudioUrl = `/uploads/${file.filename}`;
+      if (file.fieldname === 'image_file') finalImageUrl = `/uploads/${file.filename}`;
+      if (file.fieldname === 'document_file') finalDocumentUrl = `/uploads/${file.filename}`;
+      if (file.fieldname === 'vtt_file') finalVttUrl = `/uploads/${file.filename}`;
+    }
+  }
+
+  try {
+    const query = `
+      UPDATE lessons 
+      SET title = COALESCE($1, title),
+          content_type = COALESCE($2, content_type),
+          text_content = COALESCE($3, text_content),
+          video_url = COALESCE($4, video_url),
+          audio_url = COALESCE($5, audio_url),
+          image_url = COALESCE($6, image_url),
+          document_url = COALESCE($7, document_url),
+          vtt_url = COALESCE($8, vtt_url),
+          duration = COALESCE($9, duration)
+      WHERE id = $10 RETURNING *
+    `;
+    const values = [title, content_type, text_content, finalVideoUrl, finalAudioUrl, finalImageUrl, finalDocumentUrl, finalVttUrl, duration, lessonId];
+    const result = await pool.query(query, values);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Lesson not found' });
+    res.json(result.rows[0]);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/courses/lessons/:lessonId', authMiddleware(['INSTRUCTOR']), async (req, res) => {
+  const { lessonId } = req.params;
+  try {
+    const result = await pool.query('DELETE FROM lessons WHERE id = $1 RETURNING *', [lessonId]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Lesson not found' });
+    res.json({ message: 'Lesson deleted successfully' });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// PUT & DELETE for Quizzes
+app.put('/api/courses/quizzes/:quizId', authMiddleware(['INSTRUCTOR']), async (req, res) => {
+  const { quizId } = req.params;
+  const { title, passing_score } = req.body;
+  try {
+    const query = `
+      UPDATE quizzes
+      SET title = COALESCE($1, title),
+          passing_score = COALESCE($2, passing_score)
+      WHERE id = $3 RETURNING *
+    `;
+    const result = await pool.query(query, [title, passing_score, quizId]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Quiz not found' });
+    res.json(result.rows[0]);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/courses/quizzes/:quizId', authMiddleware(['INSTRUCTOR']), async (req, res) => {
+  const { quizId } = req.params;
+  try {
+    const result = await pool.query('DELETE FROM quizzes WHERE id = $1 RETURNING *', [quizId]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Quiz not found' });
+    res.json({ message: 'Quiz deleted successfully' });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// PUT & DELETE for Questions
+app.put('/api/courses/quizzes/questions/:questionId', authMiddleware(['INSTRUCTOR']), async (req, res) => {
+  const { questionId } = req.params;
+  const { text, question_type, option_a, option_b, option_c, option_d, correct_answers } = req.body;
+  try {
+    const query = `
+      UPDATE quiz_questions
+      SET text = COALESCE($1, text),
+          question_type = COALESCE($2, question_type),
+          option_a = COALESCE($3, option_a),
+          option_b = COALESCE($4, option_b),
+          option_c = COALESCE($5, option_c),
+          option_d = COALESCE($6, option_d),
+          correct_answers = COALESCE($7, correct_answers)
+      WHERE id = $8 RETURNING *
+    `;
+    const values = [text, question_type, option_a, option_b, option_c, option_d, correct_answers, questionId];
+    const result = await pool.query(query, values);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Question not found' });
+    res.json(result.rows[0]);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/courses/quizzes/questions/:questionId', authMiddleware(['INSTRUCTOR']), async (req, res) => {
+  const { questionId } = req.params;
+  try {
+    const result = await pool.query('DELETE FROM quiz_questions WHERE id = $1 RETURNING *', [questionId]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Question not found' });
+    res.json({ message: 'Question deleted successfully' });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.post('/api/courses/:courseId/prerequisites', authMiddleware(), saveCoursePrerequisites);
 app.post('/api/courses/:courseId/enroll', authMiddleware(), enrollCourse);
 
