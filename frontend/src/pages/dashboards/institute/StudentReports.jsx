@@ -171,7 +171,7 @@ function StudentReports() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-base-white p-6 rounded-2xl border border-surface-200 shadow-sm">
             <h3 className="text-sm font-bold text-surface-800 mb-6 uppercase tracking-wider">Top 5 Courses by Enrollment</h3>
-            <div className="h-64">
+            <div className="h-56">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={barData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <XAxis dataKey="name" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
@@ -188,15 +188,15 @@ function StudentReports() {
 
           <div className="bg-base-white p-6 rounded-2xl border border-surface-200 shadow-sm flex flex-col">
             <h3 className="text-sm font-bold text-surface-800 mb-6 uppercase tracking-wider">Overall Completion Status</h3>
-            <div className="h-64 flex-1 flex items-center justify-center">
+            <div className="h-56 flex-1 flex items-center justify-center">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={pieData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
+                    innerRadius={55}
+                    outerRadius={85}
                     paddingAngle={5}
                     dataKey="value"
                   >
