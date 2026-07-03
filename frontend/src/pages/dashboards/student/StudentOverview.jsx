@@ -185,7 +185,10 @@ function StudentOverview() {
             )}
 
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="bg-base-white p-6 rounded-2xl border border-surface-200 shadow-sm flex items-center gap-4">
+              <div 
+                onClick={() => navigate('/student-dashboard/courses')}
+                className="bg-base-white p-6 rounded-2xl border border-surface-200 shadow-sm flex items-center gap-4 cursor-pointer hover:shadow-md hover:border-brand-300 transition-all"
+              >
                 <div className="p-4 bg-brand-50 text-brand-600 rounded-xl">
                   <BookOpen size={28} />
                 </div>
@@ -194,7 +197,10 @@ function StudentOverview() {
                   <h4 className="text-2xl font-bold text-surface-900">{stats.enrolledCourses}</h4>
                 </div>
               </div>
-              <div className="bg-base-white p-6 rounded-2xl border border-surface-200 shadow-sm flex items-center gap-4">
+              <div 
+                onClick={() => navigate('/student-dashboard/courses')}
+                className="bg-base-white p-6 rounded-2xl border border-surface-200 shadow-sm flex items-center gap-4 cursor-pointer hover:shadow-md hover:border-success-300 transition-all"
+              >
                 <div className="p-4 bg-success-50 text-success-600 rounded-xl">
                   <PlayCircle size={28} />
                 </div>
@@ -203,7 +209,10 @@ function StudentOverview() {
                   <h4 className="text-2xl font-bold text-surface-900">{stats.lessonsCompleted}/{stats.totalLessons}</h4>
                 </div>
               </div>
-              <div className="bg-base-white p-6 rounded-2xl border border-surface-200 shadow-sm flex items-center gap-4">
+              <div 
+                onClick={() => navigate('/student-dashboard/quizzes')}
+                className="bg-base-white p-6 rounded-2xl border border-surface-200 shadow-sm flex items-center gap-4 cursor-pointer hover:shadow-md hover:border-warning-300 transition-all"
+              >
                 <div className="p-4 bg-warning-50 text-warning-600 rounded-xl">
                   <Target size={28} />
                 </div>
@@ -212,7 +221,10 @@ function StudentOverview() {
                   <h4 className="text-2xl font-bold text-surface-900">{stats.quizzesPassed}/{stats.totalQuizzes}</h4>
                 </div>
               </div>
-              <div className="bg-base-white p-6 rounded-2xl border border-surface-200 shadow-sm flex items-center gap-4">
+              <div 
+                onClick={() => navigate('/student-dashboard/certificates')}
+                className="bg-base-white p-6 rounded-2xl border border-surface-200 shadow-sm flex items-center gap-4 cursor-pointer hover:shadow-md hover:border-info-300 transition-all"
+              >
                 <div className="p-4 bg-info-50 text-info-600 rounded-xl">
                   <Award size={28} />
                 </div>
@@ -221,7 +233,10 @@ function StudentOverview() {
                   <h4 className="text-2xl font-bold text-surface-900">{stats.certsCount}</h4>
                 </div>
               </div>
-              <div className="bg-base-white p-6 rounded-2xl border border-surface-200 shadow-sm flex items-center gap-4">
+              <div 
+                onClick={() => navigate('/student-dashboard/exams')}
+                className="bg-base-white p-6 rounded-2xl border border-surface-200 shadow-sm flex items-center gap-4 cursor-pointer hover:shadow-md hover:border-accent-300 transition-all"
+              >
                 <div className="p-4 bg-accent-50 text-accent-600 rounded-xl">
                   <ClipboardList size={28} />
                 </div>
@@ -230,7 +245,10 @@ function StudentOverview() {
                   <h4 className="text-2xl font-bold text-surface-900">{stats.examsPassed}/{stats.totalExams}</h4>
                 </div>
               </div>
-              <div className="bg-base-white p-6 rounded-2xl border border-surface-200 shadow-sm flex items-center gap-4">
+              <div 
+                onClick={() => navigate('/student-dashboard/assignments')}
+                className="bg-base-white p-6 rounded-2xl border border-surface-200 shadow-sm flex items-center gap-4 cursor-pointer hover:shadow-md hover:border-danger-300 transition-all"
+              >
                 <div className="p-4 bg-danger-50 text-danger-600 rounded-xl">
                   <FileText size={28} />
                 </div>
