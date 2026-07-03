@@ -89,7 +89,7 @@ function InstituteExams() {
           </div>
           <div>
             <p className="text-blue-200 text-sm font-medium">Average Score</p>
-            <h3 className="text-2xl font-bold text-white">{stats?.averageScore || 0}%</h3>
+            <h3 className="text-2xl font-bold text-white">{Math.round(stats?.averageScore || 0)}%</h3>
           </div>
         </div>
       </div>
@@ -143,7 +143,7 @@ function InstituteExams() {
                     <td className="p-4 font-bold text-slate-800">{attempt.student_name}</td>
                     <td className="p-4">{attempt.exam_title}</td>
                     <td className="p-4 text-slate-500">{attempt.course_title}</td>
-                    <td className="p-4 font-black text-blue-950">{parseFloat(attempt.total_score).toFixed(1)}%</td>
+                    <td className="p-4 font-black text-blue-950">{Math.round(parseFloat(attempt.total_score || 0))}%</td>
                     <td className="p-4">
                       {attempt.status === 'PASSED' ? (
                         <span className="flex items-center gap-1 text-green-600 font-bold bg-green-50 px-2 py-1 rounded-md w-fit"><CheckCircle size={14} /> PASSED</span>
