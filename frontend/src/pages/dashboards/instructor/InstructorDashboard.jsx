@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, Link, Outlet, useLocation } from "react-router-dom";
 import logo from "../../../assets/shnoor-logo.jpeg";
 import GlobalSearch from "../../../components/GlobalSearch";
+import NotificationDropdown from "../../../components/NotificationDropdown";
 import { chatService } from "../../../services/chatService";
 import {
   LayoutDashboard,
@@ -174,6 +175,7 @@ function InstructorDashboard() {
           </div>
           <div className="flex items-center gap-6">
             <GlobalSearch />
+            <NotificationDropdown />
             <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
               <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-800 border border-blue-200 flex items-center justify-center font-bold text-sm overflow-hidden">
                 {profilePic ? (

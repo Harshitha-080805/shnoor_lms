@@ -1,5 +1,6 @@
 const express = require('express');
 const pool = require('./db');
+const { createNotification } = require('./notificationRoutes');
 const bcrypt = require('bcryptjs');
 
 module.exports = (authMiddleware) => {
@@ -66,6 +67,16 @@ module.exports = (authMiddleware) => {
         "UPDATE users SET is_approved = true, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND role IN ('LEARNER', 'INSTRUCTOR') AND organization_id = $2 RETURNING id, email, full_name, role, is_approved",
         [id, orgId]
       );
+
+      try {
+        if (result.rows.length > 0) {
+          if (result.rows[0].role === 'INSTRUCTOR') {
+            await createNotification(result.rows[0].id, 'Account Approved', `Your instructor account has been approved by the Organization Admin.`, 'ACCOUNT_APPROVAL', '/instructor-dashboard');
+          } else if (result.rows[0].role === 'LEARNER') {
+            await createNotification(result.rows[0].id, 'Account Approved', `Your learner account has been approved!`, 'ACCOUNT_APPROVAL', '/user-dashboard');
+          }
+        }
+      } catch(e) { console.error('Notification error', e); }
 
       const chatEvents = require('./chatEvents');
       await chatEvents.addUserToSystemGroup(id);
@@ -139,7 +150,18 @@ module.exports = (authMiddleware) => {
       }
 
       if (action === 'approve') {
-        await pool.query("UPDATE courses SET is_approved = true WHERE id = $1", [courseId]);
+        const courseRes = await pool.query("UPDATE courses SET is_approved = true WHERE id = $1 RETURNING instructor_id, title", [courseId]);
+        
+        try {
+          if (courseRes.rows.length > 0) {
+            await createNotification(courseRes.rows[0].instructor_id, 'Course Published', `Your course "${courseRes.rows[0].title}" has been approved by your Organization Admin.`, 'COURSE_STATUS', '/instructor-dashboard');
+            
+            const learners = await pool.query("SELECT id FROM users WHERE role = 'LEARNER' AND organization_id = $1", [orgId]);
+            for (let l of learners.rows) {
+              await createNotification(l.id, 'New Course Available', `A new course "${courseRes.rows[0].title}" is now available in your organization.`, 'NEW_COURSE', '/user-dashboard');
+            }
+          }
+        } catch(e) { console.error('Notification error', e); }
         res.json({ message: 'Course approved successfully' });
       } else if (action === 'reject') {
         await pool.query("DELETE FROM courses WHERE id = $1", [courseId]);
@@ -280,6 +302,14 @@ module.exports = (authMiddleware) => {
         "INSERT INTO announcements (organization_id, title, content, author_role, author_id) VALUES ($1, $2, $3, 'ORGANIZATION_ADMIN', $4) RETURNING *",
         [orgId, title, content, req.user.userId]
       );
+      
+      try {
+        const learners = await pool.query("SELECT id FROM users WHERE role = 'LEARNER' AND organization_id = $1", [orgId]);
+        for (let l of learners.rows) {
+          await createNotification(l.id, 'New Announcement', `A new organization announcement: ${title}`, 'ANNOUNCEMENT', '/user-dashboard');
+        }
+      } catch(e) { console.error('Notification error', e); }
+
       res.status(201).json(result.rows[0]);
     } catch (err) {
       console.error(err);

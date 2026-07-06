@@ -2,6 +2,7 @@ const express = require('express');
 const axios = require('axios');
 const router = express.Router();
 const pool = require('./db');
+const { createNotification } = require('./notificationRoutes');
 const cp = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -251,7 +252,17 @@ module.exports = (authMiddleware) => {
       }
 
       await pool.query('COMMIT');
-      res.json({ message: 'Practice Arena saved successfully', id: arenaId });
+      
+      try {
+        await createNotification(instructorId, 'Practice Arena Created', `Your practice arena "${title}" was created successfully.`, 'PRACTICE_ARENA', '/instructor-dashboard');
+        
+        const learners = await pool.query("SELECT id FROM users WHERE role = 'LEARNER'");
+        for (let l of learners.rows) {
+          await createNotification(l.id, 'New Practice Arena', `A new practice arena "${title}" is available.`, 'PRACTICE_ARENA', '/user-dashboard');
+        }
+      } catch(e) { console.error('Notification error', e); }
+
+      res.status(201).json({ id: arenaId, message: 'Practice Arena created successfully' });
     } catch (e) {
       await pool.query('ROLLBACK');
       console.error(e);

@@ -1,4 +1,5 @@
 const pool = require('../db');
+const { createNotification } = require('../notificationRoutes');
 
 /**
  * @param {string|number} courseId
@@ -134,6 +135,14 @@ const checkAndMarkCourseCompletion = async (courseId, studentId) => {
 
     await pool.query('UPDATE enrollments SET completed_at = CURRENT_TIMESTAMP WHERE id = $1', [enrollRes.rows[0].id]);
     console.log(`Course ${courseId} auto-completed for student ${studentId}`);
+    
+    try {
+      const cQuery = await pool.query('SELECT title FROM courses WHERE id = $1', [courseId]);
+      if (cQuery.rows.length > 0) {
+        await createNotification(studentId, 'Course Completed', `Congratulations! You have successfully completed the course "${cQuery.rows[0].title}".`, 'COURSE_COMPLETED', '/user-dashboard');
+      }
+    } catch(e) { console.error('Notification error', e); }
+    
   } catch (err) {
     console.error('Error auto-completing course', err);
   }

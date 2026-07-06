@@ -14,6 +14,7 @@ const chatRoutes = require('./chatRoutes');
 const orgAdmin = require('./orgAdmin');
 const searchRoutes = require('./searchRoutes');
 const groupRoutes = require('./groupRoutes');
+const { router: notificationRoutes, createNotification } = require('./notificationRoutes');
 const path = require('path');
 
 dotenv.config();
@@ -136,6 +137,16 @@ const registerUser = async (req, res) => {
       employee_id || null
     ]);
     const user = newUserQuery.rows[0];
+
+    try {
+      await createNotification(null, 'New User Registration', `User ${email} registered and requires approval.`, 'USER_APPROVAL', '/admin-dashboard');
+      if (orgId) {
+        const orgAdminQuery = await pool.query('SELECT id FROM users WHERE organization_id = $1 AND role = $2', [orgId, 'ORGANIZATION_ADMIN']);
+        if (orgAdminQuery.rows.length > 0) {
+          await createNotification(orgAdminQuery.rows[0].id, 'New User Registration', `User ${email} registered to your organization and requires approval.`, 'USER_APPROVAL', '/org-dashboard');
+        }
+      }
+    } catch(e) { console.error('Notification error', e); }
 
     res.status(201).json({ message: 'User registered successfully', userId: user.id });
   } catch (error) {
@@ -491,8 +502,18 @@ const reviewCourse = async (req, res) => {
 
   try {
     if (action === 'approve') {
-      await pool.query('UPDATE courses SET is_approved = true WHERE id = $1', [courseId]);
-      res.json({ message: 'Course approved successfully' });
+      const courseRes = await pool.query('UPDATE courses SET is_approved = true WHERE id = $1 RETURNING instructor_id, title', [courseId]);
+      if (courseRes.rows.length > 0) {
+        try {
+          await createNotification(courseRes.rows[0].instructor_id, 'Course Published', `Your course "${courseRes.rows[0].title}" has been approved and published.`, 'COURSE_STATUS', '/instructor-dashboard');
+          
+          const learners = await pool.query("SELECT id FROM users WHERE role = 'LEARNER'");
+          for (let l of learners.rows) {
+            await createNotification(l.id, 'New Course Available', `A new course "${courseRes.rows[0].title}" is now available.`, 'NEW_COURSE', '/user-dashboard');
+          }
+        } catch(e) { console.error(e); }
+      }
+      res.json({ success: true, message: 'Course approved successfully' });
     } else if (action === 'reject') {
       await pool.query('DELETE FROM courses WHERE id = $1', [courseId]);
       res.json({ message: 'Course rejected and deleted' });
@@ -534,7 +555,12 @@ const reviewCertificate = async (req, res) => {
 
   try {
     if (action === 'approve') {
-      await pool.query("UPDATE certificate_requests SET status = 'APPROVED' WHERE id = $1", [requestId]);
+      const certRes = await pool.query("UPDATE certificate_requests SET status = 'APPROVED' WHERE id = $1 RETURNING student_id", [requestId]);
+      try {
+        if (certRes.rows.length > 0) {
+          await createNotification(certRes.rows[0].student_id, 'Certificate Approved', `Your certificate request has been approved!`, 'CERTIFICATE', '/user-dashboard');
+        }
+      } catch(e) { console.error(e); }
       res.json({ message: 'Certificate approved' });
     } else if (action === 'reject') {
       await pool.query("UPDATE certificate_requests SET status = 'REJECTED' WHERE id = $1", [requestId]);
@@ -558,11 +584,24 @@ const createAssessment = async (req, res) => {
     const courseCheck = await pool.query('SELECT * FROM courses WHERE id = $1 AND instructor_id = $2', [courseId, req.user.userId]);
     if (courseCheck.rows.length === 0) return res.status(403).json({ error: 'Access denied' });
 
-    const insertResult = await pool.query(
+    const result = await pool.query(
       'INSERT INTO assessments (course_id, title, description) VALUES ($1, $2, $3) RETURNING *',
       [courseId, title, description]
     );
-    res.status(201).json(insertResult.rows[0]);
+
+    try {
+      const courseQ = await pool.query('SELECT instructor_id FROM courses WHERE id = $1', [courseId]);
+      if (courseQ.rows.length > 0) {
+        await createNotification(courseQ.rows[0].instructor_id, 'New Assignment Created', `Assignment "${title}" was successfully created.`, 'ASSIGNMENT', '/instructor-dashboard');
+      }
+
+      const enrolledLearners = await pool.query('SELECT student_id FROM enrollments WHERE course_id = $1', [courseId]);
+      for (let learner of enrolledLearners.rows) {
+        await createNotification(learner.student_id, 'New Assignment', `A new assignment "${title}" has been added to your course.`, 'ASSIGNMENT', '/user-dashboard');
+      }
+    } catch(e) { console.error(e); }
+
+    res.status(201).json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
@@ -632,6 +671,16 @@ const gradeSubmission = async (req, res) => {
       'UPDATE assessment_submissions SET grade = $1, is_graded = true WHERE id = $2 RETURNING *',
       [grade, submissionId]
     );
+
+    try {
+      await createNotification(req.user.userId, 'Assignment Graded', `You have successfully graded a student assignment.`, 'GRADING', '/instructor-dashboard');
+      
+      const enrollQ = await pool.query('SELECT student_id FROM enrollments WHERE id = $1', [result.rows[0].enrollment_id]);
+      if (enrollQ.rows.length > 0) {
+        await createNotification(enrollQ.rows[0].student_id, 'Assignment Graded', `Your assignment has been graded.`, 'GRADING', '/user-dashboard');
+      }
+    } catch(e) { console.error(e); }
+
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
@@ -677,6 +726,19 @@ const requestCertificate = async (req, res) => {
       'INSERT INTO certificate_requests (enrollment_id) VALUES ($1) RETURNING *',
       [enrollmentId]
     );
+
+    try {
+      await createNotification(null, 'New Certificate Request', `A user has requested a certificate.`, 'CERTIFICATE_APPROVAL', '/admin-dashboard');
+      const studentQuery = await pool.query('SELECT organization_id FROM users WHERE id = $1', [studentId]);
+      if (studentQuery.rows.length > 0 && studentQuery.rows[0].organization_id) {
+        const oId = studentQuery.rows[0].organization_id;
+        const orgAdminQuery = await pool.query('SELECT id FROM users WHERE organization_id = $1 AND role = $2', [oId, 'ORGANIZATION_ADMIN']);
+        if (orgAdminQuery.rows.length > 0) {
+          await createNotification(orgAdminQuery.rows[0].id, 'New Certificate Request', `A learner from your organization has requested a certificate.`, 'CERTIFICATE_APPROVAL', '/org-dashboard');
+        }
+      }
+    } catch(e) { console.error('Notification error', e); }
+
     res.status(201).json(insertResult.rows[0]);
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
@@ -989,6 +1051,13 @@ const enrollCourse = async (req, res) => {
       [studentId, courseId]
     );
 
+    try {
+      const courseQ = await pool.query('SELECT instructor_id, title FROM courses WHERE id = $1', [courseId]);
+      if (courseQ.rows.length > 0) {
+        await createNotification(courseQ.rows[0].instructor_id, 'New Learner Enrolled', `A new learner enrolled in your course "${courseQ.rows[0].title}".`, 'ENROLLMENT', '/instructor-dashboard');
+      }
+    } catch(e) { console.error(e); }
+
     // Auto-add to course group
     try {
       const chatEvents = require('./chatEvents');
@@ -1189,6 +1258,11 @@ const submitQuiz = async (req, res) => {
     `;
     const attemptResult = await pool.query(attemptQuery, [enrollmentId, quizId, correctCount, totalQuestions, passed]);
 
+    try {
+      const statusText = passed ? 'passed' : 'failed';
+      await createNotification(studentId, 'Exam Result', `You have ${statusText} the exam.`, 'EXAM_RESULT', '/user-dashboard');
+    } catch(e) { console.error('Notification error', e); }
+
     const { checkAndMarkCourseCompletion } = require('./helpers/examValidation');
     await checkAndMarkCourseCompletion(quiz.course_id, studentId);
 
@@ -1304,14 +1378,23 @@ const getAllUsers = async (req, res) => {
 const approveUser = async (req, res) => {
   const { userId } = req.params;
   try {
-    const userRes = await pool.query('UPDATE users SET is_approved = true WHERE id = $1 RETURNING organization_id', [userId]);
-    if (userRes.rows.length > 0) {
-      const orgId = userRes.rows[0].organization_id;
-      const chatEvents = require('./chatEvents');
-      await chatEvents.addUserToSystemGroup(userId);
-      if (orgId) {
-        await chatEvents.addUserToOrgGroup(userId, orgId);
+    const userRes = await pool.query('UPDATE users SET is_approved = true WHERE id = $1 RETURNING organization_id, email, role', [userId]);
+
+    try {
+      if (userRes.rows.length > 0) {
+        if (userRes.rows[0].role === 'INSTRUCTOR') {
+          await createNotification(userId, 'Account Approved', `Your instructor account has been approved by the Admin.`, 'ACCOUNT_APPROVAL', '/instructor-dashboard');
+        } else if (userRes.rows[0].role === 'LEARNER') {
+          await createNotification(userId, 'Account Approved', `Your learner account has been approved! Welcome.`, 'ACCOUNT_APPROVAL', '/user-dashboard');
+        }
       }
+    } catch(e) { console.error(e); }
+
+    const orgId = userRes.rows.length > 0 ? userRes.rows[0].organization_id : null;
+    const chatEvents = require('./chatEvents');
+    await chatEvents.addUserToSystemGroup(userId);
+    if (orgId) {
+      await chatEvents.addUserToOrgGroup(userId, orgId);
     }
     res.json({ message: 'User approved' });
   } catch (error) {
@@ -1506,6 +1589,10 @@ app.post('/api/courses/', authMiddleware(['INSTRUCTOR']), upload.single('thumbna
     } catch (e) {
       console.log('Notice: Could not auto-create course chat group on course creation', e);
     }
+
+    try {
+      await createNotification(null, 'New Course Created', `Course "${title}" created and is pending approval.`, 'COURSE_APPROVAL', '/admin-dashboard');
+    } catch(e) { console.error('Notification error', e); }
 
     res.status(201).json(newCourse);
   } catch (error) {
@@ -2207,13 +2294,29 @@ app.post('/api/subscriptions', authMiddleware(), async (req, res) => {
         'INSERT INTO payments (user_id, amount, transaction_id, status) VALUES ($1, $2, $3, $4)',
         [userId, plan.price, transactionId, 'SUCCESS']
       );
+
+      try {
+        await createNotification(null, 'New Payment Received', `A payment of $${plan.price} was made. (TXN: ${transactionId})`, 'PAYMENT', '/admin-dashboard');
+      } catch(e) { console.error('Notification error', e); }
     }
 
     // Reactivate users whose access might have been revoked previously
     if (isOrg) {
       await pool.query("UPDATE users SET is_active = true WHERE organization_id = $1 AND role IN ('LEARNER', 'INSTRUCTOR')", [orgId]);
+      try {
+        const orgAdminQuery = await pool.query('SELECT id FROM users WHERE organization_id = $1 AND role = $2', [orgId, 'ORGANIZATION_ADMIN']);
+        if (orgAdminQuery.rows.length > 0) {
+          await createNotification(orgAdminQuery.rows[0].id, 'Subscription Updated', `Your organization's subscription plan is now active.`, 'SUBSCRIPTION', '/org-dashboard');
+        }
+      } catch(e) { console.error(e); }
     } else {
       await pool.query("UPDATE users SET is_active = true WHERE id = $1 AND role IN ('LEARNER', 'INSTRUCTOR')", [userId]);
+      try {
+        const checkUser = await pool.query("SELECT role FROM users WHERE id = $1", [userId]);
+        if (checkUser.rows.length > 0 && checkUser.rows[0].role === 'LEARNER') {
+          await createNotification(userId, 'Subscription Updated', `Your subscription plan is now active.`, 'SUBSCRIPTION', '/user-dashboard');
+        }
+      } catch(e) { console.error(e); }
     }
 
     res.status(201).json(insertSub.rows[0]);
@@ -2314,7 +2417,20 @@ app.post('/api/admin/announcements', authMiddleware(['admin']), async (req, res)
       "INSERT INTO announcements (title, content, author_role, author_id) VALUES ($1, $2, 'super_admin', $3) RETURNING *",
       [title, content, req.user.userId]
     );
-    res.json(result.rows[0]);
+
+    try {
+      const orgAdmins = await pool.query("SELECT id FROM users WHERE role = 'ORGANIZATION_ADMIN'");
+      for (let admin of orgAdmins.rows) {
+        await createNotification(admin.id, 'New Announcement', `A new global announcement: ${title}`, 'ANNOUNCEMENT', '/org-dashboard');
+      }
+      
+      const allLearners = await pool.query("SELECT id FROM users WHERE role = 'LEARNER'");
+      for (let l of allLearners.rows) {
+        await createNotification(l.id, 'New Announcement', `A new global announcement: ${title}`, 'ANNOUNCEMENT', '/user-dashboard');
+      }
+    } catch(e) { console.error('Notification error', e); }
+
+    res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error creating announcement' });
@@ -2364,6 +2480,7 @@ app.use('/api/practice-arenas', globalPracticeRoutes(authMiddleware));
 app.use('/api/admin/reports', adminReportsRoutes(authMiddleware));
 app.use('/api/exams', examRoutes(authMiddleware));
 app.use('/api/contact', contactRoutes(authMiddleware));
+app.use('/api/notifications', notificationRoutes);
 
 // Auto-create contact_queries table if not exists
 pool.query(`

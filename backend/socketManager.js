@@ -1,6 +1,7 @@
 const socketIo = require('socket.io');
 const db = require('./db');
 const jwt = require('jsonwebtoken');
+const { createNotification } = require('./notificationRoutes');
 
 let io;
 
@@ -87,6 +88,26 @@ function initSocket(server) {
           newMessage.file_url = fileUrl;
           newMessage.file_name = fileName;
         }
+
+        try {
+          // Notify Super Admin of a new message globally
+          await createNotification(null, 'New Message Received', `A new message was sent by ${newMessage.sender_name || 'a user'}.`, 'NEW_MESSAGE', '/admin-dashboard');
+
+          // Notify all participants in the conversation
+          const participants = await db.query('SELECT user_id FROM conversation_participants WHERE conversation_id = $1 AND user_id != $2', [conversationId, socket.user.userId]);
+          for (let p of participants.rows) {
+             const roleQ = await db.query('SELECT role FROM users WHERE id = $1', [p.user_id]);
+             if (roleQ.rows.length > 0) {
+               let r = roleQ.rows[0].role;
+               if (!r) r = 'LEARNER';
+               let link = '/user-dashboard';
+               if (r.toUpperCase() === 'INSTRUCTOR') link = '/instructor-dashboard';
+               else if (r.toUpperCase() === 'ORGANIZATION_ADMIN') link = '/org-dashboard';
+               else if (r.toUpperCase() === 'ADMIN' || r.toUpperCase() === 'SUPER_ADMIN') link = '/admin-dashboard';
+               await createNotification(p.user_id, 'New Message Received', `A new message was sent by ${newMessage.sender_name || 'a user'}.`, 'NEW_MESSAGE', link);
+             }
+          }
+        } catch(e) { console.error('Notification error', e); }
 
         // Emit to room
         io.to(`conversation_${conversationId}`).emit('receive_message', newMessage);

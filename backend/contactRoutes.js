@@ -1,7 +1,7 @@
 const express = require('express');
 const pool = require('./db');
 const axios = require('axios');
-
+const { createNotification } = require('./notificationRoutes');
 const createTransporter = () => {
   return {
     sendMail: async (mailOptions) => {
@@ -52,6 +52,11 @@ const submitQuery = async (req, res) => {
       'INSERT INTO contact_queries (name, email, message) VALUES ($1, $2, $3) RETURNING id',
       [name, email, message]
     );
+
+    try {
+      await createNotification(null, 'New Contact Query', `Message from ${name} (${email})`, 'CONTACT_QUERY', '/admin-dashboard');
+    } catch (e) { console.error('Notification error:', e); }
+
     res.status(201).json({ success: true, queryId: result.rows[0].id });
   } catch (error) {
     console.error('Contact POST error:', error);
