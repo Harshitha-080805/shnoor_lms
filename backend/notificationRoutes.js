@@ -40,13 +40,25 @@ const createNotification = async (userId, title, message, type, link = null) => 
 router.get('/', verifyToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    // For now, super admin gets notifications where user_id = userId OR user_id IS NULL
-    const query = `
-      SELECT * FROM notifications 
-      WHERE user_id = $1 OR user_id IS NULL
-      ORDER BY created_at DESC 
-      LIMIT 50
-    `;
+    const role = req.user.role;
+    
+    let query;
+    if (role === 'admin' || role === 'super_admin' || role === 'SUPER_ADMIN') {
+      query = `
+        SELECT * FROM notifications 
+        WHERE user_id = $1 OR user_id IS NULL
+        ORDER BY created_at DESC 
+        LIMIT 50
+      `;
+    } else {
+      query = `
+        SELECT * FROM notifications 
+        WHERE user_id = $1
+        ORDER BY created_at DESC 
+        LIMIT 50
+      `;
+    }
+    
     const { rows } = await pool.query(query, [userId]);
     res.json(rows);
   } catch (error) {
