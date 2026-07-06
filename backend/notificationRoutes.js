@@ -1,8 +1,22 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('./db');
-const { verifyToken } = require('./middleware');
+const jwt = require('jsonwebtoken');
 
+const verifyToken = (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Authorization token required' });
+    }
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_secret_key');
+    req.user = { id: decoded.userId, ...decoded }; // Map userId to id for compatibility
+    next();
+  } catch (error) {
+    return res.status(403).json({ error: 'Invalid or expired token' });
+  }
+};
 // Create a notification helper (can be used internally by other routes)
 const createNotification = async (userId, title, message, type, link = null) => {
   try {
