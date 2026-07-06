@@ -555,10 +555,13 @@ const reviewCertificate = async (req, res) => {
 
   try {
     if (action === 'approve') {
-      const certRes = await pool.query("UPDATE certificate_requests SET status = 'APPROVED' WHERE id = $1 RETURNING student_id", [requestId]);
+      const certRes = await pool.query("UPDATE certificate_requests SET status = 'APPROVED' WHERE id = $1 RETURNING enrollment_id", [requestId]);
       try {
         if (certRes.rows.length > 0) {
-          await createNotification(certRes.rows[0].student_id, 'Certificate Approved', `Your certificate request has been approved!`, 'CERTIFICATE', '/user-dashboard');
+          const enrollRes = await pool.query("SELECT student_id FROM enrollments WHERE id = $1", [certRes.rows[0].enrollment_id]);
+          if (enrollRes.rows.length > 0) {
+            await createNotification(enrollRes.rows[0].student_id, 'Certificate Approved', `Your certificate request has been approved!`, 'CERTIFICATE', '/user-dashboard');
+          }
         }
       } catch(e) { console.error(e); }
       res.json({ message: 'Certificate approved' });
