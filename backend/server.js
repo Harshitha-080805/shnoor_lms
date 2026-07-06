@@ -141,7 +141,7 @@ const registerUser = async (req, res) => {
     try {
       await createNotification(null, 'New User Registration', `User ${email} registered and requires approval.`, 'USER_APPROVAL', '/admin-dashboard');
       if (orgId) {
-        const orgAdminQuery = await pool.query('SELECT id FROM users WHERE organization_id = $1 AND role = $2', [orgId, 'ORGANIZATION_ADMIN']);
+        const orgAdminQuery = await pool.query('SELECT id FROM users WHERE organization_id = $1 AND UPPER(role) = $2', [orgId, 'ORGANIZATION_ADMIN']);
         if (orgAdminQuery.rows.length > 0) {
           await createNotification(orgAdminQuery.rows[0].id, 'New User Registration', `User ${email} registered to your organization and requires approval.`, 'USER_APPROVAL', '/org-dashboard');
         }
@@ -735,7 +735,7 @@ const requestCertificate = async (req, res) => {
       const studentQuery = await pool.query('SELECT organization_id FROM users WHERE id = $1', [studentId]);
       if (studentQuery.rows.length > 0 && studentQuery.rows[0].organization_id) {
         const oId = studentQuery.rows[0].organization_id;
-        const orgAdminQuery = await pool.query('SELECT id FROM users WHERE organization_id = $1 AND role = $2', [oId, 'ORGANIZATION_ADMIN']);
+        const orgAdminQuery = await pool.query('SELECT id FROM users WHERE organization_id = $1 AND UPPER(role) = $2', [oId, 'ORGANIZATION_ADMIN']);
         if (orgAdminQuery.rows.length > 0) {
           await createNotification(orgAdminQuery.rows[0].id, 'New Certificate Request', `A learner from your organization has requested a certificate.`, 'CERTIFICATE_APPROVAL', '/org-dashboard');
         }
@@ -1595,6 +1595,12 @@ app.post('/api/courses/', authMiddleware(['INSTRUCTOR']), upload.single('thumbna
 
     try {
       await createNotification(null, 'New Course Created', `Course "${title}" created and is pending approval.`, 'COURSE_APPROVAL', '/admin-dashboard');
+      if (organizationId) {
+        const orgAdminQuery = await pool.query('SELECT id FROM users WHERE organization_id = $1 AND UPPER(role) = $2', [organizationId, 'ORGANIZATION_ADMIN']);
+        if (orgAdminQuery.rows.length > 0) {
+          await createNotification(orgAdminQuery.rows[0].id, 'New Course Created', `A new course "${title}" was created by an instructor in your organization and is pending approval.`, 'COURSE_APPROVAL', '/org-dashboard');
+        }
+      }
     } catch(e) { console.error('Notification error', e); }
 
     res.status(201).json(newCourse);
