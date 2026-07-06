@@ -15,6 +15,13 @@ async function runMigration() {
       ADD COLUMN IF NOT EXISTS learning_outcomes TEXT,
       ADD COLUMN IF NOT EXISTS skills_gained TEXT,
       ADD COLUMN IF NOT EXISTS prerequisites_enabled BOOLEAN DEFAULT FALSE;
+      
+      ALTER TABLE courses
+      ALTER COLUMN thumbnail_url TYPE TEXT,
+      ALTER COLUMN thumbnail_file TYPE TEXT,
+      ALTER COLUMN estimated_duration TYPE TEXT,
+      ALTER COLUMN difficulty_level TYPE TEXT,
+      ALTER COLUMN title TYPE TEXT;
     `;
     await pool.query(query);
     console.log('Migration successful!');

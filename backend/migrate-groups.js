@@ -50,14 +50,19 @@ async function migrate() {
 
     // 4. Alter Courses Table
     try {
-        await client.query(`ALTER TABLE courses ADD COLUMN assign_all_in_org BOOLEAN DEFAULT TRUE;`);
-        console.log("Added assign_all_in_org to courses");
-    } catch (err) {
-        if (err.code === '42701') { // column already exists
-            console.log("Column assign_all_in_org already exists in courses, skipping.");
+        const checkCol = await client.query(`
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name='courses' AND column_name='assign_all_in_org'
+        `);
+        if (checkCol.rows.length === 0) {
+            await client.query(`ALTER TABLE courses ADD COLUMN assign_all_in_org BOOLEAN DEFAULT TRUE;`);
+            console.log("Added assign_all_in_org to courses");
         } else {
-            throw err;
+            console.log("Column assign_all_in_org already exists in courses, skipping.");
         }
+    } catch (err) {
+        throw err;
     }
 
     // 5. Update existing courses
