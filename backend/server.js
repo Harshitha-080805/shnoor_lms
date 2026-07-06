@@ -2313,7 +2313,7 @@ app.post('/api/subscriptions', authMiddleware(), async (req, res) => {
     if (isOrg) {
       await pool.query("UPDATE users SET is_active = true WHERE organization_id = $1 AND role IN ('LEARNER', 'INSTRUCTOR')", [orgId]);
       try {
-        const orgAdminQuery = await pool.query('SELECT id FROM users WHERE organization_id = $1 AND role = $2', [orgId, 'ORGANIZATION_ADMIN']);
+        const orgAdminQuery = await pool.query('SELECT id FROM users WHERE organization_id = $1 AND UPPER(role) = $2', [orgId, 'ORGANIZATION_ADMIN']);
         if (orgAdminQuery.rows.length > 0) {
           await createNotification(orgAdminQuery.rows[0].id, 'Subscription Updated', `Your organization's subscription plan is now active.`, 'SUBSCRIPTION', '/org-dashboard');
         }
