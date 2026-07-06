@@ -94,7 +94,7 @@ function initSocket(server) {
           await createNotification(null, 'New Message Received', `A new message was sent by ${newMessage.sender_name || 'a user'}.`, 'NEW_MESSAGE', '/admin-dashboard');
 
           // Notify all participants in the conversation
-          const participants = await db.query('SELECT user_id FROM conversation_participants WHERE conversation_id = $1 AND user_id != $2', [conversationId, socket.user.userId]);
+          const participants = await db.query('SELECT user_id FROM conversation_members WHERE conversation_id = $1 AND user_id != $2', [conversationId, socket.user.userId]);
           for (let p of participants.rows) {
              const roleQ = await db.query('SELECT role FROM users WHERE id = $1', [p.user_id]);
              if (roleQ.rows.length > 0) {
