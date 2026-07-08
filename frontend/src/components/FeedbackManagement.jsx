@@ -91,7 +91,7 @@ export default function AdminFeedbackManagement() {
                 <th className="px-6 py-3 font-bold text-slate-600 text-[11px] uppercase tracking-wider whitespace-nowrap">Organization</th>
                 <th className="px-6 py-3 font-bold text-slate-600 text-[11px] uppercase tracking-wider whitespace-nowrap">Category</th>
                 <th className="px-6 py-3 font-bold text-slate-600 text-[11px] uppercase tracking-wider whitespace-nowrap">Rating</th>
-                <th className="px-6 py-3 font-bold text-slate-600 text-[11px] uppercase tracking-wider min-w-[300px] w-full">Feedback</th>
+                <th className="px-6 py-3 font-bold text-slate-600 text-[11px] uppercase tracking-wider w-full">Feedback</th>
                 <th className="px-6 py-3 font-bold text-slate-600 text-[11px] uppercase tracking-wider text-right whitespace-nowrap">Date</th>
               </tr>
             </thead>
