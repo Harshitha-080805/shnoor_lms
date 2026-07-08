@@ -107,6 +107,75 @@ const runMigration = async () => {
       console.log("Notice with enum:", e.message);
     }
 
+    // CREATE NOTIFICATIONS TABLE
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        type VARCHAR(50) NOT NULL,
+        link VARCHAR(255),
+        is_read BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log("Migration successful: ensured notifications table exists.");
+
+    // CREATE FEEDBACK TABLES
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS platform_feedback (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+          user_role VARCHAR(50),
+          organization_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+          category VARCHAR(100),
+          subject VARCHAR(255),
+          description TEXT,
+          rating NUMERIC DEFAULT 0,
+          status VARCHAR(50) DEFAULT 'Open',
+          admin_reply TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS course_feedback (
+          id SERIAL PRIMARY KEY,
+          course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
+          student_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+          rating INTEGER,
+          review TEXT,
+          is_anonymous BOOLEAN DEFAULT FALSE,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(course_id, student_id)
+      );
+
+      CREATE TABLE IF NOT EXISTS instructor_feedback (
+          id SERIAL PRIMARY KEY,
+          instructor_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+          course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
+          student_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+          teaching_rating INTEGER,
+          knowledge_rating INTEGER,
+          communication_rating INTEGER,
+          overall_rating DECIMAL(3,2),
+          review TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(instructor_id, course_id, student_id)
+      );
+
+      CREATE TABLE IF NOT EXISTS lesson_feedback (
+          id SERIAL PRIMARY KEY,
+          lesson_id INTEGER REFERENCES lessons(id) ON DELETE CASCADE,
+          student_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+          is_helpful BOOLEAN,
+          comment TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(lesson_id, student_id)
+      );
+    `);
+    console.log("Migration successful: ensured feedback tables exist.");
+
     process.exit(0);
   } catch (err) {
     console.error("Migration failed:", err);
