@@ -186,6 +186,23 @@ router.post('/lesson', authMiddleware(), async (req, res) => {
   }
 });
 
+// Check if user has already submitted feedback for a lesson
+router.get('/lesson/check/:lessonId', authMiddleware(), async (req, res) => {
+  const { lessonId } = req.params;
+  const student_id = (req.user.userId || req.user.id);
+  
+  try {
+    const result = await pool.query(
+      'SELECT id FROM lesson_feedback WHERE lesson_id = $1 AND student_id = $2',
+      [lessonId, student_id]
+    );
+    res.json({ hasSubmitted: result.rows.length > 0 });
+  } catch (error) {
+    console.error('Error checking lesson feedback:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Get lesson feedback for an instructor
 router.get('/lesson/instructor/:instructorId', authMiddleware(), async (req, res) => {
   let { instructorId } = req.params;

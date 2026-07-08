@@ -142,6 +142,21 @@ export const PlatformFeedbackModal = ({ isOpen, onClose, role, onSuccess }) => {
 export const LessonFeedback = ({ lessonId }) => {
   const [submitted, setSubmitted] = useState(false);
 
+  useEffect(() => {
+    let isMounted = true;
+    setSubmitted(false); // Reset state when moving to a new lesson
+    if (lessonId) {
+      api.get(`/api/feedback/lesson/check/${lessonId}`)
+        .then(res => {
+          if (isMounted && res.data.hasSubmitted) {
+            setSubmitted(true);
+          }
+        })
+        .catch(console.error);
+    }
+    return () => { isMounted = false; };
+  }, [lessonId]);
+
   const handleFeedback = async (isHelpful) => {
     try {
       await api.post('/api/feedback/lesson', { lesson_id: lessonId, is_helpful: isHelpful, comment: '' });
