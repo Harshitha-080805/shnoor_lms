@@ -19,6 +19,7 @@ import InstituteExams from "./pages/dashboards/institute/InstituteExams";
 import InstituteProfile from "./pages/dashboards/institute/InstituteProfile";
 import InstituteAnnouncements from "./pages/dashboards/institute/InstituteAnnouncements";
 import InstituteGroups from "./pages/dashboards/institute/InstituteGroups";
+import InstituteFeedbackView from "./pages/dashboards/institute/InstituteFeedbackView";
 import InstructorDashboard from "./pages/dashboards/instructor/InstructorDashboard";
 import InstructorOverview from "./pages/dashboards/instructor/InstructorOverview";
 import InstructorCourses from "./pages/dashboards/instructor/InstructorCourses";
@@ -39,12 +40,14 @@ import StudentCertificates from "./pages/dashboards/student/StudentCertificates"
 import StudentSubscription from "./pages/dashboards/student/StudentSubscription";
 import StudentProfile from "./pages/dashboards/student/StudentProfile";
 import InstructorProfile from "./pages/dashboards/instructor/InstructorProfile";
+import InstructorFeedbackView from "./pages/dashboards/instructor/InstructorFeedbackView";
 import Leaderboard from "./pages/dashboards/Leaderboard";
 import api from './api';
 
 import InstructorGlobalArenas from "./pages/dashboards/instructor/InstructorGlobalArenas";
 import StudentGlobalArenas from "./pages/dashboards/student/StudentGlobalArenas";
 import StudentGlobalArenaView from "./pages/dashboards/student/StudentGlobalArenaView";
+import { GlobalFeedbackButton } from "./components/FeedbackComponents";
 
 function App() {
   return (
@@ -69,6 +72,7 @@ function App() {
           <Route path="profile" element={<InstituteProfile />} />
           <Route path="chat" element={<ChatLayout />} />
           <Route path="announcements" element={<InstituteAnnouncements />} />
+          <Route path="feedback" element={<InstituteFeedbackView />} />
         </Route>
         <Route path="/instructor-dashboard" element={<InstructorDashboard />}>
           <Route index element={<InstructorOverview />} />
@@ -82,6 +86,7 @@ function App() {
           <Route path="students" element={<StudentProgress />} />
           <Route path="announcements" element={<InstituteAnnouncements />} />
           <Route path="leaderboards" element={<Leaderboard />} />
+          <Route path="feedback" element={<InstructorFeedbackView />} />
           <Route path="chat" element={<ChatLayout />} />
           <Route path="profile" element={<InstructorProfile />} />
         </Route>
@@ -102,6 +107,7 @@ function App() {
           <Route path="profile" element={<StudentProfile />} />
         </Route>
       </Routes>
+      <GlobalFeedbackButton />
     </BrowserRouter>
   );
 }

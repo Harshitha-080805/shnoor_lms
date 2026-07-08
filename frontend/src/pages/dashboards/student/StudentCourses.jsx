@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Search, PlayCircle, CheckCircle, Clock, Lock, BookOpen, ChevronRight, Check, FileText, Maximize, Target, Video, Music, Image, Award, X, File } from 'lucide-react';
 import api from '../../../api';
 import CourseExamTaker from './CourseExamTaker';
+import { CourseFeedbackForm, LessonFeedback } from '../../../components/FeedbackComponents';
 
 function StudentCourses() {
   const location = useLocation();
@@ -31,6 +32,8 @@ function StudentCourses() {
   const [previewCourseId, setPreviewCourseId] = useState(null);
   const [previewCourseData, setPreviewCourseData] = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [ratedCourses, setRatedCourses] = useState({});
 
   const openPreview = async (id) => {
     setPreviewCourseId(id);
@@ -599,7 +602,7 @@ function StudentCourses() {
             )}
           </div>
         </div>
-        <div className="flex-1 flex flex-col h-full overflow-y-auto custom-scrollbar p-4 lg:p-8 bg-slate-50">
+        <div className="flex-1 flex flex-col h-full overflow-y-auto light-scrollbar p-4 lg:p-8 bg-slate-50">
           {activeCourseExam && courseExam && (
              <CourseExamTaker exam={courseExam} onComplete={() => { loadData(); setActiveCourseExam(false); }} onCancel={() => setActiveCourseExam(false)} />
           )}
@@ -791,6 +794,7 @@ function StudentCourses() {
                     </button>
                   )}
               </div>
+              <LessonFeedback lessonId={activeLesson.id} />
             </div>
           )}
           {activeQuiz && (
@@ -900,25 +904,39 @@ function StudentCourses() {
                   <h4 className="font-bold text-2xl text-slate-800 mb-2">Congratulations!</h4>
                   <p className="text-slate-500 mb-6 max-w-md">You have successfully completed all the modules, quizzes, and the final exam for this course.</p>
                   
-                  {getCertStatus(activePlayer.id) === 'APPROVED' ? (
-                    <button
-                      onClick={() => navigate('/student-dashboard/certificates')}
-                      className="px-8 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl shadow-lg transition-all flex items-center gap-2"
-                    >
-                      <Award size={20} /> View Certificate
-                    </button>
-                  ) : getCertStatus(activePlayer.id) === 'PENDING' ? (
-                    <div className="px-8 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl border-2 border-slate-200 flex items-center gap-2 cursor-default">
-                      <Clock size={20} /> Certificate Requested
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => handleRequestCert(activePlayer.course.id)}
-                      className="px-8 py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl shadow-lg transition-all flex items-center gap-2"
-                    >
-                      <Award size={20} /> Request Certificate
-                    </button>
-                  )}
+                  <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
+                    {ratedCourses[activePlayer.course.id] ? (
+                      <div className="px-8 py-3 bg-emerald-50 text-emerald-700 font-bold rounded-xl border-2 border-emerald-200 flex items-center gap-2">
+                        🎉 Thank you for your feedback!
+                      </div>
+                    ) : (
+                      <button 
+                        onClick={() => setShowFeedbackModal(true)}
+                        className="px-8 py-3 bg-white hover:bg-slate-50 text-slate-800 border-2 border-slate-200 font-bold rounded-xl shadow-sm transition-all flex items-center gap-2"
+                      >
+                        ⭐ Rate Course
+                      </button>
+                    )}
+                    {getCertStatus(activePlayer.id) === 'APPROVED' ? (
+                      <button
+                        onClick={() => navigate('/student-dashboard/certificates')}
+                        className="px-8 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl shadow-lg transition-all flex items-center gap-2"
+                      >
+                        <Award size={20} /> View Certificate
+                      </button>
+                    ) : getCertStatus(activePlayer.id) === 'PENDING' ? (
+                      <div className="px-8 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl border-2 border-slate-200 flex items-center gap-2 cursor-default">
+                        <Clock size={20} /> Certificate Requested
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleRequestCert(activePlayer.course.id)}
+                        className="px-8 py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl shadow-lg transition-all flex items-center gap-2"
+                      >
+                        <Award size={20} /> Request Certificate
+                      </button>
+                    )}
+                  </div>
                 </>
               ) : (
                 <>
@@ -930,6 +948,29 @@ function StudentCourses() {
             </div>
           )}
         </div>
+
+        {showFeedbackModal && (
+          <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl w-full max-w-2xl relative max-h-[90vh] overflow-y-auto light-scrollbar">
+              <button 
+                onClick={() => setShowFeedbackModal(false)}
+                className="absolute top-4 right-4 bg-slate-100 p-2 rounded-full hover:bg-slate-200"
+              >
+                <X size={16} />
+              </button>
+              <div className="p-2">
+                <CourseFeedbackForm 
+                  courseId={activePlayer.course.id} 
+                  instructorId={activePlayer.course.instructor_id || activePlayer.course.instructor?.id || activePlayer.course.instructorId}
+                  onComplete={() => {
+                    setShowFeedbackModal(false);
+                    setRatedCourses(prev => ({ ...prev, [activePlayer.course.id]: true }));
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

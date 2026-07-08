@@ -177,6 +177,20 @@
 }
 
 @layer utilities {
+  .light-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .light-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .light-scrollbar::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 10px;
+  }
+  .light-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #cbd5e1;
+  }
+
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
   }

@@ -20,6 +20,7 @@ import InstituteAnnouncements from "./institute/InstituteAnnouncements";
 import ChatLayout from "../chat/ChatLayout";
 import { chatService } from "../../services/chatService";
 import SuperAdminReports from "./SuperAdminReports";
+import AdminFeedbackManagement from "../../components/FeedbackManagement";
 function AdminDashboard() {
   const navigate = useNavigate();
   const [activePage, setActivePage] = useState("Overview");
@@ -487,7 +488,8 @@ function AdminDashboard() {
     "Reports",
     "Contact Queries",
     "Announcements",
-    "Messages"
+    "Messages",
+    "Feedback Management"
   ];
   const learners = approvedUsers.filter(
     (user) => user.role === "Learner" && user.learnerType !== "Employee"
@@ -1123,6 +1125,9 @@ function AdminDashboard() {
           })()}
           {activePage === "Announcements" && (
             <InstituteAnnouncements />
+          )}
+          {activePage === "Feedback Management" && (
+            <AdminFeedbackManagement />
           )}
           {activePage === "Messages" && (
             <ChatLayout />

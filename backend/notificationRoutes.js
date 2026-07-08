@@ -43,7 +43,7 @@ router.get('/', verifyToken, async (req, res) => {
     const role = req.user.role;
     
     let query;
-    if (role === 'admin' || role === 'super_admin' || role === 'SUPER_ADMIN') {
+    if (role === 'admin' || role === 'super_admin' || role === 'SUPER_ADMIN' || role === 'ADMIN') {
       query = `
         SELECT * FROM notifications 
         WHERE user_id = $1 OR user_id IS NULL

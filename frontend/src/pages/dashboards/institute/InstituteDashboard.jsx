@@ -16,7 +16,8 @@ import {
   User,
   Bell,
   Award,
-  MessageSquare
+  MessageSquare,
+  Star
 } from "lucide-react";
 import api from "../../../api";
 
@@ -48,6 +49,7 @@ function InstituteDashboard() {
     { name: "Certificates", path: "/institute-dashboard/certificates", icon: <Award size={20} /> },
     { name: "Profile", path: "/institute-dashboard/profile", icon: <User size={20} /> },
     { name: "Announcements", path: "/institute-dashboard/announcements", icon: <Bell size={20} /> },
+    { name: "Feedback", path: "/institute-dashboard/feedback", icon: <Star size={20} /> },
     { name: "Messages", path: "/institute-dashboard/chat", icon: <MessageSquare size={20} /> },
   ];
 

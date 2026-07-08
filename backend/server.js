@@ -15,6 +15,7 @@ const orgAdmin = require('./orgAdmin');
 const searchRoutes = require('./searchRoutes');
 const groupRoutes = require('./groupRoutes');
 const { router: notificationRoutes, createNotification } = require('./notificationRoutes');
+const feedbackRoutes = require('./feedbackRoutes');
 const path = require('path');
 
 dotenv.config();
@@ -1461,8 +1462,8 @@ app.get('/api/courses/enrollments', authMiddleware(), async (req, res) => {
     const studentId = req.user.userId;
     const enrollmentsRes = await pool.query(`
       SELECT e.*, 
-             c.title as course_title, c.thumbnail_url, c.thumbnail_file, 
-             u.full_name as instructor_name
+             c.title as course_title, c.thumbnail_url, c.thumbnail_file, c.instructor_id,
+             u.full_name as instructor_name, u.email as instructor_email
       FROM enrollments e
       JOIN courses c ON e.course_id = c.id
       LEFT JOIN users u ON c.instructor_id = u.id
@@ -1474,7 +1475,8 @@ app.get('/api/courses/enrollments', authMiddleware(), async (req, res) => {
       e.course = {
         id: e.course_id, title: e.course_title,
         thumbnail_url: e.thumbnail_url, thumbnail_file: e.thumbnail_file,
-        instructor: { full_name: e.instructor_name }
+        instructor_id: e.instructor_id,
+        instructor: { id: e.instructor_id, full_name: e.instructor_name, email: e.instructor_email }
       };
 
       // fetch modules
@@ -2490,6 +2492,7 @@ app.use('/api/admin/reports', adminReportsRoutes(authMiddleware));
 app.use('/api/exams', examRoutes(authMiddleware));
 app.use('/api/contact', contactRoutes(authMiddleware));
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/feedback', feedbackRoutes(authMiddleware));
 
 // Auto-create contact_queries table if not exists
 pool.query(`

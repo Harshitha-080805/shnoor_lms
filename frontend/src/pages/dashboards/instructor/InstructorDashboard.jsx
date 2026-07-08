@@ -17,6 +17,7 @@ import {
   User,
   Target,
   FileCheck,
+  Star,
 } from "lucide-react";
 
 const isTokenValid = (t) => {
@@ -46,6 +47,7 @@ function InstructorDashboard() {
     { name: "Students List", path: "/instructor-dashboard/students", icon: <Users size={20} /> },
     { name: "Leaderboards", path: "/instructor-dashboard/leaderboards", icon: <Trophy size={20} /> },
     { name: "Announcements", path: "/instructor-dashboard/announcements", icon: <Bell size={20} /> },
+    { name: "Feedback", path: "/instructor-dashboard/feedback", icon: <Star size={20} /> },
     { name: "Profile", path: "/instructor-dashboard/profile", icon: <User size={20} /> },
     { name: "Messages", path: "/instructor-dashboard/chat", icon: <MessageSquare size={20} /> },
   ];
