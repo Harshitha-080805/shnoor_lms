@@ -65,6 +65,27 @@ router.get('/course/instructor/:instructorId', authMiddleware(), async (req, res
   }
 });
 
+// Get course feedback for an organization
+router.get('/course/org/me', authMiddleware(), async (req, res) => {
+  const orgId = req.user.organization_id || req.user.userId || req.user.id;
+  try {
+    const result = await pool.query(`
+      SELECT cf.*, c.title as course_title, 
+        CASE WHEN cf.is_anonymous THEN 'Anonymous' ELSE u.full_name END as student_name
+      FROM course_feedback cf
+      JOIN courses c ON cf.course_id = c.id
+      JOIN users inst ON c.instructor_id = inst.id
+      LEFT JOIN users u ON cf.student_id = u.id
+      WHERE inst.organization_id = $1
+      ORDER BY cf.created_at DESC
+    `, [orgId]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching org course feedback:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 
 // ============================================
 // INSTRUCTOR FEEDBACK
@@ -120,6 +141,26 @@ router.get('/instructor/:instructorId', authMiddleware(), async (req, res) => {
   }
 });
 
+// Get instructor feedback for an organization
+router.get('/instructor/org/me', authMiddleware(), async (req, res) => {
+  const orgId = req.user.organization_id || req.user.userId || req.user.id;
+  try {
+    const result = await pool.query(`
+      SELECT inf.*, u.full_name as student_name, c.title as course_title
+      FROM instructor_feedback inf
+      LEFT JOIN users u ON inf.student_id = u.id
+      LEFT JOIN courses c ON inf.course_id = c.id
+      JOIN users inst ON inf.instructor_id = inst.id
+      WHERE inst.organization_id = $1
+      ORDER BY inf.created_at DESC
+    `, [orgId]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching org instructor feedback:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 
 // ============================================
 // LESSON FEEDBACK
@@ -163,6 +204,28 @@ router.get('/lesson/instructor/:instructorId', authMiddleware(), async (req, res
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching lesson feedback:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get lesson feedback for an organization
+router.get('/lesson/org/me', authMiddleware(), async (req, res) => {
+  const orgId = req.user.organization_id || req.user.userId || req.user.id;
+  try {
+    const result = await pool.query(`
+      SELECT lf.*, l.title as lesson_title, c.title as course_title, c.id as course_id, u.full_name as student_name
+      FROM lesson_feedback lf
+      JOIN lessons l ON lf.lesson_id = l.id
+      JOIN modules m ON l.module_id = m.id
+      JOIN courses c ON m.course_id = c.id
+      JOIN users inst ON c.instructor_id = inst.id
+      LEFT JOIN users u ON lf.student_id = u.id
+      WHERE inst.organization_id = $1
+      ORDER BY lf.created_at DESC
+    `, [orgId]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching org lesson feedback:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
