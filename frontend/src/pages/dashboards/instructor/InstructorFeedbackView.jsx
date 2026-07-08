@@ -29,8 +29,8 @@ export default function InstructorFeedbackView() {
     fetchData();
   }, []);
 
-  const avgCourse = courseFeedback.length ? (courseFeedback.reduce((a, b) => a + b.rating, 0) / courseFeedback.length).toFixed(1) : 'N/A';
-  const avgInstructor = instructorFeedback.length ? (instructorFeedback.reduce((a, b) => a + b.overall_rating, 0) / instructorFeedback.length).toFixed(1) : 'N/A';
+  const avgCourse = courseFeedback.length ? (courseFeedback.reduce((a, b) => a + Number(b.rating), 0) / courseFeedback.length).toFixed(1) : 'N/A';
+  const avgInstructor = instructorFeedback.length ? (instructorFeedback.reduce((a, b) => a + Number(b.overall_rating), 0) / instructorFeedback.length).toFixed(1) : 'N/A';
 
   if (loading) return <div className="p-8 text-center text-slate-500 font-medium">Loading feedback...</div>;
 
@@ -147,7 +147,7 @@ export default function InstructorFeedbackView() {
                   </div>
                   <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg border border-yellow-200">
                     <Star size={14} className="text-yellow-500" fill="currentColor" />
-                    <span className="text-xs font-bold text-yellow-700">{f.overall_rating.toFixed(1)}/5</span>
+                    <span className="text-xs font-bold text-yellow-700">{Number(f.overall_rating).toFixed(1)}/5</span>
                   </div>
                 </div>
                 <div className="flex gap-4 mt-2 text-xs text-slate-500">
