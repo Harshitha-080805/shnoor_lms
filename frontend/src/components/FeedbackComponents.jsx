@@ -319,7 +319,7 @@ export const GlobalFeedbackButton = () => {
   
   const role = sessionStorage.getItem('role');
   
-  if (!role || role.toLowerCase() === 'super_admin') return null;
+  if (!role || role.toLowerCase() === 'super_admin' || role.toLowerCase() === 'admin') return null;
 
   return (
     <>

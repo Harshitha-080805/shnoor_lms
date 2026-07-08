@@ -299,7 +299,7 @@ router.post('/platform', authMiddleware(), async (req, res) => {
 // Get all platform feedback (For Super Admin and Org Admin)
 router.get('/platform', authMiddleware(), async (req, res) => {
   try {
-    const role = req.user.role;
+    const role = (req.user.role || '').toUpperCase();
     let result;
 
     if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
