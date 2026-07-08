@@ -29,8 +29,10 @@ export default function InstituteFeedbackView() {
     fetchData();
   }, []);
 
-  const avgCourse = courseFeedback.length ? (courseFeedback.reduce((a, b) => a + Number(b.rating), 0) / courseFeedback.length).toFixed(1) : 'N/A';
-  const avgInstructor = instructorFeedback.length ? (instructorFeedback.reduce((a, b) => a + Number(b.overall_rating), 0) / instructorFeedback.length).toFixed(1) : 'N/A';
+  const avgCourse = courseFeedback.length ? (courseFeedback.reduce((a, b) => a + Number(b.rating), 0) / courseFeedback.length).toFixed(1) : '0.0';
+  const avgInstructor = instructorFeedback.length ? (instructorFeedback.reduce((a, b) => a + Number(b.overall_rating), 0) / instructorFeedback.length).toFixed(1) : '0.0';
+  const helpfulCount = lessonFeedback.filter(lf => lf.is_helpful).length;
+  const helpfulPercentage = lessonFeedback.length ? Math.round((helpfulCount / lessonFeedback.length) * 100) : 0;
 
   if (loading) return <div className="p-8 text-center text-slate-500 font-medium">Loading feedback...</div>;
 
@@ -41,27 +43,45 @@ export default function InstituteFeedbackView() {
         <h1 className="text-2xl font-bold text-slate-800">Feedback & Reviews</h1>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="bg-blue-950 rounded-2xl p-5 border border-blue-900 flex items-start justify-between shadow-sm">
           <div>
-            <h3 className="text-sm font-bold text-slate-500 uppercase">Average Course Rating</h3>
-            <p className="text-4xl font-black text-slate-800 mt-2 flex items-center gap-2">
-              {avgCourse} <Star className="text-yellow-400" size={32} fill="currentColor" />
-            </p>
+            <p className="text-[10px] font-bold text-blue-200 uppercase tracking-wider mb-1">Avg Course Rating</p>
+            <div className="flex items-baseline gap-1">
+              <h3 className="text-3xl font-extrabold text-white">{avgCourse}</h3>
+              <span className="text-sm text-blue-300 font-medium">/ 5.0</span>
+            </div>
+            <p className="text-xs text-blue-400 mt-1">From {courseFeedback.length} reviews</p>
           </div>
-          <div className="text-right">
-            <p className="text-sm text-slate-500">From {courseFeedback.length} reviews</p>
+          <div className="w-10 h-10 rounded-xl bg-amber-500 text-white shadow-lg shadow-amber-500/20 flex items-center justify-center">
+            <Star size={20} className="fill-white" />
           </div>
         </div>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+
+        <div className="bg-blue-950 rounded-2xl p-5 border border-blue-900 flex items-start justify-between shadow-sm">
           <div>
-            <h3 className="text-sm font-bold text-slate-500 uppercase">Average Instructor Rating</h3>
-            <p className="text-4xl font-black text-slate-800 mt-2 flex items-center gap-2">
-              {avgInstructor} <Star className="text-yellow-400" size={32} fill="currentColor" />
-            </p>
+            <p className="text-[10px] font-bold text-blue-200 uppercase tracking-wider mb-1">Avg Instructor Rating</p>
+            <div className="flex items-baseline gap-1">
+              <h3 className="text-3xl font-extrabold text-white">{avgInstructor}</h3>
+              <span className="text-sm text-blue-300 font-medium">/ 5.0</span>
+            </div>
+            <p className="text-xs text-blue-400 mt-1">From {instructorFeedback.length} reviews</p>
           </div>
-          <div className="text-right">
-            <p className="text-sm text-slate-500">From {instructorFeedback.length} reviews</p>
+          <div className="w-10 h-10 rounded-xl bg-purple-500 text-white shadow-lg shadow-purple-500/20 flex items-center justify-center">
+            <Star size={20} className="fill-white" />
+          </div>
+        </div>
+
+        <div className="bg-blue-950 rounded-2xl p-5 border border-blue-900 flex items-start justify-between shadow-sm">
+          <div>
+            <p className="text-[10px] font-bold text-blue-200 uppercase tracking-wider mb-1">Lesson Helpfulness</p>
+            <div className="flex items-baseline gap-1">
+              <h3 className="text-3xl font-extrabold text-white">{helpfulPercentage}%</h3>
+            </div>
+            <p className="text-xs text-blue-400 mt-1">From {lessonFeedback.length} votes</p>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-teal-500 text-white shadow-lg shadow-teal-500/20 flex items-center justify-center">
+            <ThumbsUp size={20} className="fill-white" />
           </div>
         </div>
       </div>
