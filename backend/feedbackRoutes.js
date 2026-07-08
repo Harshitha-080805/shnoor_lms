@@ -151,7 +151,7 @@ router.get('/lesson/instructor/:instructorId', authMiddleware(), async (req, res
   if (instructorId === 'me') instructorId = req.user.userId || req.user.id;
   try {
     const result = await pool.query(`
-      SELECT lf.*, l.title as lesson_title, c.title as course_title, u.full_name as student_name
+      SELECT lf.*, l.title as lesson_title, c.title as course_title, c.id as course_id, u.full_name as student_name
       FROM lesson_feedback lf
       JOIN lessons l ON lf.lesson_id = l.id
       JOIN modules m ON l.module_id = m.id
