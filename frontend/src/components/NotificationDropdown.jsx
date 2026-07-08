@@ -33,7 +33,8 @@ const NotificationDropdown = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const unreadCount = notifications.filter(n => !n.is_read).length;
+  const unreadNotifications = notifications.filter(n => !n.is_read);
+  const unreadCount = unreadNotifications.length;
 
   const markAsRead = async (id, link) => {
     try {
@@ -88,20 +89,20 @@ const NotificationDropdown = () => {
           </div>
           
           <div className="overflow-y-auto flex-1">
-            {notifications.length === 0 ? (
+            {unreadNotifications.length === 0 ? (
               <div className="p-4 text-center text-slate-500 text-sm">
-                No notifications yet.
+                No new notifications.
               </div>
             ) : (
-              notifications.map((notif) => (
+              unreadNotifications.map((notif) => (
                 <div 
                   key={notif.id} 
                   onClick={() => markAsRead(notif.id, notif.link)}
-                  className={`p-3 border-b border-slate-50 cursor-pointer hover:bg-slate-50 transition-colors ${!notif.is_read ? 'bg-blue-50/50' : ''}`}
+                  className="p-3 border-b border-slate-50 cursor-pointer hover:bg-slate-50 transition-colors bg-blue-50/50"
                 >
                   <div className="flex justify-between items-start mb-1">
                     <span className="font-semibold text-sm text-slate-800">{notif.title}</span>
-                    {!notif.is_read && <span className="w-2 h-2 bg-blue-500 rounded-full mt-1.5 flex-shrink-0"></span>}
+                    <span className="w-2 h-2 bg-blue-500 rounded-full mt-1.5 flex-shrink-0"></span>
                   </div>
                   <p className="text-xs text-slate-600 line-clamp-2">{notif.message}</p>
                   <span className="text-[10px] text-slate-400 mt-2 block">
