@@ -314,10 +314,12 @@ export const CourseFeedbackForm = ({ courseId, instructorId, onComplete }) => {
 };
 
 export const GlobalFeedbackButton = () => {
+  const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  
   const role = sessionStorage.getItem('role');
   
-  if (!role || role.toLowerCase().includes('admin')) return null;
+  if (!role || role.toLowerCase() === 'super_admin') return null;
 
   return (
     <>
