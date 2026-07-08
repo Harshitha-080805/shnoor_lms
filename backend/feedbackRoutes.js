@@ -33,6 +33,21 @@ router.post('/course', authMiddleware(), async (req, res) => {
         'COURSE_FEEDBACK', 
         '/instructor-dashboard'
       );
+
+      // Notify org admins
+      const orgAdminsRes = await pool.query(
+        'SELECT id FROM users WHERE role = $1 AND organization_id = (SELECT organization_id FROM users WHERE id = $2)',
+        ['ORGANIZATION_ADMIN', instructorId]
+      );
+      for (let admin of orgAdminsRes.rows) {
+        await createNotification(
+          admin.id,
+          'New Course Feedback',
+          `Course "${courseTitle}" received a new ${rating}-star feedback.`,
+          'COURSE_FEEDBACK',
+          '/institute-dashboard/feedback'
+        );
+      }
     }
 
     res.status(201).json({ message: 'Course feedback submitted successfully.', data: result.rows[0] });
@@ -128,6 +143,21 @@ router.post('/instructor', authMiddleware(), async (req, res) => {
       'INSTRUCTOR_FEEDBACK',
       '/instructor-dashboard'
     );
+
+    // Notify org admins
+    const orgAdminsRes = await pool.query(
+      'SELECT id FROM users WHERE role = $1 AND organization_id = (SELECT organization_id FROM users WHERE id = $2)',
+      ['ORGANIZATION_ADMIN', instructor_id]
+    );
+    for (let admin of orgAdminsRes.rows) {
+      await createNotification(
+        admin.id,
+        'New Instructor Feedback',
+        `An instructor in your organization received new feedback with a ${overall_rating.toFixed(1)}-star rating.`,
+        'INSTRUCTOR_FEEDBACK',
+        '/institute-dashboard/feedback'
+      );
+    }
 
     res.status(201).json({ message: 'Instructor feedback submitted successfully.', data: result.rows[0] });
   } catch (error) {
