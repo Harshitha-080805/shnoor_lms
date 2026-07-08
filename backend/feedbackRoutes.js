@@ -145,6 +145,28 @@ router.post('/lesson', authMiddleware(), async (req, res) => {
   }
 });
 
+// Get lesson feedback for an instructor
+router.get('/lesson/instructor/:instructorId', authMiddleware(), async (req, res) => {
+  let { instructorId } = req.params;
+  if (instructorId === 'me') instructorId = req.user.userId || req.user.id;
+  try {
+    const result = await pool.query(`
+      SELECT lf.*, l.title as lesson_title, c.title as course_title, u.full_name as student_name
+      FROM lesson_feedback lf
+      JOIN lessons l ON lf.lesson_id = l.id
+      JOIN modules m ON l.module_id = m.id
+      JOIN courses c ON m.course_id = c.id
+      LEFT JOIN users u ON lf.student_id = u.id
+      WHERE c.instructor_id = $1
+      ORDER BY lf.created_at DESC
+    `, [instructorId]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching lesson feedback:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // ============================================
 // PLATFORM FEEDBACK
 // ============================================

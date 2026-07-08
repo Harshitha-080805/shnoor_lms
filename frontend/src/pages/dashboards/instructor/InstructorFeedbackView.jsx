@@ -1,22 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../api';
-import { Star } from 'lucide-react';
+import { Star, ThumbsUp, ThumbsDown } from 'lucide-react';
 
 export default function InstructorFeedbackView() {
   const [courseFeedback, setCourseFeedback] = useState([]);
   const [instructorFeedback, setInstructorFeedback] = useState([]);
+  const [lessonFeedback, setLessonFeedback] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [cRes, iRes] = await Promise.all([
+        const [cRes, iRes, lRes] = await Promise.all([
           api.get(`/api/feedback/course/instructor/me`),
-          api.get(`/api/feedback/instructor/me`)
+          api.get(`/api/feedback/instructor/me`),
+          api.get(`/api/feedback/lesson/instructor/me`)
         ]);
         
         setCourseFeedback(cRes.data);
         setInstructorFeedback(iRes.data);
+        setLessonFeedback(lRes.data);
       } catch (err) {
         console.error(err);
       }
@@ -111,6 +114,29 @@ export default function InstructorFeedbackView() {
                   <span>Communication: {f.communication_rating}/5</span>
                 </div>
                 {f.review && <p className="text-sm text-slate-600 mt-3">{f.review}</p>}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <h2 className="text-lg font-bold text-slate-800 mb-6">Recent Lesson Feedback</h2>
+        <div className="space-y-4">
+          {lessonFeedback.length === 0 ? (
+            <p className="text-slate-500">No lesson feedback yet.</p>
+          ) : (
+            lessonFeedback.map(f => (
+              <div key={f.id} className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-start justify-between">
+                <div>
+                  <h4 className="font-bold text-slate-800">{f.lesson_title}</h4>
+                  <p className="text-xs text-slate-500">Course: {f.course_title}</p>
+                  <p className="text-xs text-slate-500 mt-1">By {f.student_name} on {new Date(f.created_at).toLocaleDateString()}</p>
+                  {f.comment && <p className="text-sm text-slate-600 mt-2">{f.comment}</p>}
+                </div>
+                <div className={`p-2 rounded-full flex items-center justify-center ${f.is_helpful ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                  {f.is_helpful ? <ThumbsUp size={20} /> : <ThumbsDown size={20} />}
+                </div>
               </div>
             ))
           )}
