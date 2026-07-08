@@ -301,9 +301,22 @@ export const CourseFeedbackForm = ({ courseId, instructorId, onComplete }) => {
 export const GlobalFeedbackButton = () => {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
   const role = sessionStorage.getItem('role');
 
-  if (!role || role.toLowerCase().includes('admin')) return null;
+  useEffect(() => {
+    if (role && !role.toLowerCase().includes('admin')) {
+      api.get('/api/feedback/platform')
+        .then(res => {
+          if (res.data && res.data.length > 0) {
+            setHasSubmitted(true);
+          }
+        })
+        .catch(console.error);
+    }
+  }, [location.pathname, role]);
+  
+  if (!role || role.toLowerCase().includes('admin') || hasSubmitted) return null;
 
   return (
     <>
@@ -313,7 +326,7 @@ export const GlobalFeedbackButton = () => {
       >
         <Star size={24} />
       </button>
-      <PlatformFeedbackModal isOpen={isOpen} onClose={() => setIsOpen(false)} role={role} />
+      <PlatformFeedbackModal isOpen={isOpen} onClose={() => setIsOpen(false)} role={role} onSuccess={() => setHasSubmitted(true)} />
     </>
   );
 };
