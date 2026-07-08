@@ -85,14 +85,14 @@ export default function AdminFeedbackManagement() {
           <table className="w-full text-left text-sm table-auto">
             <thead className="bg-slate-50/80 border-b border-slate-200">
               <tr>
-                <th className="px-6 py-3 font-bold text-slate-600 text-[11px] uppercase tracking-wider whitespace-nowrap">User</th>
-                <th className="px-6 py-3 font-bold text-slate-600 text-[11px] uppercase tracking-wider whitespace-nowrap">Role</th>
-                <th className="px-6 py-3 font-bold text-slate-600 text-[11px] uppercase tracking-wider whitespace-nowrap">Email</th>
-                <th className="px-6 py-3 font-bold text-slate-600 text-[11px] uppercase tracking-wider whitespace-nowrap">Organization</th>
-                <th className="px-6 py-3 font-bold text-slate-600 text-[11px] uppercase tracking-wider whitespace-nowrap">Category</th>
-                <th className="px-6 py-3 font-bold text-slate-600 text-[11px] uppercase tracking-wider whitespace-nowrap">Rating</th>
+                <th className="px-6 py-3 font-bold text-slate-600 text-[11px] uppercase tracking-wider">User</th>
+                <th className="px-6 py-3 font-bold text-slate-600 text-[11px] uppercase tracking-wider">Role</th>
+                <th className="px-6 py-3 font-bold text-slate-600 text-[11px] uppercase tracking-wider">Email</th>
+                <th className="px-6 py-3 font-bold text-slate-600 text-[11px] uppercase tracking-wider">Organization</th>
+                <th className="px-6 py-3 font-bold text-slate-600 text-[11px] uppercase tracking-wider">Category</th>
+                <th className="px-6 py-3 font-bold text-slate-600 text-[11px] uppercase tracking-wider">Rating</th>
                 <th className="px-6 py-3 font-bold text-slate-600 text-[11px] uppercase tracking-wider w-[35%]">Feedback</th>
-                <th className="px-6 py-3 font-bold text-slate-600 text-[11px] uppercase tracking-wider whitespace-nowrap text-right">Date</th>
+                <th className="px-6 py-3 font-bold text-slate-600 text-[11px] uppercase tracking-wider text-right whitespace-nowrap">Date</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -107,7 +107,7 @@ export default function AdminFeedbackManagement() {
                   <tr key={f.id} className="hover:bg-slate-50/50 transition-colors group">
                     
                     {/* User */}
-                    <td className="px-6 py-4 align-middle whitespace-nowrap">
+                    <td className="px-6 py-4 align-middle">
                       <div className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 shrink-0">
                           <User size={13} />
@@ -117,17 +117,17 @@ export default function AdminFeedbackManagement() {
                     </td>
 
                     {/* Role */}
-                    <td className="px-6 py-4 align-middle whitespace-nowrap">
+                    <td className="px-6 py-4 align-middle">
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
                         {f.user_role}
                       </span>
                     </td>
 
                     {/* Email */}
-                    <td className="px-6 py-4 align-middle whitespace-nowrap">
+                    <td className="px-6 py-4 align-middle">
                       {f.user_email ? (
-                        <div className="flex items-center gap-1.5">
-                          <Mail size={12} className="text-slate-400" />
+                        <div className="flex items-center gap-1.5 break-all">
+                          <Mail size={12} className="text-slate-400 shrink-0" />
                           <a href={`mailto:${f.user_email}`} className="text-[13px] text-blue-600 hover:underline">
                             {f.user_email}
                           </a>
@@ -138,10 +138,10 @@ export default function AdminFeedbackManagement() {
                     </td>
 
                     {/* Organization */}
-                    <td className="px-6 py-4 align-middle whitespace-nowrap">
+                    <td className="px-6 py-4 align-middle">
                       {f.org_name ? (
                         <div className="flex items-center gap-1.5 text-[13px] text-slate-700">
-                          <Building2 size={12} className="text-slate-400" />
+                          <Building2 size={12} className="text-slate-400 shrink-0" />
                           {f.org_name}
                         </div>
                       ) : (
@@ -150,22 +150,22 @@ export default function AdminFeedbackManagement() {
                     </td>
 
                     {/* Category */}
-                    <td className="px-6 py-4 align-middle whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${f.category === 'Suggestion' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-purple-50 text-purple-700 border border-purple-200'}`}>
+                    <td className="px-6 py-4 align-middle">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
+                        f.category === 'Suggestion' ? 'bg-purple-50 text-purple-600 border-purple-200' :
+                        f.category === 'Feature Request' ? 'bg-teal-50 text-teal-600 border-teal-200' :
+                        'bg-slate-100 text-slate-600 border-slate-200'
+                      }`}>
                         {f.category}
                       </span>
                     </td>
 
                     {/* Rating */}
-                    <td className="px-6 py-4 align-middle whitespace-nowrap">
-                      {f.rating > 0 ? (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200">
-                          <Star size={10} className="fill-amber-400 text-amber-500" />
-                          {f.rating}
-                        </span>
-                      ) : (
-                        <span className="text-slate-300 text-xs">-</span>
-                      )}
+                    <td className="px-6 py-4 align-middle">
+                      <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 px-2 py-1 rounded text-amber-600 font-bold text-xs w-fit">
+                        <Star size={12} className="fill-amber-500 text-amber-500" />
+                        {f.rating > 0 ? f.rating : '-'}
+                      </div>
                     </td>
                     
                     {/* Feedback Content */}
