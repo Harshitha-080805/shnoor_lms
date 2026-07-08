@@ -87,6 +87,12 @@ function StudentCourses() {
            if (res.data && res.data.length > 0) setCourseExam(res.data[0]);
            else setCourseExam(null);
        }).catch(e => console.error(e));
+
+       api.get(`/api/feedback/course/check/${activePlayer.course.id}`).then(res => {
+         if (res.data?.hasSubmitted) {
+           setRatedCourses(prev => ({ ...prev, [activePlayer.course.id]: true }));
+         }
+       }).catch(e => console.error(e));
     } else {
        setCourseExam(null);
     }

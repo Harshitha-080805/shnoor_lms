@@ -45,6 +45,23 @@ router.post('/course', authMiddleware(), async (req, res) => {
   }
 });
 
+// Check if user has already submitted feedback for a course
+router.get('/course/check/:courseId', authMiddleware(), async (req, res) => {
+  const { courseId } = req.params;
+  const student_id = (req.user.userId || req.user.id);
+  
+  try {
+    const result = await pool.query(
+      'SELECT id FROM course_feedback WHERE course_id = $1 AND student_id = $2',
+      [courseId, student_id]
+    );
+    res.json({ hasSubmitted: result.rows.length > 0 });
+  } catch (error) {
+    console.error('Error checking course feedback:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 router.get('/course/instructor/:instructorId', authMiddleware(), async (req, res) => {
   let { instructorId } = req.params;
   if (instructorId === 'me') instructorId = req.user.userId || req.user.id;
