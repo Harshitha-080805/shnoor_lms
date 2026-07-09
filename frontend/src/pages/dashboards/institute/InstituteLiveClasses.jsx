@@ -87,10 +87,15 @@ const InstituteLiveClasses = () => {
     setSubmitting(true);
     setError(null);
     try {
+      const payload = {
+        ...formData,
+        start_datetime: new Date(formData.start_datetime).toISOString(),
+        end_datetime: new Date(formData.end_datetime).toISOString()
+      };
       if (isEditing) {
-        await api.put(`/api/live-classes/${formData.id}`, formData);
+        await api.put(`/api/live-classes/${formData.id}`, payload);
       } else {
-        await api.post('/api/live-classes', formData);
+        await api.post('/api/live-classes', payload);
       }
       await fetchData();
       handleCloseModal();
