@@ -17,7 +17,8 @@ import {
   Bell,
   Award,
   MessageSquare,
-  Star
+  Star,
+  Video
 } from "lucide-react";
 import api from "../../../api";
 
@@ -47,6 +48,7 @@ function InstituteDashboard() {
     { name: "Exam Evaluation", path: "/institute-dashboard/exams", icon: <Award size={20} /> },
     { name: "Subscriptions", path: "/institute-dashboard/subscriptions", icon: <CreditCard size={20} /> },
     { name: "Certificates", path: "/institute-dashboard/certificates", icon: <Award size={20} /> },
+    { name: "Live Classes", path: "/institute-dashboard/live-classes", icon: <Video size={20} /> },
     { name: "Profile", path: "/institute-dashboard/profile", icon: <User size={20} /> },
     { name: "Announcements", path: "/institute-dashboard/announcements", icon: <Bell size={20} /> },
     { name: "Feedback", path: "/institute-dashboard/feedback", icon: <Star size={20} /> },

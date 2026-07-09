@@ -19,6 +19,7 @@ import {
   User,
   TrendingUp,
   FileCheck,
+  Video,
 } from "lucide-react";
 
 const isTokenValid = (t) => {
@@ -44,6 +45,7 @@ function StudentDashboard() {
     { name: "Quizzes", path: "/student-dashboard/quizzes", icon: <ClipboardList size={20} /> },
     { name: "Assignments", path: "/student-dashboard/assignments", icon: <FileText size={20} /> },
     { name: "Exams", path: "/student-dashboard/exams", icon: <FileCheck size={20} /> },
+    { name: "Live Classes", path: "/student-dashboard/live-classes", icon: <Video size={20} /> },
     { name: "Practice Arena", path: "/student-dashboard/practice-arena", icon: <Target size={20} /> },
     { name: "Progress Tracker", path: "/student-dashboard/progress", icon: <TrendingUp size={20} /> },
     { name: "Certificates", path: "/student-dashboard/certificates", icon: <Award size={20} /> },

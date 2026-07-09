@@ -175,6 +175,34 @@ const runMigration = async () => {
       );
     `);
     console.log("Migration successful: ensured feedback tables exist.");
+    // CREATE LIVE CLASSES TABLE
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS live_classes (
+          id SERIAL PRIMARY KEY,
+          course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
+          instructor_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+          organization_id INTEGER REFERENCES organizations(id) ON DELETE CASCADE,
+          title VARCHAR(255) NOT NULL,
+          description TEXT,
+          meeting_provider VARCHAR(100) NOT NULL,
+          meeting_link VARCHAR(500) NOT NULL,
+          start_datetime TIMESTAMP NOT NULL,
+          end_datetime TIMESTAMP NOT NULL,
+          recording_link VARCHAR(500),
+          status VARCHAR(50) DEFAULT 'Upcoming',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    console.log("Migration successful: ensured live_classes table exists.");
+
+    // Fix the incorrect foreign key constraint if it exists
+    await pool.query(`
+      ALTER TABLE live_classes
+      DROP CONSTRAINT IF EXISTS live_classes_organization_id_fkey,
+      ADD CONSTRAINT live_classes_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+    `);
+    console.log("Migration successful: fixed foreign key constraint on live_classes.");
 
     process.exit(0);
   } catch (err) {

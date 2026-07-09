@@ -2483,6 +2483,7 @@ const globalPracticeRoutes = require('./globalPracticeRoutes');
 const adminReportsRoutes = require('./adminReportsRoutes');
 const examRoutes = require('./examRoutes');
 const contactRoutes = require('./contactRoutes');
+const liveClassRoutes = require('./liveClassRoutes');
 app.use('/api/chat', authMiddleware(), chatRoutes(upload));
 app.use('/api/groups', authMiddleware(), groupRoutes);
 app.use('/api/org-admin', orgAdmin(authMiddleware));
@@ -2493,6 +2494,7 @@ app.use('/api/exams', examRoutes(authMiddleware));
 app.use('/api/contact', contactRoutes(authMiddleware));
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/feedback', feedbackRoutes(authMiddleware));
+app.use('/api/live-classes', liveClassRoutes(authMiddleware));
 
 // Auto-create contact_queries table if not exists
 pool.query(`

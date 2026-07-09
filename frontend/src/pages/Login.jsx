@@ -50,6 +50,7 @@ function Login() {
       .then(res => {
         const data = res.data;
         sessionStorage.setItem("access", data.token);
+        sessionStorage.setItem("userId", data.user.id);
         sessionStorage.setItem("role", data.user.role.toLowerCase());
         sessionStorage.setItem("email", data.user.email);
         sessionStorage.setItem("username", data.user.fullName);
@@ -95,6 +96,7 @@ function Login() {
       .then(res => {
         const data = res.data;
         sessionStorage.setItem("access", data.token);
+        sessionStorage.setItem("userId", data.user.id);
         sessionStorage.setItem("role", data.user.role.toLowerCase());
         sessionStorage.setItem("email", data.user.email);
         sessionStorage.setItem("username", data.user.fullName);
