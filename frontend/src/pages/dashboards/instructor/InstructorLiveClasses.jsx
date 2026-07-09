@@ -44,6 +44,14 @@ const InstructorLiveClasses = () => {
     }
   };
 
+  const formatDatetimeLocal = (dateString) => {
+    if (!dateString) return '';
+    const d = new Date(dateString);
+    const offset = d.getTimezoneOffset();
+    const localDate = new Date(d.getTime() - (offset * 60000));
+    return localDate.toISOString().slice(0, 16);
+  };
+
   const handleOpenModal = (cls = null) => {
     if (cls) {
       setIsEditing(true);
@@ -54,8 +62,8 @@ const InstructorLiveClasses = () => {
         description: cls.description || '',
         meeting_provider: cls.meeting_provider,
         meeting_link: cls.meeting_link,
-        start_datetime: new Date(cls.start_datetime).toISOString().slice(0, 16),
-        end_datetime: new Date(cls.end_datetime).toISOString().slice(0, 16),
+        start_datetime: formatDatetimeLocal(cls.start_datetime),
+        end_datetime: formatDatetimeLocal(cls.end_datetime),
         recording_link: cls.recording_link || '',
         status: cls.status
       });
