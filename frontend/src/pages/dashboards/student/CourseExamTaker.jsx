@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Clock, CheckCircle, XCircle, Play, Maximize2, Minimize2, ArrowLeft, Bookmark, RotateCcw, Send, ChevronLeft, ChevronRight, Award, Target, BookOpen, Code } from 'lucide-react';
 import api from '../../../api';
 import ProctoringEngine from '../../../components/proctoring/ProctoringEngine';
-
+import { preloadModels } from '../../../utils/proctoringModels';
 function CourseExamTaker({ exam, onComplete, onCancel }) {
   const [flowState, setFlowState] = useState('loading_preview'); // loading_preview, overview, theory, coding, submit, result
   const [previewData, setPreviewData] = useState(null);
@@ -36,6 +36,7 @@ function CourseExamTaker({ exam, onComplete, onCancel }) {
 
   useEffect(() => {
     loadPreview();
+    preloadModels().catch(err => console.error("Preload models error", err));
   }, []);
 
   const loadPreview = async () => {
@@ -56,8 +57,22 @@ function CourseExamTaker({ exam, onComplete, onCancel }) {
       if (res.status >= 200 && res.status < 300) {
         setAttemptId(res.data.id);
         
-        const dataRes = await api.get(`/api/exams/attempts/${res.data.id}/data`);
+        const dataPromise = api.get(`/api/exams/attempts/${res.data.id}/data`);
+        const procPromise = api.post('/api/proctoring/start-session', {
+          target_type: 'ASSESSMENT',
+          target_id: exam.id
+        }).catch(e => {
+          console.error("Proctoring could not be started", e);
+          return null;
+        });
+
+        const [dataRes, procRes] = await Promise.all([dataPromise, procPromise]);
+        
         setExamData(dataRes.data);
+        
+        if (procRes && procRes.data) {
+          setProctorSessionId(procRes.data.session_id);
+        }
         
         let theory = [];
         let coding = [];
@@ -88,17 +103,6 @@ function CourseExamTaker({ exam, onComplete, onCancel }) {
         if (theory.length > 0) setFlowState('theory');
         else if (coding.length > 0) setFlowState('coding');
         else setFlowState('submit');
-
-        // Start Proctoring Session
-        try {
-          const procRes = await api.post('/api/proctoring/start-session', {
-            target_type: 'ASSESSMENT',
-            target_id: exam.id
-          });
-          setProctorSessionId(procRes.data.session_id);
-        } catch (e) {
-          console.error("Proctoring could not be started", e);
-        }
 
       } else {
         alert("Failed to start exam. You may have reached your attempt limit or already have an active attempt.");

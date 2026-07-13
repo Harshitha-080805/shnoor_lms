@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../../api';
 import { Target, CheckCircle, XCircle, Play, Maximize2, Minimize2, ArrowLeft, CheckSquare, Code, ChevronRight, ChevronLeft, Award, Bookmark, RotateCcw, Send, Clock } from 'lucide-react';
 import ProctoringEngine from '../../../components/proctoring/ProctoringEngine';
+import { preloadModels } from '../../../utils/proctoringModels';
 
 function StudentGlobalArenaView() {
   const { arenaId } = useParams();
@@ -38,9 +39,11 @@ function StudentGlobalArenaView() {
   const [executing, setExecuting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [proctoringReady, setProctoringReady] = useState(false);
+  const [starting, setStarting] = useState(false);
 
   useEffect(() => {
     loadArena();
+    preloadModels().catch(err => console.error("Preload models error", err));
   }, [arenaId]);
 
   async function loadArena() {
@@ -95,30 +98,35 @@ function StudentGlobalArenaView() {
   }
 
   const handleStartPractice = () => {
-    setStartTime(Date.now());
-    if (arena?.time_limit_minutes > 0) {
-      setTimeRemaining(arena.time_limit_minutes * 60);
-    } else {
-      setTimeRemaining(null);
-    }
-    if (allMcqs.length > 0) {
-      setFlowState('mcq');
-    } else if (arena.coding?.length > 0) {
-      setFlowState('coding');
-    } else {
-      setFlowState('submit');
-    }
+    setStarting(true);
+    // Use a tiny timeout to allow the React state to update the button UI before mounting the heavy AI components
+    setTimeout(() => {
+      setStartTime(Date.now());
+      if (arena?.time_limit_minutes > 0) {
+        setTimeRemaining(arena.time_limit_minutes * 60);
+      } else {
+        setTimeRemaining(null);
+      }
+      if (allMcqs.length > 0) {
+        setFlowState('mcq');
+      } else if (arena.coding?.length > 0) {
+        setFlowState('coding');
+      } else {
+        setFlowState('submit');
+      }
 
-    // Start Proctoring Session
-    api.post('/api/proctoring/start-session', {
-      target_type: 'PRACTICE_ARENA',
-      target_uuid: arenaId,
-      target_id: 0 // dummy for non-integer PK
-    }).then(res => {
-      setProctorSessionId(res.data.session_id);
-    }).catch(err => {
-      console.error("Proctoring could not be started", err);
-    });
+      // Start Proctoring Session
+      api.post('/api/proctoring/start-session', {
+        target_type: 'PRACTICE_ARENA',
+        target_uuid: arenaId,
+        target_id: 0 // dummy for non-integer PK
+      }).then(res => {
+        setProctorSessionId(res.data.session_id);
+      }).catch(err => {
+        console.error("Proctoring could not be started", err);
+      });
+      setStarting(false);
+    }, 50);
   };
 
   useEffect(() => {
@@ -336,9 +344,14 @@ function StudentGlobalArenaView() {
 
         <button
           onClick={handleStartPractice}
-          className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl shadow-lg hover:shadow-xl transition-all text-lg"
+          disabled={starting}
+          className="px-8 py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-black rounded-xl shadow-lg hover:shadow-xl transition-all text-lg inline-flex items-center justify-center gap-3 min-w-[200px]"
         >
-          Start Practice
+          {starting ? (
+             <><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> Starting...</>
+          ) : (
+             arena.coding && arena.coding.length > 0 && allMcqs.length === 0 ? "Start Coding Practice" : "Start Practice"
+          )}
         </button>
       </div>
     </div>

@@ -5,6 +5,7 @@ import * as cocoSsd from '@tensorflow-models/coco-ssd';
 import { Camera, Volume2, ShieldAlert } from 'lucide-react';
 import { io } from 'socket.io-client';
 import api from '../../api';
+import { preloadModels } from '../../utils/proctoringModels';
 
 const ProctoringEngine = ({ 
   sessionId, 
@@ -216,23 +217,16 @@ const ProctoringEngine = ({
 
   const loadModels = async () => {
     try {
-      await tf.ready();
+      const { faceModel: fm, objectModel: om } = await preloadModels();
       
-      const promises = [];
-      if (enable_face_detection) {
-        promises.push(blazeface.load().then(model => {
-          faceModelRef.current = model;
-          setFaceModel(model);
-        }));
+      if (enable_face_detection && fm) {
+        faceModelRef.current = fm;
+        setFaceModel(fm);
       }
-      if (enable_mobile_detection) {
-        promises.push(cocoSsd.load().then(model => {
-          objectModelRef.current = model;
-          setObjectModel(model);
-        }));
+      if (enable_mobile_detection && om) {
+        objectModelRef.current = om;
+        setObjectModel(om);
       }
-      
-      await Promise.all(promises);
       
       setModelsLoaded(true);
       if (onReady) onReady();
