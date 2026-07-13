@@ -118,6 +118,80 @@ function initSocket(server) {
       }
     });
 
+    // ==========================================
+    // Proctoring WebRTC Signaling
+    // ==========================================
+
+    socket.on('join_proctor_room', async (data) => {
+      // Both instructors and students join the room for a specific arena/assessment
+      const { targetType, targetId } = data;
+      const room = `proctor_${targetType}_${targetId}`;
+      socket.join(room);
+      console.log(`User ${socket.user.userId} joined proctor room: ${room}`);
+      
+      // Tell instructors that a student is available
+      socket.to(room).emit('student_available', { studentId: socket.user.userId, socketId: socket.id });
+
+      // Notify instructor and org admin if a student joined
+      try {
+        const role = String(socket.user.role).toLowerCase();
+        if (role === 'student' || role === 'learner') {
+            let instructorId = null;
+            let orgId = socket.user.organization_id;
+            
+            if (targetType === 'ASSESSMENT') {
+                const res = await db.query('SELECT course_id FROM exams WHERE id = $1', [targetId]);
+                if (res.rows.length > 0) {
+                    const cRes = await db.query('SELECT instructor_id FROM courses WHERE id = $1', [res.rows[0].course_id]);
+                    if (cRes.rows.length > 0) instructorId = cRes.rows[0].instructor_id;
+                }
+            } else if (targetType === 'ARENA') {
+                const res = await db.query('SELECT created_by FROM practice_arenas WHERE id = $1', [targetId]);
+                if (res.rows.length > 0) instructorId = res.rows[0].created_by;
+            }
+
+            if (instructorId) {
+                await createNotification(instructorId, 'Live Proctoring Alert', `A student has started taking a proctored exam.`, 'EXAM_STARTED', '/instructor-dashboard/proctoring');
+            }
+            if (orgId) {
+                const orgAdmins = await db.query('SELECT id FROM users WHERE organization_id = $1 AND role IN ($2, $3)', [orgId, 'organization_admin', 'manager']);
+                for (const row of orgAdmins.rows) {
+                    await createNotification(row.id, 'Live Proctoring Alert', `A student in your organization has started taking a proctored exam.`, 'EXAM_STARTED', '/institute-dashboard/proctoring');
+                }
+            }
+        }
+      } catch (err) {
+         console.error('Notification error in join_proctor_room', err);
+      }
+    });
+
+    socket.on('request_video_stream', (data) => {
+      // Instructor requests video from a specific student socket
+      const { targetSocketId } = data;
+      io.to(targetSocketId).emit('request_video_stream', { instructorSocketId: socket.id });
+    });
+
+    socket.on('webrtc_offer', (data) => {
+      io.to(data.targetSocketId).emit('webrtc_offer', {
+        sdp: data.sdp,
+        senderSocketId: socket.id
+      });
+    });
+
+    socket.on('webrtc_answer', (data) => {
+      io.to(data.targetSocketId).emit('webrtc_answer', {
+        sdp: data.sdp,
+        senderSocketId: socket.id
+      });
+    });
+
+    socket.on('webrtc_ice_candidate', (data) => {
+      io.to(data.targetSocketId).emit('webrtc_ice_candidate', {
+        candidate: data.candidate,
+        senderSocketId: socket.id
+      });
+    });
+
     socket.on('disconnect', () => {
       console.log(`User disconnected: ${socket.user.userId}`);
     });

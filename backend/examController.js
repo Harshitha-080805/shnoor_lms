@@ -57,7 +57,15 @@ const getCourseExams = async (req, res) => {
     const courseCheck = await pool.query('SELECT * FROM courses WHERE id = $1 AND instructor_id = $2', [courseId, instructorId]);
     if (courseCheck.rows.length === 0) return res.status(403).json({ error: 'Access denied' });
 
-    const examsRes = await pool.query('SELECT * FROM course_exams WHERE course_id = $1 AND is_deleted = false ORDER BY created_at DESC', [courseId]);
+    const examsRes = await pool.query(`
+      SELECT e.*, 
+             s.shuffle_questions, s.shuffle_options, s.show_result_immediately, 
+             s.allow_review, s.require_manual_review, s.enable_negative_marking, s.allow_resume
+      FROM course_exams e
+      LEFT JOIN course_exam_settings s ON e.id = s.exam_id
+      WHERE e.course_id = $1 AND e.is_deleted = false 
+      ORDER BY e.created_at DESC
+    `, [courseId]);
     res.json(examsRes.rows);
   } catch (err) {
     console.error(err);

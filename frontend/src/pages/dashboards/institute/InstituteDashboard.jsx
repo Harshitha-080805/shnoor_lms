@@ -18,7 +18,8 @@ import {
   Award,
   MessageSquare,
   Star,
-  Video
+  Video,
+  ShieldAlert,
 } from "lucide-react";
 import api from "../../../api";
 

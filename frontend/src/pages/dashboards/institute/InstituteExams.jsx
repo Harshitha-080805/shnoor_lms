@@ -1,14 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Award, Search, TrendingUp, Users, CheckCircle, XCircle, Download } from 'lucide-react';
+import { Award, Search, TrendingUp, Users, CheckCircle, XCircle, Download, ShieldAlert, X } from 'lucide-react';
 import api from '../../../api';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
+import ProctoringReports from '../../../components/proctoring/ProctoringReports';
 
 function InstituteExams() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [sortOption, setSortOption] = useState('Newest');
+
+  // Proctoring Modal State
+  const [showProctoringModal, setShowProctoringModal] = useState(false);
+  const [proctoringExamId, setProctoringExamId] = useState(null);
+  const [proctoringStudentEmail, setProctoringStudentEmail] = useState(null);
 
   useEffect(() => {
     const fetchAnalytics = async () => {
@@ -225,6 +231,7 @@ function InstituteExams() {
                   <th className="p-4">Score</th>
                   <th className="p-4">Status</th>
                   <th className="p-4">Date</th>
+                  <th className="p-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
@@ -242,6 +249,18 @@ function InstituteExams() {
                       )}
                     </td>
                     <td className="p-4 text-slate-500">{new Date(attempt.submitted_at || attempt.started_at).toLocaleDateString()}</td>
+                    <td className="p-4 text-right">
+                      <button 
+                        onClick={() => { 
+                          setProctoringExamId(attempt.exam_id); 
+                          setProctoringStudentEmail(attempt.student_email);
+                          setShowProctoringModal(true); 
+                        }}
+                        className="bg-amber-50 text-amber-700 hover:bg-amber-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors inline-flex items-center gap-1"
+                      >
+                        <ShieldAlert size={14} /> Proctoring
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -251,6 +270,34 @@ function InstituteExams() {
           <div className="p-8 text-center text-slate-500">No recent exam attempts found.</div>
         )}
       </div>
+
+      {showProctoringModal && proctoringExamId && (
+        <div className="fixed inset-0 bg-slate-50 z-[100] flex flex-col overflow-hidden animate-in fade-in duration-200">
+          <div className="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="p-2.5 bg-red-50 text-red-600 rounded-xl">
+                <ShieldAlert size={24} />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-slate-800">Proctoring Violations Report</h3>
+                <p className="text-sm text-slate-500 font-medium">Live monitoring logs and historical records</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => setShowProctoringModal(false)} 
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-lg transition-colors flex items-center gap-2"
+            >
+              <X size={18} /> Close Reports
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-8">
+            <div className="w-full">
+              <ProctoringReports targetType="ASSESSMENT" targetId={proctoringExamId} studentEmail={proctoringStudentEmail} />
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

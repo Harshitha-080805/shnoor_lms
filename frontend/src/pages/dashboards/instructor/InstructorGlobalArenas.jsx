@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Target, Plus, X, Save, Code, CheckSquare, Settings, Edit, Trash, Eye, EyeOff, Search } from 'lucide-react';
+import { Target, Plus, X, Save, Code, CheckSquare, Settings, Edit, Trash, Eye, EyeOff, Search, ShieldAlert } from 'lucide-react';
 import api from '../../../api';
+import ProctoringReports from '../../../components/proctoring/ProctoringReports';
 
 function InstructorGlobalArenas() {
   const [arenas, setArenas] = useState([]);
@@ -11,6 +12,7 @@ function InstructorGlobalArenas() {
 
   // View states
   const [activeArenaId, setActiveArenaId] = useState(null);
+  const [viewingReportsArenaId, setViewingReportsArenaId] = useState(null);
   
   // Create Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -176,6 +178,12 @@ function InstructorGlobalArenas() {
                 <Trash size={18} />
               </button>
               <button 
+                onClick={() => setViewingReportsArenaId(arena.id)}
+                className="flex-1 bg-amber-50 text-amber-700 hover:bg-amber-100 font-bold py-2 rounded-lg text-xs transition shadow flex items-center justify-center gap-2"
+              >
+                <ShieldAlert size={14} /> Reports
+              </button>
+              <button 
                 onClick={() => setActiveArenaId(arena.id)}
                 className="flex-1 bg-slate-900 text-white font-bold py-2 rounded-lg text-xs hover:bg-slate-800 transition shadow flex items-center justify-center gap-2"
               >
@@ -190,6 +198,35 @@ function InstructorGlobalArenas() {
           </div>
         )}
       </div>
+
+      {viewingReportsArenaId && (
+        <div className="fixed inset-0 bg-slate-50 z-[100] flex flex-col overflow-hidden animate-in fade-in duration-200">
+          <div className="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="p-2.5 bg-red-50 text-red-600 rounded-xl">
+                <ShieldAlert size={24} />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-slate-800">Proctoring Violations Report</h3>
+                <p className="text-sm text-slate-500 font-medium">Live monitoring logs and historical records</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => setViewingReportsArenaId(null)} 
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-lg transition-colors flex items-center gap-2"
+            >
+              <X size={18} /> Close Reports
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-8">
+            <div className="w-full">
+              <ProctoringReports targetType="PRACTICE_ARENA" targetId={viewingReportsArenaId} />
+            </div>
+          </div>
+        </div>
+      )}
+
+
 
       {showCreateModal && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -261,13 +298,14 @@ function ArenaEditor({ arenaId, onBack }) {
   
   const [isMcqEnabled, setIsMcqEnabled] = useState(false);
   const [isCodingEnabled, setIsCodingEnabled] = useState(false);
+  const [isProctoringEnabled, setIsProctoringEnabled] = useState(false);
   const [quizzes, setQuizzes] = useState([{ title: 'General Quiz', mcqs: [] }]);
   const [coding, setCoding] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
 
   const [showMcqModalForQuiz, setShowMcqModalForQuiz] = useState(null);
   const [showCodingModal, setShowCodingModal] = useState(false);
-
+  const [viewingReports, setViewingReports] = useState(false);
   useEffect(() => {
     loadArena();
   }, [arenaId]);
@@ -277,8 +315,9 @@ function ArenaEditor({ arenaId, onBack }) {
       const res = await api.get(`/api/practice-arenas/${arenaId}`);
       if (res.data) {
         setArena(res.data);
-        setIsMcqEnabled(res.data.is_mcq_enabled);
-        setIsCodingEnabled(res.data.is_coding_enabled);
+        setIsMcqEnabled(res.data.is_mcq_enabled || false);
+        setIsCodingEnabled(res.data.is_coding_enabled || false);
+        setIsProctoringEnabled(res.data.is_proctoring_enabled || false);
         if (res.data.quizzes && res.data.quizzes.length > 0) {
           setQuizzes(res.data.quizzes);
         } else {
@@ -309,6 +348,7 @@ function ArenaEditor({ arenaId, onBack }) {
         difficulty: arena.difficulty,
         is_mcq_enabled: isMcqEnabled,
         is_coding_enabled: isCodingEnabled,
+        is_proctoring_enabled: isProctoringEnabled,
         quizzes,
         coding
       });
@@ -328,12 +368,14 @@ function ArenaEditor({ arenaId, onBack }) {
           <button onClick={onBack} className="text-xs font-bold text-slate-500 hover:text-slate-800 mb-2 block">← Back to Arenas</button>
           <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">Editing: {arena?.title}</h2>
         </div>
-        <button 
-          onClick={handleSave}
-          className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow flex items-center gap-2"
-        >
-          <Save size={18} /> Save Changes
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={handleSave}
+            className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow flex items-center gap-2"
+          >
+            <Save size={18} /> Save Changes
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
@@ -355,6 +397,15 @@ function ArenaEditor({ arenaId, onBack }) {
               className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
             />
             Enable Coding Practice
+          </label>
+          <label className="flex items-center gap-2 text-sm font-bold text-slate-700 cursor-pointer">
+            <input 
+              type="checkbox" 
+              checked={isProctoringEnabled} 
+              onChange={(e) => setIsProctoringEnabled(e.target.checked)}
+              className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500"
+            />
+            Enable Proctoring
           </label>
         </div>
 
@@ -484,7 +535,6 @@ function ArenaEditor({ arenaId, onBack }) {
           )}
         </div>
       </div>
-
       {showMcqModalForQuiz !== null && <AddMcqModal onAdd={(m) => { const newQ = [...quizzes]; newQ[showMcqModalForQuiz].mcqs.push(m); setQuizzes(newQ); setShowMcqModalForQuiz(null); }} onClose={() => setShowMcqModalForQuiz(null)} />}
       {showCodingModal && <AddCodingModal onAdd={(c) => { setCoding([...coding, c]); setShowCodingModal(false); }} onClose={() => setShowCodingModal(false)} />}
     </div>

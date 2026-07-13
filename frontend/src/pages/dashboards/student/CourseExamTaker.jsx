@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, CheckCircle, XCircle, Play, Maximize2, Minimize2, ArrowLeft, Bookmark, RotateCcw, Send, ChevronLeft, ChevronRight, Award, Target, BookOpen, Code } from 'lucide-react';
 import api from '../../../api';
+import ProctoringEngine from '../../../components/proctoring/ProctoringEngine';
 
 function CourseExamTaker({ exam, onComplete, onCancel }) {
   const [flowState, setFlowState] = useState('loading_preview'); // loading_preview, overview, theory, coding, submit, result
   const [previewData, setPreviewData] = useState(null);
   const [examData, setExamData] = useState(null);
   const [attemptId, setAttemptId] = useState(null);
+  const [proctorSessionId, setProctorSessionId] = useState(null);
+  const [violationCount, setViolationCount] = useState(0);
   
   // Grouped questions
   const [theoryQuestions, setTheoryQuestions] = useState([]);
@@ -16,6 +19,7 @@ function CourseExamTaker({ exam, onComplete, onCancel }) {
   const [currentTheoryIndex, setCurrentTheoryIndex] = useState(0);
   const [theoryAnswers, setTheoryAnswers] = useState({});
   const [markedForReview, setMarkedForReview] = useState({});
+  const [proctoringReady, setProctoringReady] = useState(false);
   
   // Coding State
   const [activeCodingProblem, setActiveCodingProblem] = useState(null);
@@ -85,6 +89,17 @@ function CourseExamTaker({ exam, onComplete, onCancel }) {
         else if (coding.length > 0) setFlowState('coding');
         else setFlowState('submit');
 
+        // Start Proctoring Session
+        try {
+          const procRes = await api.post('/api/proctoring/start-session', {
+            target_type: 'ASSESSMENT',
+            target_id: exam.id
+          });
+          setProctorSessionId(procRes.data.session_id);
+        } catch (e) {
+          console.error("Proctoring could not be started", e);
+        }
+
       } else {
         alert("Failed to start exam. You may have reached your attempt limit or already have an active attempt.");
         onCancel();
@@ -98,12 +113,16 @@ function CourseExamTaker({ exam, onComplete, onCancel }) {
   useEffect(() => {
     let timer;
     if ((flowState === 'theory' || flowState === 'coding') && timeLeft !== null && timeLeft > 0 && !isSubmitting) {
-      timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
+      if (exam?.proctoring && proctorSessionId && !proctoringReady) {
+        // Pause timer while proctoring compiles
+      } else {
+        timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
+      }
     } else if ((flowState === 'theory' || flowState === 'coding') && timeLeft === 0 && !isSubmitting) {
       handleSubmitExam();
     }
     return () => clearInterval(timer);
-  }, [flowState, timeLeft, isSubmitting]);
+  }, [flowState, timeLeft, isSubmitting, proctoringReady, exam, proctorSessionId]);
 
   const formatTime = (seconds) => {
     if (seconds === null || seconds === undefined) return '0:00';
@@ -198,6 +217,14 @@ function CourseExamTaker({ exam, onComplete, onCancel }) {
     setIsSubmitting(true);
     const previousState = flowState;
     setFlowState('loading_preview');
+    
+    if (proctorSessionId) {
+      try {
+        await api.post('/api/proctoring/end-session', { session_id: proctorSessionId });
+      } catch (e) {
+        console.error("Failed to end proctoring session", e);
+      }
+    }
     try {
       const answersArray = [];
       Object.keys(theoryAnswers).forEach(qId => {
@@ -759,11 +786,49 @@ function CourseExamTaker({ exam, onComplete, onCancel }) {
                   Your exam has been submitted but requires manual review from your instructor. Please check back later for your final score.
                 </p>
               )}
+              {exam.proctoring && (
+                <div className={`mt-6 p-4 rounded-xl border text-center ${violationCount > 0 ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
+                  <p className={`text-sm font-bold uppercase ${violationCount > 0 ? 'text-red-700' : 'text-green-700'}`}>Proctoring Violations Logged</p>
+                  <p className={`text-3xl font-black ${violationCount > 0 ? 'text-red-800' : 'text-green-800'}`}>{violationCount}</p>
+                  {violationCount > 0 && <p className="text-xs text-red-600 mt-1">Your instructor will review these violations.</p>}
+                </div>
+              )}
             </div>
             <div className="flex justify-center mt-8">
               <button onClick={onComplete} className="px-8 py-3 rounded-xl bg-slate-100 text-slate-700 font-bold hover:bg-slate-200 transition-colors">Continue to Course</button>
             </div>
           </div>
+        </div>
+      )}
+
+      {proctorSessionId && (flowState === 'theory' || flowState === 'coding' || flowState === 'submit') && (
+        <ProctoringEngine 
+          sessionId={proctorSessionId} 
+          settings={{
+            enable_face_detection: true,
+            enable_mobile_detection: true,
+            enable_tab_switch: true,
+            enable_voice_detection: true,
+            enable_fullscreen_exit: true,
+            enable_copy_paste: true
+          }}
+          onReady={() => setProctoringReady(true)}
+          onViolation={async (violationData) => {
+            try {
+              await api.post('/api/proctoring/violation', violationData);
+              setViolationCount(prev => prev + 1);
+            } catch (err) {
+              console.error("Failed to log violation");
+            }
+          }}
+        />
+      )}
+
+      {!proctoringReady && proctorSessionId && (flowState === 'theory' || flowState === 'coding' || flowState === 'submit') && (
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[200] flex flex-col items-center justify-center text-white">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mb-6"></div>
+          <h2 className="text-2xl font-bold mb-2">Initializing AI Proctoring...</h2>
+          <p className="text-slate-300">Please wait while the neural networks are compiled. Your exam timer is paused.</p>
         </div>
       )}
     </div>

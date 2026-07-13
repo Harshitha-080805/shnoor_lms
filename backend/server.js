@@ -16,6 +16,7 @@ const searchRoutes = require('./searchRoutes');
 const groupRoutes = require('./groupRoutes');
 const { router: notificationRoutes, createNotification } = require('./notificationRoutes');
 const feedbackRoutes = require('./feedbackRoutes');
+const proctoringRoutes = require('./routes/proctoringRoutes');
 const path = require('path');
 
 dotenv.config();
@@ -29,6 +30,8 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+// Serve uploads folder statically
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const rateLimit = require('express-rate-limit');
 
 
@@ -2485,6 +2488,7 @@ const examRoutes = require('./examRoutes');
 const contactRoutes = require('./contactRoutes');
 const liveClassRoutes = require('./liveClassRoutes');
 app.use('/api/chat', authMiddleware(), chatRoutes(upload));
+app.use('/api/proctoring', authMiddleware(), proctoringRoutes);
 app.use('/api/groups', authMiddleware(), groupRoutes);
 app.use('/api/org-admin', orgAdmin(authMiddleware));
 app.use('/api/search', authMiddleware(), searchRoutes());

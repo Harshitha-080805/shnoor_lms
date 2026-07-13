@@ -19,6 +19,7 @@ import {
   FileCheck,
   Star,
   Video,
+  ShieldAlert,
 } from "lucide-react";
 
 const isTokenValid = (t) => {

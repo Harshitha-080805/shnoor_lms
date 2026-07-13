@@ -438,8 +438,8 @@ module.exports = (authMiddleware) => {
       const orgId = req.user.organization_id;
       
       const attemptsRes = await pool.query(`
-        SELECT a.id, a.status, a.total_score, a.started_at, a.submitted_at, 
-               u.full_name as student_name,
+        SELECT a.id, a.exam_id, a.status, a.total_score, a.started_at, a.submitted_at, 
+               u.full_name as student_name, u.email as student_email,
                e.title as exam_title,
                c.title as course_title
         FROM course_exam_attempts a

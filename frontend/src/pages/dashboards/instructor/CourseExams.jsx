@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { GraduationCap, Plus, Search, Edit, BookOpen, HelpCircle, X, Settings, CheckCircle, Users, BarChart3 } from 'lucide-react';
+import { GraduationCap, Plus, Search, Edit, BookOpen, HelpCircle, X, Settings, CheckCircle, Users, BarChart3, ShieldAlert } from 'lucide-react';
 import api from '../../../api';
+import ProctoringReports from '../../../components/proctoring/ProctoringReports';
 
 function CourseExams() {
   const navigate = useNavigate();
@@ -26,6 +27,10 @@ function CourseExams() {
   const [shuffleOptions, setShuffleOptions] = useState(false);
   const [showResultImmediately, setShowResultImmediately] = useState(true);
   const [allowReview, setAllowReview] = useState(false);
+
+  // Proctoring Modal State
+  const [showProctoringModal, setShowProctoringModal] = useState(false);
+  const [proctoringExam, setProctoringExam] = useState(null);
 
   // Pending Reviews State
   const [activeTab, setActiveTab] = useState('listings');
@@ -149,8 +154,10 @@ function CourseExams() {
 
   const openSettings = (exam) => {
     setActiveExam(exam);
-    // Note: since settings might not be eagerly loaded, we would ideally fetch them,
-    // but for now we'll just open the modal.
+    setShuffleQuestions(exam.shuffle_questions || false);
+    setShuffleOptions(exam.shuffle_options || false);
+    setShowResultImmediately(exam.show_result_immediately !== false); // default true if undefined
+    setAllowReview(exam.allow_review || false);
     setShowSettingsModal(true);
   };
 
@@ -326,6 +333,19 @@ function CourseExams() {
                   </div>
 
                   <div className="flex items-center gap-2">
+                    <button 
+                      onClick={() => { setProctoringExam(exam); setShowProctoringModal(true); }}
+                      className="text-red-600 hover:text-red-700 p-2 hover:bg-red-50 rounded-xl transition-colors"
+                      title="Proctoring Reports"
+                    >
+                      <ShieldAlert size={20} />
+                    </button>
+                    <button 
+                      onClick={() => openSettings(exam)}
+                      className="text-surface-500 hover:text-surface-700 p-2 hover:bg-surface-100 rounded-xl transition-colors"
+                    >
+                      <Settings size={20} />
+                    </button>
                     <button 
                       onClick={() => openAttemptsModal(exam)}
                       className="bg-info-50 text-info-900 hover:bg-info-100 px-4 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-1.5"
@@ -706,6 +726,33 @@ function CourseExams() {
               <button type="submit" className="px-5 py-2.5 bg-brand-950 text-base-white font-bold text-sm rounded-xl shadow-md hover:bg-brand-900 transition-colors">Save Settings</button>
             </div>
           </form>
+        </div>
+      )}
+
+      {showProctoringModal && proctoringExam && (
+        <div className="fixed inset-0 bg-slate-50 z-[100] flex flex-col overflow-hidden animate-in fade-in duration-200">
+          <div className="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="p-2.5 bg-red-50 text-red-600 rounded-xl">
+                <ShieldAlert size={24} />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-slate-800">Proctoring Violations Report: {proctoringExam.title}</h3>
+                <p className="text-sm text-slate-500 font-medium">Live monitoring logs and historical records</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => setShowProctoringModal(false)} 
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-lg transition-colors flex items-center gap-2"
+            >
+              <X size={18} /> Close Reports
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-8">
+            <div className="w-full">
+              <ProctoringReports targetType="ASSESSMENT" targetId={proctoringExam.id} />
+            </div>
+          </div>
         </div>
       )}
     </div>

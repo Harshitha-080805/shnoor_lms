@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../../api';
 import { Target, CheckCircle, XCircle, Play, Maximize2, Minimize2, ArrowLeft, CheckSquare, Code, ChevronRight, ChevronLeft, Award, Bookmark, RotateCcw, Send, Clock } from 'lucide-react';
+import ProctoringEngine from '../../../components/proctoring/ProctoringEngine';
 
 function StudentGlobalArenaView() {
   const { arenaId } = useParams();
@@ -11,6 +12,8 @@ function StudentGlobalArenaView() {
   
   // Flow State
   const [flowState, setFlowState] = useState('overview'); // overview, mcq, coding, submit, results, leaderboard, solutions
+  const [proctorSessionId, setProctorSessionId] = useState(null);
+  const [violationCount, setViolationCount] = useState(0);
 
   // Data prepped for UI
   const [allMcqs, setAllMcqs] = useState([]); // Flattened array of all MCQs { quizId, mcq }
@@ -34,6 +37,7 @@ function StudentGlobalArenaView() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [executing, setExecuting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [proctoringReady, setProctoringReady] = useState(false);
 
   useEffect(() => {
     loadArena();
@@ -104,24 +108,40 @@ function StudentGlobalArenaView() {
     } else {
       setFlowState('submit');
     }
+
+    // Start Proctoring Session
+    api.post('/api/proctoring/start-session', {
+      target_type: 'PRACTICE_ARENA',
+      target_uuid: arenaId,
+      target_id: 0 // dummy for non-integer PK
+    }).then(res => {
+      setProctorSessionId(res.data.session_id);
+    }).catch(err => {
+      console.error("Proctoring could not be started", err);
+    });
   };
 
   useEffect(() => {
     let interval = null;
     if ((flowState === 'mcq' || flowState === 'coding') && timeRemaining !== null && timeRemaining > 0) {
-      interval = setInterval(() => {
-        setTimeRemaining(prev => {
-          if (prev <= 1) {
-            clearInterval(interval);
-            handleSubmitPractice();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+      // Pause timer if proctoring is initializing
+      if (arena?.proctoring_settings && proctorSessionId && !proctoringReady) {
+        // Do not start the timer yet
+      } else {
+        interval = setInterval(() => {
+          setTimeRemaining(prev => {
+            if (prev <= 1) {
+              clearInterval(interval);
+              handleSubmitPractice();
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
     }
     return () => clearInterval(interval);
-  }, [flowState, timeRemaining]);
+  }, [flowState, timeRemaining, proctoringReady, arena, proctorSessionId]);
 
   const formatTimer = (seconds) => {
     const m = Math.floor(seconds / 60);
@@ -184,6 +204,15 @@ function StudentGlobalArenaView() {
 
   const handleSubmitPractice = async () => {
     setLoading(true);
+
+    if (proctorSessionId) {
+      try {
+        await api.post('/api/proctoring/end-session', { session_id: proctorSessionId });
+      } catch (e) {
+        console.error("Failed to end proctoring session", e);
+      }
+    }
+
     try {
       let quizAnswers = {};
       let quizScores = {};
@@ -952,6 +981,30 @@ function StudentGlobalArenaView() {
               <p className="font-bold text-slate-800">Evaluating your practice...</p>
            </div>
          </div>
+      )}
+
+      {proctorSessionId && (flowState === 'mcq' || flowState === 'coding' || flowState === 'submit') && (
+        <ProctoringEngine 
+          sessionId={proctorSessionId}
+          settings={arena.proctoring_settings}
+          onReady={() => setProctoringReady(true)}
+          onViolation={async (violationData) => {
+            try {
+              await api.post('/api/proctoring/violation', violationData);
+              setViolationCount(prev => prev + 1);
+            } catch (err) {
+              console.error("Failed to log violation");
+            }
+          }}
+        />
+      )}
+
+      {!proctoringReady && proctorSessionId && (flowState === 'mcq' || flowState === 'coding' || flowState === 'submit') && (
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[200] flex flex-col items-center justify-center text-white">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mb-6"></div>
+          <h2 className="text-2xl font-bold mb-2">Initializing AI Proctoring...</h2>
+          <p className="text-slate-300">Please wait while the neural networks are compiled. Your exam timer is paused.</p>
+        </div>
       )}
     </div>
   );

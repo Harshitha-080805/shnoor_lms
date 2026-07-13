@@ -202,15 +202,15 @@ module.exports = (authMiddleware) => {
 
   // POST practice arena (Instructor only)
   router.post('/', authMiddleware(['INSTRUCTOR']), async (req, res) => {
-    const { title, description, visibility, target_course_id, is_mcq_enabled, is_coding_enabled, time_limit_minutes, difficulty, quizzes, coding } = req.body;
+    const { title, description, visibility, target_course_id, is_mcq_enabled, is_coding_enabled, is_proctoring_enabled, time_limit_minutes, difficulty, quizzes, coding } = req.body;
     const instructorId = req.user.userId;
 
     try {
       await pool.query('BEGIN');
       
       const inserted = await pool.query(
-        'INSERT INTO practice_arenas (title, description, visibility, target_course_id, is_mcq_enabled, is_coding_enabled, time_limit_minutes, difficulty, instructor_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id',
-        [title, description, visibility || 'GLOBAL', target_course_id || null, is_mcq_enabled, is_coding_enabled, time_limit_minutes || 60, difficulty || 'Medium', instructorId]
+        'INSERT INTO practice_arenas (title, description, visibility, target_course_id, is_mcq_enabled, is_coding_enabled, is_proctoring_enabled, time_limit_minutes, difficulty, instructor_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id',
+        [title, description, visibility || 'GLOBAL', target_course_id || null, is_mcq_enabled, is_coding_enabled, is_proctoring_enabled || false, time_limit_minutes || 60, difficulty || 'Medium', instructorId]
       );
       const arenaId = inserted.rows[0].id;
 
@@ -270,10 +270,10 @@ module.exports = (authMiddleware) => {
     }
   });
 
-  // PUT practice arena (Instructor only)
+  // PUT update practice arena (Instructor only)
   router.put('/:id', authMiddleware(['INSTRUCTOR']), async (req, res) => {
     const { id } = req.params;
-    const { title, description, visibility, target_course_id, is_mcq_enabled, is_coding_enabled, time_limit_minutes, difficulty, quizzes, coding } = req.body;
+    const { title, description, visibility, target_course_id, is_mcq_enabled, is_coding_enabled, is_proctoring_enabled, time_limit_minutes, difficulty, quizzes, coding } = req.body;
     const instructorId = req.user.userId;
 
     try {
@@ -285,8 +285,8 @@ module.exports = (authMiddleware) => {
       await pool.query('BEGIN');
       
       await pool.query(
-        'UPDATE practice_arenas SET title = $1, description = $2, visibility = $3, target_course_id = $4, is_mcq_enabled = $5, is_coding_enabled = $6, time_limit_minutes = $7, difficulty = $8 WHERE id = $9',
-        [title, description, visibility || 'GLOBAL', target_course_id || null, is_mcq_enabled, is_coding_enabled, time_limit_minutes || 60, difficulty || 'Medium', id]
+        'UPDATE practice_arenas SET title = $1, description = $2, visibility = $3, target_course_id = $4, is_mcq_enabled = $5, is_coding_enabled = $6, is_proctoring_enabled = $7, time_limit_minutes = $8, difficulty = $9 WHERE id = $10',
+        [title, description, visibility || 'GLOBAL', target_course_id || null, is_mcq_enabled, is_coding_enabled, is_proctoring_enabled || false, time_limit_minutes || 60, difficulty || 'Medium', id]
       );
 
       // Delete existing questions to fully replace
