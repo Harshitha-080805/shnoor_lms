@@ -50,6 +50,7 @@ import InstructorGlobalArenas from "./pages/dashboards/instructor/InstructorGlob
 import StudentGlobalArenas from "./pages/dashboards/student/StudentGlobalArenas";
 import StudentGlobalArenaView from "./pages/dashboards/student/StudentGlobalArenaView";
 import { GlobalFeedbackButton } from "./components/FeedbackComponents";
+import LiveCCTVProctoring from "./components/proctoring/LiveCCTVProctoring";
 
 function App() {
   return (
@@ -72,6 +73,7 @@ function App() {
           <Route path="certificates" element={<InstituteCertificates />} />
           <Route path="exams" element={<InstituteExams />} />
           <Route path="live-classes" element={<InstituteLiveClasses />} />
+          <Route path="proctoring" element={<LiveCCTVProctoring />} />
           <Route path="profile" element={<InstituteProfile />} />
           <Route path="chat" element={<ChatLayout />} />
           <Route path="announcements" element={<InstituteAnnouncements />} />
@@ -86,6 +88,7 @@ function App() {
           <Route path="exams" element={<CourseExams />} />
           <Route path="exams/:examId/build" element={<ExamBuilder />} />
           <Route path="live-classes" element={<InstructorLiveClasses />} />
+          <Route path="proctoring" element={<LiveCCTVProctoring />} />
           <Route path="practice-arena" element={<InstructorGlobalArenas />} />
           <Route path="students" element={<StudentProgress />} />
           <Route path="announcements" element={<InstituteAnnouncements />} />

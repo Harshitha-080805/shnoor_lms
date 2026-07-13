@@ -812,7 +812,10 @@ function CourseExamTaker({ exam, onComplete, onCancel }) {
             enable_fullscreen_exit: true,
             enable_copy_paste: true
           }}
+          targetType="ASSESSMENT"
+          targetId={examId}
           onReady={() => setProctoringReady(true)}
+          onForceSubmit={handleSubmitExam}
           onViolation={async (violationData) => {
             try {
               await api.post('/api/proctoring/violation', violationData);

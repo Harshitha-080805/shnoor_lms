@@ -31,6 +31,15 @@ function initSocket(server) {
   io.on('connection', (socket) => {
     console.log(`User connected: ${socket.user.userId}`);
 
+    const userRole = String(socket.user.role || '').toLowerCase();
+    if (userRole === 'instructor') {
+      socket.join(`instructor_cctv_${socket.user.userId}`);
+    } else if (userRole === 'organization_admin' || userRole === 'manager') {
+      if (socket.user.organization_id) {
+        socket.join(`org_cctv_${socket.user.organization_id}`);
+      }
+    }
+
     // Join conversations room
     socket.on('join_rooms', async (conversationIds) => {
       if (Array.isArray(conversationIds)) {
@@ -140,21 +149,23 @@ function initSocket(server) {
             let orgId = socket.user.organization_id;
             
             if (targetType === 'ASSESSMENT') {
-                const res = await db.query('SELECT course_id FROM exams WHERE id = $1', [targetId]);
+                const res = await db.query('SELECT course_id FROM assessments WHERE id = $1', [targetId]);
                 if (res.rows.length > 0) {
                     const cRes = await db.query('SELECT instructor_id FROM courses WHERE id = $1', [res.rows[0].course_id]);
                     if (cRes.rows.length > 0) instructorId = cRes.rows[0].instructor_id;
                 }
             } else if (targetType === 'ARENA') {
-                const res = await db.query('SELECT created_by FROM practice_arenas WHERE id = $1', [targetId]);
-                if (res.rows.length > 0) instructorId = res.rows[0].created_by;
+                const res = await db.query('SELECT instructor_id FROM practice_arenas WHERE id = $1', [targetId]);
+                if (res.rows.length > 0) instructorId = res.rows[0].instructor_id;
             }
 
             if (instructorId) {
+                io.to(`instructor_cctv_${instructorId}`).emit('student_available', { studentId: socket.user.userId, socketId: socket.id, targetType, targetId, studentName: socket.user.email || 'Student' });
                 await createNotification(instructorId, 'Live Proctoring Alert', `A student has started taking a proctored exam.`, 'EXAM_STARTED', '/instructor-dashboard/proctoring');
             }
             if (orgId) {
-                const orgAdmins = await db.query('SELECT id FROM users WHERE organization_id = $1 AND role IN ($2, $3)', [orgId, 'organization_admin', 'manager']);
+                io.to(`org_cctv_${orgId}`).emit('student_available', { studentId: socket.user.userId, socketId: socket.id, targetType, targetId, studentName: socket.user.email || 'Student' });
+                const orgAdmins = await db.query('SELECT id FROM users WHERE organization_id = $1 AND role = $2', [orgId, 'ORGANIZATION_ADMIN']);
                 for (const row of orgAdmins.rows) {
                     await createNotification(row.id, 'Live Proctoring Alert', `A student in your organization has started taking a proctored exam.`, 'EXAM_STARTED', '/institute-dashboard/proctoring');
                 }
@@ -188,6 +199,15 @@ function initSocket(server) {
     socket.on('webrtc_ice_candidate', (data) => {
       io.to(data.targetSocketId).emit('webrtc_ice_candidate', {
         candidate: data.candidate,
+        senderSocketId: socket.id
+      });
+    });
+
+    socket.on('proctor_action', (data) => {
+      // Forward proctor commands (e.g. TERMINATE, MESSAGE) to the student
+      io.to(data.targetSocketId).emit('proctor_action', {
+        action: data.action,
+        payload: data.payload,
         senderSocketId: socket.id
       });
     });

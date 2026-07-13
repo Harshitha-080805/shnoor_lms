@@ -10,7 +10,10 @@ const ProctoringEngine = ({
   sessionId, 
   settings = {}, 
   onViolation,
-  onReady
+  onReady,
+  onForceSubmit,
+  targetType,
+  targetId
 }) => {
   const videoRef = useRef(null);
   const audioContextRef = useRef(null);
@@ -18,6 +21,7 @@ const ProctoringEngine = ({
   const dataArrayRef = useRef(null);
   const streamRef = useRef(null);
 
+  const [cameraReady, setCameraReady] = useState(false);
   const [modelsLoaded, setModelsLoaded] = useState(false);
   const [faceModel, setFaceModel] = useState(null);
   const [objectModel, setObjectModel] = useState(null);
@@ -61,6 +65,7 @@ const ProctoringEngine = ({
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
         }
+        setCameraReady(true);
 
         if (enable_voice_detection) {
           const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -115,18 +120,20 @@ const ProctoringEngine = ({
       if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
         audioContextRef.current.close();
       }
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-      }
       Object.values(peerConnectionsRef.current).forEach(pc => pc.close());
     };
   }, []);
 
   // WebRTC Setup
   useEffect(() => {
+    if (!cameraReady) return;
+
     // Only connect if we have a token
-    const token = localStorage.getItem('token');
-    if (!token) return;
+    const token = sessionStorage.getItem('access') || localStorage.getItem('token');
+    if (!token) {
+      console.warn("ProctoringEngine: No auth token found!");
+      return;
+    }
 
     const socket = io('http://localhost:5000', {
       auth: { token }
@@ -135,8 +142,11 @@ const ProctoringEngine = ({
 
     socket.on('connect', () => {
       console.log("Proctoring Engine Socket connected");
-      // Could join room here if we passed targetType/Id
     });
+
+    if (targetType && targetId) {
+      socket.emit('join_proctor_room', { targetType, targetId });
+    }
 
     socket.on('request_video_stream', async ({ instructorSocketId }) => {
       const pc = new RTCPeerConnection({
@@ -145,10 +155,10 @@ const ProctoringEngine = ({
       peerConnectionsRef.current[instructorSocketId] = pc;
 
       // Add local stream to peer connection
-      if (videoRef.current && videoRef.current.srcObject) {
-        videoRef.current.srcObject.getTracks().forEach(track => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => {
           // Do not add audio track if user requested video only, but we'll add all for now
-          pc.addTrack(track, videoRef.current.srcObject);
+          pc.addTrack(track, streamRef.current);
         });
       }
 
@@ -188,10 +198,21 @@ const ProctoringEngine = ({
       }
     });
 
+    socket.on('proctor_action', (data) => {
+      if (data.action === 'MESSAGE') {
+        alert("Message from Proctor:\n\n" + data.payload.text);
+      } else if (data.action === 'TERMINATE') {
+        alert("Your exam has been forcefully terminated by the proctor due to excessive violations or suspicious activity.");
+        if (onForceSubmit) {
+          onForceSubmit();
+        }
+      }
+    });
+
     return () => {
       socket.disconnect();
     };
-  }, []);
+  }, [cameraReady, targetType, targetId]);
 
   const loadModels = async () => {
     try {

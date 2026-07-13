@@ -987,7 +987,10 @@ function StudentGlobalArenaView() {
         <ProctoringEngine 
           sessionId={proctorSessionId}
           settings={arena.proctoring_settings}
+          targetType="ARENA"
+          targetId={arenaId}
           onReady={() => setProctoringReady(true)}
+          onForceSubmit={handleSubmitPractice}
           onViolation={async (violationData) => {
             try {
               await api.post('/api/proctoring/violation', violationData);
