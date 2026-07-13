@@ -314,6 +314,15 @@ const ProctoringEngine = ({
       image_snapshot: snapshot
     });
 
+    if (socketRef.current && peerConnectionsRef.current) {
+      Object.keys(peerConnectionsRef.current).forEach(instructorSocketId => {
+        socketRef.current.emit('forward_violation', {
+          targetSocketId: instructorSocketId,
+          violationType: type
+        });
+      });
+    }
+
     setWarning(`Warning: ${type}`);
     setTimeout(() => setWarning(null), 4000);
   };

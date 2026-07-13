@@ -212,6 +212,14 @@ function initSocket(server) {
       });
     });
 
+    socket.on('forward_violation', (data) => {
+      // Forward violation from student to a specific instructor
+      io.to(data.targetSocketId).emit('student_violation', {
+        violationType: data.violationType,
+        studentSocketId: socket.id
+      });
+    });
+
     socket.on('disconnect', () => {
       console.log(`User disconnected: ${socket.user.userId}`);
     });

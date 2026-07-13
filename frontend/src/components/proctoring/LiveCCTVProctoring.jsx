@@ -4,6 +4,7 @@ import { ShieldAlert, VideoOff, Users, Maximize2, Radio, Activity, LayoutGrid, M
 
 const LiveCCTVProctoring = () => {
     const [activeStudents, setActiveStudents] = useState({});
+    const [selectedStudentForViolations, setSelectedStudentForViolations] = useState(null);
     const socketRef = useRef(null);
     const peerConnectionsRef = useRef({});
     const videoRefs = useRef({});
@@ -28,7 +29,7 @@ const LiveCCTVProctoring = () => {
 
             setActiveStudents(prev => ({
                 ...prev,
-                [socketId]: { studentId, studentName, targetType, targetId }
+                [socketId]: { studentId, studentName, targetType, targetId, violations: {}, totalViolations: 0 }
             }));
 
             const pc = new RTCPeerConnection({
@@ -84,6 +85,26 @@ const LiveCCTVProctoring = () => {
                     console.error("Error adding ice candidate:", err);
                 }
             }
+        });
+
+        socket.on('student_violation', ({ violationType, studentSocketId }) => {
+            setActiveStudents(prev => {
+                if (!prev[studentSocketId]) return prev;
+                const student = prev[studentSocketId];
+                const violations = student.violations || {};
+                const newCount = (violations[violationType] || 0) + 1;
+                return {
+                    ...prev,
+                    [studentSocketId]: {
+                        ...student,
+                        violations: {
+                            ...violations,
+                            [violationType]: newCount
+                        },
+                        totalViolations: (student.totalViolations || 0) + 1
+                    }
+                };
+            });
         });
 
         socket.on('student_disconnected', ({ socketId }) => {
@@ -232,9 +253,17 @@ const LiveCCTVProctoring = () => {
                                     <div className="p-4 flex flex-col justify-between flex-1 bg-white">
                                         <div className="mb-3">
                                             <h4 className="text-slate-800 font-bold text-sm truncate">{student.studentName}</h4>
-                                            <div className="flex items-center gap-1.5 mt-1 text-slate-500">
-                                                <Activity size={12} className="text-emerald-500" />
-                                                <span className="text-xs font-medium">Candidate ID: {student.studentId}</span>
+                                            <div className="flex items-center justify-between mt-1">
+                                                <div className="flex items-center gap-1.5 text-slate-500">
+                                                    <Activity size={12} className="text-emerald-500" />
+                                                    <span className="text-xs font-medium">ID: {student.studentId}</span>
+                                                </div>
+                                                <button 
+                                                    onClick={() => setSelectedStudentForViolations(student)}
+                                                    className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                                                >
+                                                    {student.totalViolations || 0} Violations
+                                                </button>
                                             </div>
                                         </div>
                                         
@@ -267,6 +296,54 @@ const LiveCCTVProctoring = () => {
                     )}
                 </div>
             </div>
+
+            {/* Empty State */}
+            {Object.keys(activeStudents).length === 0 && (
+                <div className="flex flex-col items-center justify-center h-[600px] text-slate-400">
+                    <VideoOff size={64} className="mb-4 text-slate-300" strokeWidth={1} />
+                    <h3 className="text-xl font-bold text-slate-500 mb-2">No Active Streams</h3>
+                    <p className="max-w-md text-center text-sm font-medium">
+                        Waiting for candidates to begin their proctored sessions. Live feeds will appear here automatically.
+                    </p>
+                </div>
+            )}
+
+            {/* Violations Modal */}
+            {selectedStudentForViolations && (
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl border border-slate-200">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                                <AlertTriangle size={20} />
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-slate-900">Violations Log</h3>
+                                <p className="text-xs font-medium text-slate-500">{selectedStudentForViolations.studentName}</p>
+                            </div>
+                        </div>
+                        
+                        <div className="space-y-3 mb-6 max-h-[300px] overflow-y-auto pr-2">
+                            {(!selectedStudentForViolations.violations || Object.keys(selectedStudentForViolations.violations).length === 0) ? (
+                                <p className="text-center text-sm font-bold text-slate-400 py-4">No violations logged yet.</p>
+                            ) : (
+                                Object.entries(selectedStudentForViolations.violations).map(([type, count]) => (
+                                    <div key={type} className="flex justify-between items-center bg-slate-50 border border-slate-100 p-3 rounded-xl">
+                                        <span className="text-sm font-bold text-slate-700">{type}</span>
+                                        <span className="text-sm font-black text-red-600 bg-red-100 px-2.5 py-0.5 rounded-lg">{count}</span>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        <button 
+                            onClick={() => setSelectedStudentForViolations(null)}
+                            className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition-colors text-sm uppercase tracking-wider"
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

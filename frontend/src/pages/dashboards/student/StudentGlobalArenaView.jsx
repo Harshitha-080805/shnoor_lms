@@ -9,7 +9,7 @@ function StudentGlobalArenaView() {
   const navigate = useNavigate();
   const [arena, setArena] = useState(null);
   const [loading, setLoading] = useState(true);
-  
+
   // Flow State
   const [flowState, setFlowState] = useState('overview'); // overview, mcq, coding, submit, results, leaderboard, solutions
   const [proctorSessionId, setProctorSessionId] = useState(null);
@@ -17,7 +17,7 @@ function StudentGlobalArenaView() {
 
   // Data prepped for UI
   const [allMcqs, setAllMcqs] = useState([]); // Flattened array of all MCQs { quizId, mcq }
-  
+
   // Progress State
   const [currentMcqIndex, setCurrentMcqIndex] = useState(0);
   const [mcqAnswers, setMcqAnswers] = useState({}); // key: mcqId, value: selectedOption
@@ -30,7 +30,7 @@ function StudentGlobalArenaView() {
   const [selectedLanguages, setSelectedLanguages] = useState({}); // key: problemId, value: string
 
   // Backend Results (after submission)
-  const [submissionResult, setSubmissionResult] = useState(null); 
+  const [submissionResult, setSubmissionResult] = useState(null);
   const [leaderboard, setLeaderboard] = useState([]);
 
   // Editor states
@@ -49,7 +49,7 @@ function StudentGlobalArenaView() {
       const res = await api.get(`/api/practice-arenas/${arenaId}`);
       if (res.data) {
         setArena(res.data);
-        
+
         let flattened = [];
         if (res.data.quizzes) {
           res.data.quizzes.forEach(q => {
@@ -81,7 +81,7 @@ function StudentGlobalArenaView() {
         try {
           const lbRes = await api.get(`/api/practice-arenas/${arenaId}/leaderboard`);
           setLeaderboard(lbRes.data);
-        } catch(e) {}
+        } catch (e) { }
       }
     } catch (e) {
       console.error(e);
@@ -177,7 +177,7 @@ function StudentGlobalArenaView() {
 
     setExecuting(true);
     setIsSubmitting(isSubmit);
-    
+
     try {
       const res = await api.post(`/api/practice-arenas/${arenaId}/submit-code`, {
         coding_question_id: activeProblem.id,
@@ -185,15 +185,17 @@ function StudentGlobalArenaView() {
         language: selectedLanguages[activeProblem.id] || activeProblem.language || 'Python',
         isSubmit
       });
-      
-      setCodingResults(prev => ({ ...prev, [activeProblem.id]: {
-        passedCount: res.data.passedCount,
-        totalCount: res.data.totalCount,
-        score: res.data.score,
-        maxMarks: res.data.maxMarks,
-        results: res.data.results,
-        isSubmitted: isSubmit || prev[activeProblem.id]?.isSubmitted
-      }}));
+
+      setCodingResults(prev => ({
+        ...prev, [activeProblem.id]: {
+          passedCount: res.data.passedCount,
+          totalCount: res.data.totalCount,
+          score: res.data.score,
+          maxMarks: res.data.maxMarks,
+          results: res.data.results,
+          isSubmitted: isSubmit || prev[activeProblem.id]?.isSubmitted
+        }
+      }));
 
     } catch (e) {
       alert(e.response?.data?.error || "Error executing code");
@@ -216,7 +218,7 @@ function StudentGlobalArenaView() {
     try {
       let quizAnswers = {};
       let quizScores = {};
-      
+
       allMcqs.forEach(m => {
         if (!quizAnswers[m.quizId]) {
           quizAnswers[m.quizId] = {};
@@ -230,7 +232,7 @@ function StudentGlobalArenaView() {
         }
       });
 
-      const promises = Object.keys(quizAnswers).map(qId => 
+      const promises = Object.keys(quizAnswers).map(qId =>
         api.post(`/api/practice-arenas/${arenaId}/submit-mcq`, {
           quizId: qId,
           mcqAnswers: quizAnswers[qId],
@@ -239,7 +241,7 @@ function StudentGlobalArenaView() {
         })
       );
       await Promise.all(promises);
-      
+
       let totalMcqScore = 0;
       let maxMcqScore = 0;
       let correctMcqs = 0;
@@ -316,7 +318,7 @@ function StudentGlobalArenaView() {
         <Target size={64} className="mx-auto text-blue-600 mb-6" />
         <h2 className="text-3xl font-black text-slate-900 mb-2">{arena.title}</h2>
         <p className="text-slate-500 mb-8 max-w-lg mx-auto">{arena.description}</p>
-        
+
         <div className="flex justify-center gap-8 mb-10">
           {arena.is_mcq_enabled && (
             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 min-w-[150px]">
@@ -331,8 +333,8 @@ function StudentGlobalArenaView() {
             </div>
           )}
         </div>
-        
-        <button 
+
+        <button
           onClick={handleStartPractice}
           className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl shadow-lg hover:shadow-xl transition-all text-lg"
         >
@@ -362,12 +364,12 @@ function StudentGlobalArenaView() {
     const progressPercent = Math.round((answeredCount / allMcqs.length) * 100);
 
     return (
-      <div className="flex gap-6 mt-6 max-w-[1400px] mx-auto w-full px-6">
+      <div className="flex gap-6 mt-6 max-w-[1400px] mx-auto w-full px-6 pb-32">
         {/* Left Sidebar - Question Navigator */}
         <div className="w-[300px] flex-shrink-0 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col overflow-hidden h-[calc(100vh-140px)] sticky top-[100px]">
           <div className="p-6 border-b border-slate-100">
             <h4 className="font-bold text-slate-800 mb-6">Question Navigator</h4>
-            
+
             {/* Legend */}
             <div className="grid grid-cols-2 gap-y-4 gap-x-2 text-[11px] font-bold text-slate-600 mb-8">
               <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-green-500"></div> Answered</div>
@@ -382,9 +384,9 @@ function StudentGlobalArenaView() {
                 const isAnswered = !!mcqAnswers[m.id];
                 const isCurrent = idx === currentMcqIndex;
                 const isMarked = markedForReview[m.id];
-                
+
                 let btnClass = "w-11 h-11 rounded-lg font-bold text-sm flex items-center justify-center border-2 transition-all relative ";
-                
+
                 if (isCurrent) {
                   btnClass += "border-blue-600 bg-white text-blue-600 shadow-sm";
                 } else if (isAnswered) {
@@ -402,15 +404,15 @@ function StudentGlobalArenaView() {
               })}
             </div>
           </div>
-          
+
           <div className="mt-auto p-6 bg-slate-50/50">
             <div className="mb-4">
               <div className="text-xs font-bold text-slate-500 mb-2">{answeredCount} of {allMcqs.length} answered</div>
               <div className="w-full bg-slate-200 rounded-full h-1.5">
-                <div className="bg-green-500 h-1.5 rounded-full transition-all" style={{width: `${progressPercent}%`}}></div>
+                <div className="bg-green-500 h-1.5 rounded-full transition-all" style={{ width: `${progressPercent}%` }}></div>
               </div>
             </div>
-            <button 
+            <button
               onClick={() => handleClearResponse(q.id)}
               className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-sm rounded-xl transition-colors flex items-center justify-center gap-2"
             >
@@ -427,19 +429,19 @@ function StudentGlobalArenaView() {
                 <h3 className="font-bold text-blue-600">Question {currentMcqIndex + 1} of {allMcqs.length}</h3>
                 {q.quizTitle && <p className="text-sm font-semibold text-slate-500 mt-1">Topic: {q.quizTitle}</p>}
               </div>
-              <button 
+              <button
                 onClick={() => toggleMarkForReview(q.id)}
                 className={`text-sm font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors ${markedForReview[q.id] ? 'bg-blue-50 text-blue-600' : 'text-slate-500 hover:bg-slate-50'}`}
               >
                 <Bookmark size={16} className={markedForReview[q.id] ? 'fill-blue-600' : ''} /> Mark for Review
               </button>
             </div>
-            
+
             <div className="flex justify-between items-start gap-4 mb-8">
               <p className="text-slate-800 text-lg font-medium leading-relaxed">{q.question}</p>
               <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full whitespace-nowrap">{q.marks || 1} Marks</span>
             </div>
-            
+
             <div className="space-y-3">
               {['A', 'B', 'C', 'D'].map(k => {
                 const val = q[`option_${k.toLowerCase()}`];
@@ -464,23 +466,23 @@ function StudentGlobalArenaView() {
             </div>
           </div>
 
-          <div className="p-6 border-t border-slate-100 flex justify-between items-center bg-white">
-            <button 
+          <div className="p-6 pr-[240px] border-t border-slate-100 flex justify-between items-center bg-white rounded-b-2xl">
+            <button
               onClick={() => setCurrentMcqIndex(prev => Math.max(0, prev - 1))}
               disabled={currentMcqIndex === 0}
               className="px-6 py-2.5 rounded-xl font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 disabled:text-slate-400 disabled:bg-slate-100 flex items-center gap-2 transition-colors"
             >
               <ChevronLeft size={18} /> Previous
             </button>
-            
+
             <div className="flex gap-3">
 
-              <button 
+              <button
                 onClick={handleNextMcq}
                 className="px-8 py-2.5 rounded-xl font-black text-white bg-blue-600 hover:bg-blue-700 flex items-center gap-2 shadow-sm transition-colors"
               >
                 {currentMcqIndex === allMcqs.length - 1 ? (
-                   arena.coding && arena.coding.length > 0 ? "Next: Coding" : "Finish MCQs"
+                  arena.coding && arena.coding.length > 0 ? "Next: Coding" : "Finish MCQs"
                 ) : "Next"} <ChevronRight size={18} />
               </button>
             </div>
@@ -491,8 +493,8 @@ function StudentGlobalArenaView() {
   };
 
   const renderCoding = () => (
-    <div className={`mt-6 max-w-[1400px] mx-auto w-full px-6 ${isFullscreen ? 'fixed inset-0 z-[100] bg-slate-50 p-6 m-0 h-screen overflow-hidden' : 'h-[calc(100vh-140px)]'}`}>
-      
+    <div className={`mt-6 max-w-[1400px] mx-auto w-full px-6 ${isFullscreen ? 'fixed inset-0 z-[100] bg-slate-50 p-6 m-0 h-screen overflow-hidden' : 'pb-32'}`}>
+
       {!activeProblem ? (
         <div className="max-w-4xl mx-auto h-full overflow-y-auto">
           <div className="flex justify-between items-center mb-6">
@@ -502,10 +504,10 @@ function StudentGlobalArenaView() {
             {arena.coding?.map((p, idx) => {
               const isSub = codingResults[p.id]?.isSubmitted;
               const passedAll = isSub && codingResults[p.id].passedCount === codingResults[p.id].totalCount;
-              
+
               return (
-                <div 
-                  key={p.id} 
+                <div
+                  key={p.id}
                   onClick={() => setActiveProblem(p)}
                   className="bg-white p-6 rounded-2xl border border-slate-200 hover:border-blue-300 shadow-sm hover:shadow-md cursor-pointer transition-all group flex justify-between items-center"
                 >
@@ -519,8 +521,8 @@ function StudentGlobalArenaView() {
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
-                    {isSub && passedAll && <span className="font-bold text-sm text-green-600 bg-green-50 px-3 py-1.5 rounded-lg flex items-center gap-1.5"><CheckCircle size={16}/> Solved</span>}
-                    {isSub && !passedAll && <span className="font-bold text-sm text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg flex items-center gap-1.5"><XCircle size={16}/> Attempted</span>}
+                    {isSub && passedAll && <span className="font-bold text-sm text-green-600 bg-green-50 px-3 py-1.5 rounded-lg flex items-center gap-1.5"><CheckCircle size={16} /> Solved</span>}
+                    {isSub && !passedAll && <span className="font-bold text-sm text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg flex items-center gap-1.5"><XCircle size={16} /> Attempted</span>}
                     <button className="w-10 h-10 rounded-full bg-slate-50 text-slate-400 group-hover:bg-blue-600 group-hover:text-white flex items-center justify-center transition-colors">
                       <ChevronRight size={20} />
                     </button>
@@ -536,7 +538,7 @@ function StudentGlobalArenaView() {
           {!isFullscreen && (
             <div className="w-[400px] flex-shrink-0 flex flex-col h-full bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="p-4 border-b border-slate-100 bg-slate-50/50">
-                <button 
+                <button
                   onClick={() => setActiveProblem(null)}
                   className="text-sm font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1.5 transition-colors"
                 >
@@ -584,7 +586,7 @@ function StudentGlobalArenaView() {
             <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-white">
               <div className="flex items-center gap-3">
                 <span className="text-sm font-bold text-slate-500">Language</span>
-                <select 
+                <select
                   value={selectedLanguages[activeProblem.id] || activeProblem.language || 'Python'}
                   onChange={(e) => setSelectedLanguages(prev => ({ ...prev, [activeProblem.id]: e.target.value }))}
                   className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 cursor-pointer appearance-none"
@@ -599,7 +601,7 @@ function StudentGlobalArenaView() {
                 </select>
               </div>
               <div className="flex items-center gap-4">
-                <button 
+                <button
                   onClick={() => setCodeDrafts(prev => ({ ...prev, [activeProblem.id]: activeProblem.starter_code || '' }))}
                   className="text-sm font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1.5 transition-colors"
                 >
@@ -614,7 +616,7 @@ function StudentGlobalArenaView() {
             <div className="flex-1 relative bg-[#1e1e2e] overflow-hidden">
               {/* Optional: Add line numbers visually */}
               <div id={`line-numbers-${activeProblem.id}`} className="absolute left-0 top-0 bottom-0 w-12 bg-[#181825] border-r border-[#313244] text-[#6c7086] font-mono text-sm py-4 px-2 text-right select-none opacity-80 z-0 overflow-hidden">
-                {codeDrafts[activeProblem.id]?.split('\n').map((_, i) => <div key={i}>{i+1}</div>) || <div>1</div>}
+                {codeDrafts[activeProblem.id]?.split('\n').map((_, i) => <div key={i}>{i + 1}</div>) || <div>1</div>}
               </div>
               <textarea
                 value={codeDrafts[activeProblem.id] || ''}
@@ -630,32 +632,32 @@ function StudentGlobalArenaView() {
 
             {codingResults[activeProblem.id] && (
               <div className="h-48 bg-slate-50 border-t border-slate-200 p-4 overflow-y-auto">
-                 <h5 className={`font-bold text-sm mb-3 flex items-center gap-2 ${codingResults[activeProblem.id].passedCount === codingResults[activeProblem.id].totalCount ? 'text-green-600' : 'text-amber-600'}`}>
-                   {codingResults[activeProblem.id].passedCount === codingResults[activeProblem.id].totalCount ? <CheckCircle size={16}/> : <XCircle size={16}/>}
-                   Test Results: {codingResults[activeProblem.id].passedCount} / {codingResults[activeProblem.id].totalCount} Passed
-                   {codingResults[activeProblem.id].isSubmitted && <span className="ml-2 text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded uppercase tracking-wider">Submitted</span>}
-                 </h5>
-                 <div className="space-y-2">
-                   {codingResults[activeProblem.id].results?.map((r, i) => (
-                     <div key={i} className={`p-3 rounded-lg border text-xs font-mono ${r.passed ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
-                       <div className="flex items-center gap-2 font-bold mb-1">
-                         {r.passed ? <CheckCircle size={14} /> : <XCircle size={14} />}
-                         Test Case {i + 1} {r.is_hidden && '(Hidden)'}
-                       </div>
-                       {!r.is_hidden && (
-                         <div className="mt-2 space-y-1">
-                           <p><span className="font-bold text-slate-500 select-none">Input:</span> {r.input_data}</p>
-                           <p><span className="font-bold text-slate-500 select-none">Expected:</span> {r.expected}</p>
-                           <p><span className="font-bold text-slate-500 select-none">Output:</span> {r.output}</p>
-                         </div>
-                       )}
-                     </div>
-                   ))}
-                 </div>
+                <h5 className={`font-bold text-sm mb-3 flex items-center gap-2 ${codingResults[activeProblem.id].passedCount === codingResults[activeProblem.id].totalCount ? 'text-green-600' : 'text-amber-600'}`}>
+                  {codingResults[activeProblem.id].passedCount === codingResults[activeProblem.id].totalCount ? <CheckCircle size={16} /> : <XCircle size={16} />}
+                  Test Results: {codingResults[activeProblem.id].passedCount} / {codingResults[activeProblem.id].totalCount} Passed
+                  {codingResults[activeProblem.id].isSubmitted && <span className="ml-2 text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded uppercase tracking-wider">Submitted</span>}
+                </h5>
+                <div className="space-y-2">
+                  {codingResults[activeProblem.id].results?.map((r, i) => (
+                    <div key={i} className={`p-3 rounded-lg border text-xs font-mono ${r.passed ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+                      <div className="flex items-center gap-2 font-bold mb-1">
+                        {r.passed ? <CheckCircle size={14} /> : <XCircle size={14} />}
+                        Test Case {i + 1} {r.is_hidden && '(Hidden)'}
+                      </div>
+                      {!r.is_hidden && (
+                        <div className="mt-2 space-y-1">
+                          <p><span className="font-bold text-slate-500 select-none">Input:</span> {r.input_data}</p>
+                          <p><span className="font-bold text-slate-500 select-none">Expected:</span> {r.expected}</p>
+                          <p><span className="font-bold text-slate-500 select-none">Output:</span> {r.output}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
-            <div className="bg-white p-4 border-t border-slate-100 flex justify-end gap-3">
+            <div className="bg-white p-6 pr-[240px] border-t border-slate-100 flex justify-end gap-3 rounded-b-2xl">
               <button
                 onClick={() => handleCodeExecute(false)}
                 disabled={executing}
@@ -683,37 +685,37 @@ function StudentGlobalArenaView() {
     <div className="max-w-2xl mx-auto mt-10">
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden text-center p-12">
         <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-           <CheckCircle size={40} className="text-blue-600" />
+          <CheckCircle size={40} className="text-blue-600" />
         </div>
         <h2 className="text-2xl font-black text-slate-900 mb-6">Ready to Submit?</h2>
-        
+
         <div className="bg-slate-50 p-6 rounded-xl border border-slate-100 mb-8 max-w-sm mx-auto text-left space-y-4">
-           {allMcqs.length > 0 && (
-             <div className="flex justify-between items-center">
-               <span className="font-bold text-slate-600">MCQs Answered</span>
-               <span className="font-black text-slate-900">{Object.keys(mcqAnswers).length} / {allMcqs.length}</span>
-             </div>
-           )}
-           {arena.coding && arena.coding.length > 0 && (
-             <div className="flex justify-between items-center">
-               <span className="font-bold text-slate-600">Coding Problems Submitted</span>
-               <span className="font-black text-slate-900">{Object.values(codingResults).filter(r => r.isSubmitted).length} / {arena.coding.length}</span>
-             </div>
-           )}
+          {allMcqs.length > 0 && (
+            <div className="flex justify-between items-center">
+              <span className="font-bold text-slate-600">MCQs Answered</span>
+              <span className="font-black text-slate-900">{Object.keys(mcqAnswers).length} / {allMcqs.length}</span>
+            </div>
+          )}
+          {arena.coding && arena.coding.length > 0 && (
+            <div className="flex justify-between items-center">
+              <span className="font-bold text-slate-600">Coding Problems Submitted</span>
+              <span className="font-black text-slate-900">{Object.values(codingResults).filter(r => r.isSubmitted).length} / {arena.coding.length}</span>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-4 justify-center">
-          <button 
+          <button
             onClick={() => {
               if (arena.coding && arena.coding.length > 0) setFlowState('coding');
               else if (allMcqs.length > 0) setFlowState('mcq');
               else setFlowState('overview');
-            }} 
+            }}
             className="px-6 py-3 font-bold text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200"
           >
             Go Back
           </button>
-          <button 
+          <button
             onClick={handleSubmitPractice}
             className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl shadow-lg transition-all"
           >
@@ -731,60 +733,60 @@ function StudentGlobalArenaView() {
     return (
       <div className="max-w-3xl mx-auto mt-8 space-y-6">
         <div className="flex justify-end">
-           <button onClick={() => navigate('/student-dashboard/practice-arena')} className="text-sm font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm hover:bg-slate-50 transition-colors">
-             <ArrowLeft size={16}/> Back to Arenas
-           </button>
+          <button onClick={() => navigate('/student-dashboard/practice-arena')} className="text-sm font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm hover:bg-slate-50 transition-colors">
+            <ArrowLeft size={16} /> Back to Arenas
+          </button>
         </div>
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center">
-           <Award size={64} className="mx-auto text-amber-500 mb-4" />
-           <h2 className="text-3xl font-black text-slate-900 mb-2">Practice Results</h2>
-           <div className="text-5xl font-black text-blue-600 my-6">{sr.percentage}%</div>
-           
-           <div className="grid grid-cols-2 gap-6 max-w-lg mx-auto mb-8">
-             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-               <p className="text-sm font-bold text-slate-500 uppercase">MCQ Score</p>
-               <p className="text-xl font-black text-slate-800">{sr.totalMcqScore} / {sr.maxMcqScore}</p>
-             </div>
-             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-               <p className="text-sm font-bold text-slate-500 uppercase">Coding Score</p>
-               <p className="text-xl font-black text-slate-800">{sr.totalCodingScore} / {sr.maxCodingScore}</p>
-             </div>
-           </div>
+          <Award size={64} className="mx-auto text-amber-500 mb-4" />
+          <h2 className="text-3xl font-black text-slate-900 mb-2">Practice Results</h2>
+          <div className="text-5xl font-black text-blue-600 my-6">{sr.percentage}%</div>
 
-           <div className="flex flex-wrap justify-center gap-4">
-             <button onClick={() => setFlowState('solutions')} className="px-6 py-2.5 font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100">
-               View Solutions
-             </button>
-             <button onClick={() => setFlowState('leaderboard')} className="px-6 py-2.5 font-bold text-slate-700 bg-slate-100 border border-slate-200 rounded-xl hover:bg-slate-200">
-               Leaderboard
-             </button>
-             <button onClick={handleRetake} className="px-6 py-2.5 font-black text-white bg-blue-600 rounded-xl shadow hover:bg-blue-700">
-               Retake Practice
-             </button>
-           </div>
+          <div className="grid grid-cols-2 gap-6 max-w-lg mx-auto mb-8">
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+              <p className="text-sm font-bold text-slate-500 uppercase">MCQ Score</p>
+              <p className="text-xl font-black text-slate-800">{sr.totalMcqScore} / {sr.maxMcqScore}</p>
+            </div>
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+              <p className="text-sm font-bold text-slate-500 uppercase">Coding Score</p>
+              <p className="text-xl font-black text-slate-800">{sr.totalCodingScore} / {sr.maxCodingScore}</p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-4">
+            <button onClick={() => setFlowState('solutions')} className="px-6 py-2.5 font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100">
+              View Solutions
+            </button>
+            <button onClick={() => setFlowState('leaderboard')} className="px-6 py-2.5 font-bold text-slate-700 bg-slate-100 border border-slate-200 rounded-xl hover:bg-slate-200">
+              Leaderboard
+            </button>
+            <button onClick={handleRetake} className="px-6 py-2.5 font-black text-white bg-blue-600 rounded-xl shadow hover:bg-blue-700">
+              Retake Practice
+            </button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-           {allMcqs.length > 0 && (
-             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-               <h3 className="font-bold text-lg text-slate-800 mb-4 border-b border-slate-100 pb-2">MCQ Breakdown</h3>
-               <div className="space-y-3">
-                 <div className="flex justify-between items-center"><span className="text-slate-600 font-medium">Correct Answers:</span> <span className="font-bold text-green-600">{sr.correctMcqs}</span></div>
-                 <div className="flex justify-between items-center"><span className="text-slate-600 font-medium">Wrong Answers:</span> <span className="font-bold text-red-600">{sr.wrongMcqs}</span></div>
-                 <div className="flex justify-between items-center"><span className="text-slate-600 font-medium">Unattempted:</span> <span className="font-bold text-slate-400">{sr.unattemptedMcqs}</span></div>
-               </div>
-             </div>
-           )}
-           {arena.coding && arena.coding.length > 0 && (
-             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-               <h3 className="font-bold text-lg text-slate-800 mb-4 border-b border-slate-100 pb-2">Coding Breakdown</h3>
-               <div className="space-y-3">
-                 <div className="flex justify-between items-center"><span className="text-slate-600 font-medium">Fully Passed:</span> <span className="font-bold text-green-600">{sr.codingPassed}</span></div>
-                 <div className="flex justify-between items-center"><span className="text-slate-600 font-medium">Attempted:</span> <span className="font-bold text-amber-600">{sr.codingAttempted}</span></div>
-                 <div className="flex justify-between items-center"><span className="text-slate-600 font-medium">Total Problems:</span> <span className="font-bold text-slate-800">{sr.totalCodingQuestions}</span></div>
-               </div>
-             </div>
-           )}
+        <div className={`grid grid-cols-1 ${allMcqs.length > 0 && arena.coding && arena.coding.length > 0 ? 'md:grid-cols-2' : 'max-w-xl mx-auto w-full'} gap-6`}>
+          {allMcqs.length > 0 && (
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+              <h3 className="font-bold text-lg text-slate-800 mb-4 border-b border-slate-100 pb-2">MCQ Breakdown</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center"><span className="text-slate-600 font-medium">Correct Answers:</span> <span className="font-bold text-green-600">{sr.correctMcqs}</span></div>
+                <div className="flex justify-between items-center"><span className="text-slate-600 font-medium">Wrong Answers:</span> <span className="font-bold text-red-600">{sr.wrongMcqs}</span></div>
+                <div className="flex justify-between items-center"><span className="text-slate-600 font-medium">Unattempted:</span> <span className="font-bold text-slate-400">{sr.unattemptedMcqs}</span></div>
+              </div>
+            </div>
+          )}
+          {arena.coding && arena.coding.length > 0 && (
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+              <h3 className="font-bold text-lg text-slate-800 mb-4 border-b border-slate-100 pb-2">Coding Breakdown</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center"><span className="text-slate-600 font-medium">Fully Passed:</span> <span className="font-bold text-green-600">{sr.codingPassed}</span></div>
+                <div className="flex justify-between items-center"><span className="text-slate-600 font-medium">Attempted:</span> <span className="font-bold text-amber-600">{sr.codingAttempted}</span></div>
+                <div className="flex justify-between items-center"><span className="text-slate-600 font-medium">Total Problems:</span> <span className="font-bold text-slate-800">{sr.totalCodingQuestions}</span></div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -793,41 +795,41 @@ function StudentGlobalArenaView() {
   const renderSolutions = () => (
     <div className="max-w-4xl mx-auto mt-8 space-y-8 pb-12">
       <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-         <h3 className="font-bold text-xl text-slate-800">Solutions</h3>
-         <button onClick={() => setFlowState('results')} className="text-sm font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1">
-           <ArrowLeft size={16}/> Back to Results
-         </button>
+        <h3 className="font-bold text-xl text-slate-800">Solutions</h3>
+        <button onClick={() => setFlowState('results')} className="text-sm font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1">
+          <ArrowLeft size={16} /> Back to Results
+        </button>
       </div>
 
       {allMcqs.length > 0 && (
         <div className="space-y-6">
           <h4 className="font-black text-xl text-slate-800">MCQ Solutions</h4>
           {allMcqs.map((m, idx) => {
-             const userAns = mcqAnswers[m.id];
-             const isCorrect = userAns === m.correct_answer;
-             return (
-               <div key={m.id} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                 <h5 className="font-bold text-slate-800 mb-4">Question {idx + 1}: {m.question}</h5>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                     <p className="text-xs font-bold text-slate-500 uppercase mb-1">Your Answer</p>
-                     <p className={`font-bold ${isCorrect ? 'text-green-600' : 'text-red-600'}`}>
-                       {userAns ? `Option ${userAns}` : 'Unattempted'}
-                     </p>
-                   </div>
-                   <div className="bg-green-50 p-4 rounded-xl border border-green-200">
-                     <p className="text-xs font-bold text-green-700 uppercase mb-1">Correct Answer</p>
-                     <p className="font-bold text-green-800">Option {m.correct_answer}</p>
-                   </div>
-                 </div>
-                 {m.explanation && (
-                   <div className="bg-blue-50 p-4 rounded-xl text-sm text-blue-900 border border-blue-100">
-                     <span className="font-bold block mb-1">Explanation:</span>
-                     {m.explanation}
-                   </div>
-                 )}
-               </div>
-             );
+            const userAns = mcqAnswers[m.id];
+            const isCorrect = userAns === m.correct_answer;
+            return (
+              <div key={m.id} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <h5 className="font-bold text-slate-800 mb-4">Question {idx + 1}: {m.question}</h5>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <p className="text-xs font-bold text-slate-500 uppercase mb-1">Your Answer</p>
+                    <p className={`font-bold ${isCorrect ? 'text-green-600' : 'text-red-600'}`}>
+                      {userAns ? `Option ${userAns}` : 'Unattempted'}
+                    </p>
+                  </div>
+                  <div className="bg-green-50 p-4 rounded-xl border border-green-200">
+                    <p className="text-xs font-bold text-green-700 uppercase mb-1">Correct Answer</p>
+                    <p className="font-bold text-green-800">Option {m.correct_answer}</p>
+                  </div>
+                </div>
+                {m.explanation && (
+                  <div className="bg-blue-50 p-4 rounded-xl text-sm text-blue-900 border border-blue-100">
+                    <span className="font-bold block mb-1">Explanation:</span>
+                    {m.explanation}
+                  </div>
+                )}
+              </div>
+            );
           })}
         </div>
       )}
@@ -836,22 +838,22 @@ function StudentGlobalArenaView() {
         <div className="space-y-6">
           <h4 className="font-black text-xl text-slate-800">Coding Problem Solutions</h4>
           {arena.coding.map((p, idx) => {
-             const res = codingResults[p.id];
-             const isPassed = res?.passedCount === res?.totalCount && res?.totalCount > 0;
-             return (
-               <div key={p.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                 <div className="bg-slate-50 p-5 border-b border-slate-200 flex justify-between items-center">
-                   <h5 className="font-bold text-slate-800">Problem {idx + 1}: {p.title}</h5>
-                   {isPassed ? <span className="bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full">Passed</span> : <span className="bg-slate-200 text-slate-600 text-xs font-bold px-3 py-1 rounded-full">Not Passed</span>}
-                 </div>
-                 <div className="p-5">
-                   <p className="text-sm font-bold text-slate-600 mb-2">Your Submitted Code:</p>
-                   <pre className="bg-[#1e1e1e] text-slate-300 p-4 rounded-xl text-sm font-mono overflow-x-auto">
-                     {codeDrafts[p.id] || "No code submitted"}
-                   </pre>
-                 </div>
-               </div>
-             );
+            const res = codingResults[p.id];
+            const isPassed = res?.passedCount === res?.totalCount && res?.totalCount > 0;
+            return (
+              <div key={p.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="bg-slate-50 p-5 border-b border-slate-200 flex justify-between items-center">
+                  <h5 className="font-bold text-slate-800">Problem {idx + 1}: {p.title}</h5>
+                  {isPassed ? <span className="bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full">Passed</span> : <span className="bg-slate-200 text-slate-600 text-xs font-bold px-3 py-1 rounded-full">Not Passed</span>}
+                </div>
+                <div className="p-5">
+                  <p className="text-sm font-bold text-slate-600 mb-2">Your Submitted Code:</p>
+                  <pre className="bg-[#1e1e1e] text-slate-300 p-4 rounded-xl text-sm font-mono overflow-x-auto">
+                    {codeDrafts[p.id] || "No code submitted"}
+                  </pre>
+                </div>
+              </div>
+            );
           })}
         </div>
       )}
@@ -861,10 +863,10 @@ function StudentGlobalArenaView() {
   const renderLeaderboard = () => (
     <div className="max-w-4xl mx-auto mt-8 space-y-6 pb-12">
       <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-         <h3 className="font-bold text-xl text-slate-800 flex items-center gap-2"><Target className="text-blue-600"/> Arena Leaderboard</h3>
-         <button onClick={() => setFlowState('results')} className="text-sm font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1">
-           <ArrowLeft size={16}/> Back to Results
-         </button>
+        <h3 className="font-bold text-xl text-slate-800 flex items-center gap-2"><Target className="text-blue-600" /> Arena Leaderboard</h3>
+        <button onClick={() => setFlowState('results')} className="text-sm font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1">
+          <ArrowLeft size={16} /> Back to Results
+        </button>
       </div>
 
       {leaderboard.length === 0 ? (
@@ -923,11 +925,11 @@ function StudentGlobalArenaView() {
   return (
     <div className={isExamMode ? "fixed inset-0 z-[100] bg-slate-50 overflow-y-auto p-6 lg:p-10" : "min-h-screen"}>
       {flowState === 'overview' && (
-         <div className="mb-4">
-           <button onClick={() => navigate('/student-dashboard/practice-arena')} className="text-sm font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1">
-             <ArrowLeft size={16} /> Back to Arenas
-           </button>
-         </div>
+        <div className="mb-4">
+          <button onClick={() => navigate('/student-dashboard/practice-arena')} className="text-sm font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1">
+            <ArrowLeft size={16} /> Back to Arenas
+          </button>
+        </div>
       )}
 
       {(flowState === 'mcq' || flowState === 'coding') && (
@@ -956,7 +958,7 @@ function StudentGlobalArenaView() {
                 <Clock size={20} /> {formatTimer(timeRemaining)}
               </div>
             )}
-            <button 
+            <button
               onClick={() => setFlowState('submit')}
               className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-black text-sm rounded-lg transition-all shadow-sm flex items-center gap-2"
             >
@@ -965,7 +967,7 @@ function StudentGlobalArenaView() {
           </div>
         </div>
       )}
-      
+
       {flowState === 'overview' && renderOverview()}
       {flowState === 'mcq' && renderMcq()}
       {flowState === 'coding' && renderCoding()}
@@ -973,18 +975,18 @@ function StudentGlobalArenaView() {
       {flowState === 'results' && renderResults()}
       {flowState === 'solutions' && renderSolutions()}
       {flowState === 'leaderboard' && renderLeaderboard()}
-      
+
       {loading && flowState === 'submit' && (
-         <div className="fixed inset-0 bg-white/50 backdrop-blur-sm z-50 flex items-center justify-center">
-           <div className="bg-white p-6 rounded-2xl shadow-xl flex flex-col items-center border border-slate-200">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4"></div>
-              <p className="font-bold text-slate-800">Evaluating your practice...</p>
-           </div>
-         </div>
+        <div className="fixed inset-0 bg-white/50 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-2xl shadow-xl flex flex-col items-center border border-slate-200">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4"></div>
+            <p className="font-bold text-slate-800">Evaluating your practice...</p>
+          </div>
+        </div>
       )}
 
       {proctorSessionId && (flowState === 'mcq' || flowState === 'coding' || flowState === 'submit') && (
-        <ProctoringEngine 
+        <ProctoringEngine
           sessionId={proctorSessionId}
           settings={arena.proctoring_settings}
           targetType="ARENA"

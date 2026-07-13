@@ -462,7 +462,7 @@ function CourseExamTaker({ exam, onComplete, onCancel }) {
                   </div>
                 </div>
 
-                <div className="p-6 border-t border-slate-100 flex justify-between items-center bg-white">
+                <div className="p-6 pr-[240px] border-t border-slate-100 flex justify-between items-center bg-white">
                   <button 
                     onClick={() => setCurrentTheoryIndex(prev => Math.max(0, prev - 1))}
                     disabled={currentTheoryIndex === 0}
@@ -675,7 +675,7 @@ function CourseExamTaker({ exam, onComplete, onCancel }) {
                     </div>
                   )}
 
-                  <div className="bg-white p-4 border-t border-slate-100 flex justify-end gap-3">
+                  <div className="bg-white p-4 pr-[240px] border-t border-slate-100 flex justify-end gap-3">
                     <button
                       onClick={handleCodeExecute}
                       disabled={isExecuting}
