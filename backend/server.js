@@ -20,13 +20,28 @@ const proctoringRoutes = require('./routes/proctoringRoutes');
 const path = require('path');
 const { initializeApp, cert } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
-const serviceAccount = require('./firebaseServiceAccount.json');
-
-initializeApp({
-  credential: cert(serviceAccount)
-});
-
 dotenv.config();
+
+let serviceAccount;
+try {
+  serviceAccount = require('./firebaseServiceAccount.json');
+} catch (error) {
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    try {
+      serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    } catch (parseError) {
+      console.error("Error parsing FIREBASE_SERVICE_ACCOUNT env var:", parseError);
+    }
+  }
+}
+
+if (serviceAccount) {
+  initializeApp({
+    credential: cert(serviceAccount)
+  });
+} else {
+  console.warn("⚠️ No Firebase Service Account found. Firebase features may fail.");
+}
 
 const app = express();
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
