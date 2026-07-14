@@ -201,7 +201,7 @@ router.get('/users', async (req, res) => {
         (SELECT status FROM subscriptions s WHERE s.user_id = u.id AND s.status = 'revoked' LIMIT 1) as user_sub_status
       FROM users u
       LEFT JOIN organizations o ON u.organization_id = o.id
-      WHERE u.role != 'admin'
+      WHERE u.role::text != 'ADMIN' AND u.role::text != 'admin'
       ORDER BY u.created_at DESC
     `;
     const result = await pool.query(query);

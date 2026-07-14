@@ -18,6 +18,13 @@ const { router: notificationRoutes, createNotification } = require('./notificati
 const feedbackRoutes = require('./feedbackRoutes');
 const proctoringRoutes = require('./routes/proctoringRoutes');
 const path = require('path');
+const { initializeApp, cert } = require('firebase-admin/app');
+const { getAuth } = require('firebase-admin/auth');
+const serviceAccount = require('./firebaseServiceAccount.json');
+
+initializeApp({
+  credential: cert(serviceAccount)
+});
 
 dotenv.config();
 
@@ -62,7 +69,7 @@ const authMiddleware = (roles = []) => {
       req.user = decoded;
 
       // Check roles if provided
-      if (roles.length > 0 && !roles.includes(decoded.role)) {
+      if (roles.length > 0 && !roles.includes(decoded.role.toLowerCase())) {
         return res.status(403).json({ error: 'Forbidden: Insufficient privileges' });
       }
 
@@ -313,6 +320,140 @@ const googleLoginUser = async (req, res) => {
   } catch (error) {
     console.error('Google login error:', error);
     res.status(500).json({ error: 'Internal server error during Google login' });
+  }
+};
+
+const firebaseAuthUser = async (req, res) => {
+  try {
+    const { token, isRegistering, ...registerData } = req.body;
+    if (!token) return res.status(400).json({ error: 'Token is required' });
+
+    // Verify token with Firebase Admin
+    const decodedToken = await getAuth().verifyIdToken(token);
+    const email = decodedToken.email;
+
+    // Find user in DB
+    const userQuery = await pool.query(`
+      SELECT u.*, 
+             (SELECT status FROM subscriptions s WHERE s.organization_id = u.organization_id ORDER BY end_date DESC LIMIT 1) as org_sub_status,
+             (SELECT status FROM subscriptions s WHERE s.user_id = u.id ORDER BY end_date DESC LIMIT 1) as user_sub_status
+      FROM users u WHERE email = $1
+    `, [email]);
+
+    let user = null;
+
+    if (userQuery.rows.length === 0) {
+      if (!isRegistering) {
+        return res.status(400).json({ error: 'Account not found. Please register first.' });
+      }
+      
+      // Handle registration logic
+      const {
+        full_name, fullName, role,
+        organization_code, learner_type, roll_number, employee_id,
+        organization_type, organization_name, location, website
+      } = registerData;
+
+      const name = fullName || full_name || decodedToken.name || '';
+      const userRole = (role || 'LEARNER').toUpperCase();
+      
+      let orgId = null;
+      if (userRole === 'ORGANIZATION_ADMIN') {
+        if (!organization_code || !organization_name) {
+          return res.status(400).json({ error: 'Organization name and code are required for Organization Admins' });
+        }
+        const orgCheck = await pool.query('SELECT * FROM organizations WHERE code = $1', [organization_code]);
+        if (orgCheck.rows.length > 0) return res.status(400).json({ error: 'Organization code already exists.' });
+
+        const newOrg = await pool.query(
+          'INSERT INTO organizations (name, code, type, location, website) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+          [organization_name, organization_code, organization_type || 'institute', location || null, website || null]
+        );
+        orgId = newOrg.rows[0].id;
+      } else if (organization_code) {
+        const orgQuery = await pool.query('SELECT id FROM organizations WHERE code = $1', [organization_code]);
+        if (orgQuery.rows.length === 0) return res.status(400).json({ error: 'Invalid organization code' });
+        orgId = orgQuery.rows[0].id;
+      }
+
+      // Generate a random password since authentication is handled by Firebase
+      const randomPassword = crypto.randomBytes(32).toString('hex');
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(randomPassword, salt);
+
+      const insertQuery = `
+        INSERT INTO users (email, password, full_name, role, organization_id, learner_type, roll_number, employee_id, profile_pic) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
+        RETURNING *
+      `;
+      const newUserQuery = await pool.query(insertQuery, [
+        email, hashedPassword, name, userRole, orgId,
+        learner_type || null, roll_number || null, employee_id || null, decodedToken.picture || null
+      ]);
+      user = newUserQuery.rows[0];
+      
+      // Mock sub statuses for new user to bypass checks
+      user.org_sub_status = null;
+      user.user_sub_status = null;
+      
+      // Create notification
+      try {
+        await createNotification(null, 'New User Registration', `User ${email} registered and requires approval.`, 'USER_APPROVAL', '/admin-dashboard');
+        if (orgId) {
+          const orgAdminQuery = await pool.query('SELECT id FROM users WHERE organization_id = $1 AND UPPER(role) = $2', [orgId, 'ORGANIZATION_ADMIN']);
+          if (orgAdminQuery.rows.length > 0) {
+            await createNotification(orgAdminQuery.rows[0].id, 'New User Registration', `User ${email} registered to your organization and requires approval.`, 'USER_APPROVAL', '/org-dashboard');
+          }
+        }
+      } catch(e) { console.error('Notification error', e); }
+
+    } else {
+      user = userQuery.rows[0];
+    }
+
+    // Access Checks
+    if (user.org_sub_status === 'revoked' || user.user_sub_status === 'revoked') {
+      return res.status(403).json({ error: 'User access is suspended. Please contact your administrator.' });
+    }
+    if (user.org_sub_status === 'expired' || user.user_sub_status === 'expired') {
+      const isOrgAdmin = user.role === 'ORGANIZATION_ADMIN';
+      const isIndependentLearner = user.role === 'LEARNER' && !user.organization_id;
+      if (!isOrgAdmin && !isIndependentLearner) {
+        return res.status(403).json({ error: 'Subscription payment is not done. Access is revoked.' });
+      }
+    }
+    if (!user.is_active) {
+      if (user.role === 'LEARNER' && user.organization_id) return res.status(403).json({ error: 'Account is suspended. Please contact your organization administrator.' });
+      return res.status(403).json({ error: 'Account is suspended. Please contact support.' });
+    }
+    if (!user.is_approved) {
+      return res.status(403).json({ error: 'Account is pending admin approval. You will be able to login once approved.' });
+    }
+
+    // Generate JWT
+    const jwtPayload = {
+      userId: user.id,
+      id: user.id, // For routes that expect req.user.id
+      email: user.email,
+      role: user.role,
+      organization_id: user.organization_id,
+    };
+    const jwtToken = jwt.sign(jwtPayload, process.env.JWT_SECRET || 'your_secret_key', { expiresIn: '1d' });
+
+    res.status(200).json({
+      token: jwtToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        fullName: user.full_name,
+        role: user.role,
+        learnerType: user.learner_type,
+        profilePic: user.profile_pic,
+      },
+    });
+  } catch (error) {
+    console.error('Firebase Auth error:', error);
+    res.status(500).json({ error: 'Internal server error during Firebase authentication' });
   }
 };
 
@@ -1288,6 +1429,7 @@ const submitQuiz = async (req, res) => {
 app.post('/api/accounts/register', registerUser);
 app.post('/api/accounts/login', loginUser);
 app.post('/api/accounts/google-login', googleLoginUser);
+app.post('/api/accounts/firebase-auth', firebaseAuthUser);
 app.post('/api/forgot-password', forgotPassword);
 app.get('/api/verify-reset-token/:token', verifyResetToken);
 app.post('/api/reset-password-with-token', resetPasswordWithToken);
